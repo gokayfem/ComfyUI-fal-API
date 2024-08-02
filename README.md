@@ -9,6 +9,8 @@ pip install -r requirements.txt
 ```
 Get your fal API key from: [fal.ai](https://fal.ai/dashboard/keys)
 
+Put Your API Key inside ```config.ini```
+
 ## Examples
 
 ![image](https://github.com/user-attachments/assets/e9d2ab68-e735-4731-875c-c64c9df1a0fe)
