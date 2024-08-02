@@ -2,9 +2,23 @@ import requests
 from PIL import Image
 import io
 import numpy as np
-
-from fal_client import submit
+import torch
 import os
+import configparser
+from fal_client import submit
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+config_path = os.path.join(parent_dir, "config.ini")
+
+config = configparser.ConfigParser()
+config.read(config_path)
+
+try:
+    fal_key = config['API']['FAL_KEY']
+    os.environ["FAL_KEY"] = fal_key
+except KeyError:
+    print("Error: FAL_KEY not found in config.ini")
 
 class FluxPro:
     @classmethod
@@ -20,7 +34,6 @@ class FluxPro:
             },
             "optional": {
                 "seed": ("INT", {"default": -1}),
-                "api_key": ("STRING", {"default": ""})
             }
         }
 
@@ -28,10 +41,7 @@ class FluxPro:
     FUNCTION = "generate_image"
     CATEGORY = "FAL"
 
-    def generate_image(self, prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance, seed=-1, api_key=""):
-        if api_key:
-            os.environ['FAL_KEY'] = api_key
-
+    def generate_image(self, prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance, seed=-1):
         arguments = {
             "prompt": prompt,
             "image_size": image_size,
@@ -65,7 +75,6 @@ class FluxDev:
             },
             "optional": {
                 "seed": ("INT", {"default": -1}),
-                "api_key": ("STRING", {"default": ""})
             }
         }
 
@@ -73,10 +82,7 @@ class FluxDev:
     FUNCTION = "generate_image"
     CATEGORY = "FAL"
 
-    def generate_image(self, prompt, image_size, num_inference_steps, guidance_scale, num_images, enable_safety_checker, seed=-1, api_key=""):
-        if api_key:
-            os.environ['FAL_KEY'] = api_key
-
+    def generate_image(self, prompt, image_size, num_inference_steps, guidance_scale, num_images, enable_safety_checker, seed=-1):
         arguments = {
             "prompt": prompt,
             "image_size": image_size,
@@ -109,7 +115,6 @@ class FluxSchnell:
             },
             "optional": {
                 "seed": ("INT", {"default": -1}),
-                "api_key": ("STRING", {"default": ""})
             }
         }
 
@@ -117,10 +122,7 @@ class FluxSchnell:
     FUNCTION = "generate_image"
     CATEGORY = "FAL"
 
-    def generate_image(self, prompt, image_size, num_inference_steps, num_images, enable_safety_checker, seed=-1, api_key=""):
-        if api_key:
-            os.environ['FAL_KEY'] = api_key
-
+    def generate_image(self, prompt, image_size, num_inference_steps, num_images, enable_safety_checker, seed=-1):
         arguments = {
             "prompt": prompt,
             "image_size": image_size,
@@ -141,7 +143,6 @@ class FluxSchnell:
 
 # Common methods for all classes
 def process_result(self, result):
-    import torch
     images = []
     for img_info in result["images"]:
         img_url = img_info["url"]
@@ -159,7 +160,6 @@ def process_result(self, result):
     return (img_tensor,)
 
 def create_blank_image(self):   
-    import torch
     blank_img = Image.new('RGB', (512, 512), color='black')
     img_array = np.array(blank_img).astype(np.float32) / 255.0
     img_tensor = torch.from_numpy(img_array)[None,]
