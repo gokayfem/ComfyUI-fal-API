@@ -141,6 +141,45 @@ class FluxSchnell:
             print(f"Error generating image with FluxSchnell: {str(e)}")
             return self.create_blank_image()
 
+class FluxPro11:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image_size": (["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"], {"default": "landscape_4_3"}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 10}),
+                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2"}),
+            },
+            "optional": {
+                "seed": ("INT", {"default": -1}),
+                "sync_mode": ("BOOLEAN", {"default": False}),
+            }
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL"
+
+    def generate_image(self, prompt, image_size, num_images, safety_tolerance, seed=-1, sync_mode=False):
+        arguments = {
+            "prompt": prompt,
+            "image_size": image_size,
+            "num_images": num_images,
+            "safety_tolerance": safety_tolerance,
+            "sync_mode": sync_mode
+        }
+        if seed != -1:
+            arguments["seed"] = seed
+
+        try:
+            handler = submit("fal-ai/flux-pro/v1.1", arguments=arguments)
+            result = handler.get()
+            return self.process_result(result)
+        except Exception as e:
+            print(f"Error generating image with FluxPro 1.1: {str(e)}")
+            return self.create_blank_image()
+
 # Common methods for all classes
 def process_result(self, result):
     images = []
@@ -166,7 +205,7 @@ def create_blank_image(self):
     return (img_tensor,)
 
 # Add common methods to all classes
-for cls in [FluxPro, FluxDev, FluxSchnell]:
+for cls in [FluxPro, FluxDev, FluxSchnell, FluxPro11]:
     cls.process_result = process_result
     cls.create_blank_image = create_blank_image
 
@@ -174,12 +213,14 @@ for cls in [FluxPro, FluxDev, FluxSchnell]:
 NODE_CLASS_MAPPINGS = {
     "FluxPro_fal": FluxPro,
     "FluxDev_fal": FluxDev,
-    "FluxSchnell_fal": FluxSchnell
+    "FluxSchnell_fal": FluxSchnell,
+    "FluxPro11_fal": FluxPro11
 }
 
 # Node display name mappings
 NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxPro_fal": "Flux Pro (fal)",
     "FluxDev_fal": "Flux Dev (fal)",
-    "FluxSchnell_fal": "Flux Schnell (fal)"
+    "FluxSchnell_fal": "Flux Schnell (fal)",
+    "FluxPro11_fal": "Flux Pro 1.1 (fal)"
 }
