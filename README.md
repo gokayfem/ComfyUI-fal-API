@@ -11,6 +11,14 @@ Get your fal API key from: [fal.ai](https://fal.ai/dashboard/keys)
 
 Put Your API Key inside ```config.ini```
 
+## If you get errors
+
+Go to this directory and apply 
+
+``` 
+ComfyUI_windows_portable>.\python_embeded\python.exe -m pip install fal-client
+``` 
+
 ## Examples
 
 ![image](https://github.com/user-attachments/assets/e9d2ab68-e735-4731-875c-c64c9df1a0fe)
