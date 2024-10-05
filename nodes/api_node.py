@@ -26,7 +26,9 @@ class FluxPro:
         return {
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
-                "image_size": (["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"], {"default": "landscape_4_3"}),
+                "image_size": (["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9", "custom"], {"default": "landscape_4_3"}),
+                "width": ("INT", {"default": 1024, "min": 512, "max": 1440, "step": 32}),
+                "height": ("INT", {"default": 768, "min": 512, "max": 1440, "step": 32}),
                 "num_inference_steps": ("INT", {"default": 28, "min": 1, "max": 100}),
                 "guidance_scale": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 20.0}),
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 10}),
@@ -41,15 +43,18 @@ class FluxPro:
     FUNCTION = "generate_image"
     CATEGORY = "FAL"
 
-    def generate_image(self, prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance, seed=-1):
+    def generate_image(self, prompt, image_size, width, height, num_inference_steps, guidance_scale, num_images, safety_tolerance, seed=-1):
         arguments = {
             "prompt": prompt,
-            "image_size": image_size,
             "num_inference_steps": num_inference_steps,
             "guidance_scale": guidance_scale,
             "num_images": num_images,
             "safety_tolerance": safety_tolerance
         }
+        if image_size == "custom":
+            arguments["image_size"] = {"width": width, "height": height}
+        else:
+            arguments["image_size"] = image_size
         if seed != -1:
             arguments["seed"] = seed
 
@@ -67,7 +72,9 @@ class FluxDev:
         return {
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
-                "image_size": (["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"], {"default": "landscape_4_3"}),
+                "image_size": (["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9", "custom"], {"default": "landscape_4_3"}),
+                "width": ("INT", {"default": 1024, "min": 512, "max": 1536, "step": 16}),
+                "height": ("INT", {"default": 768, "min": 512, "max": 1536, "step": 16}),
                 "num_inference_steps": ("INT", {"default": 28, "min": 1, "max": 100}),
                 "guidance_scale": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 20.0}),
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 10}),
@@ -82,15 +89,18 @@ class FluxDev:
     FUNCTION = "generate_image"
     CATEGORY = "FAL"
 
-    def generate_image(self, prompt, image_size, num_inference_steps, guidance_scale, num_images, enable_safety_checker, seed=-1):
+    def generate_image(self, prompt, image_size, width, height, num_inference_steps, guidance_scale, num_images, enable_safety_checker, seed=-1):
         arguments = {
             "prompt": prompt,
-            "image_size": image_size,
             "num_inference_steps": num_inference_steps,
             "guidance_scale": guidance_scale,
             "num_images": num_images,
             "enable_safety_checker": enable_safety_checker
         }
+        if image_size == "custom":
+            arguments["image_size"] = {"width": width, "height": height}
+        else:
+            arguments["image_size"] = image_size
         if seed != -1:
             arguments["seed"] = seed
 
@@ -108,7 +118,9 @@ class FluxSchnell:
         return {
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
-                "image_size": (["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"], {"default": "landscape_4_3"}),
+                "image_size": (["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9", "custom"], {"default": "landscape_4_3"}),
+                "width": ("INT", {"default": 1024, "min": 512, "max": 1536, "step": 32}),
+                "height": ("INT", {"default": 768, "min": 512, "max": 1536, "step": 32}),
                 "num_inference_steps": ("INT", {"default": 4, "min": 1, "max": 100}),
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 10}),
                 "enable_safety_checker": ("BOOLEAN", {"default": True}),
@@ -122,14 +134,17 @@ class FluxSchnell:
     FUNCTION = "generate_image"
     CATEGORY = "FAL"
 
-    def generate_image(self, prompt, image_size, num_inference_steps, num_images, enable_safety_checker, seed=-1):
+    def generate_image(self, prompt, image_size, width, height, num_inference_steps, num_images, enable_safety_checker, seed=-1):
         arguments = {
             "prompt": prompt,
-            "image_size": image_size,
             "num_inference_steps": num_inference_steps,
             "num_images": num_images,
             "enable_safety_checker": enable_safety_checker
         }
+        if image_size == "custom":
+            arguments["image_size"] = {"width": width, "height": height}
+        else:
+            arguments["image_size"] = image_size
         if seed != -1:
             arguments["seed"] = seed
 
@@ -147,7 +162,9 @@ class FluxPro11:
         return {
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
-                "image_size": (["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"], {"default": "landscape_4_3"}),
+                "image_size": (["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9", "custom"], {"default": "landscape_4_3"}),
+                "width": ("INT", {"default": 1024, "min": 512, "max": 1440, "step": 32}),
+                "height": ("INT", {"default": 768, "min": 512, "max": 1440, "step": 32}),
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 10}),
                 "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2"}),
             },
@@ -161,14 +178,17 @@ class FluxPro11:
     FUNCTION = "generate_image"
     CATEGORY = "FAL"
 
-    def generate_image(self, prompt, image_size, num_images, safety_tolerance, seed=-1, sync_mode=False):
+    def generate_image(self, prompt, image_size, width, height, num_images, safety_tolerance, seed=-1, sync_mode=False):
         arguments = {
             "prompt": prompt,
-            "image_size": image_size,
             "num_images": num_images,
             "safety_tolerance": safety_tolerance,
             "sync_mode": sync_mode
         }
+        if image_size == "custom":
+            arguments["image_size"] = {"width": width, "height": height}
+        else:
+            arguments["image_size"] = image_size
         if seed != -1:
             arguments["seed"] = seed
 
