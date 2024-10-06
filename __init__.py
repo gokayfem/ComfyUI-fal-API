@@ -2,7 +2,10 @@ import importlib.util
 import importlib
 
 node_list = [
-"api_node",
+"image_node",
+"video_node",
+"llm_node",
+"vlm_node",
 ]
 
 NODE_CLASS_MAPPINGS = {}

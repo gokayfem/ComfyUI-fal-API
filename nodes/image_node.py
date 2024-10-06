@@ -41,7 +41,7 @@ class FluxPro:
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL"
+    CATEGORY = "FAL/Image"
 
     def generate_image(self, prompt, image_size, width, height, num_inference_steps, guidance_scale, num_images, safety_tolerance, seed=-1):
         arguments = {
@@ -87,7 +87,7 @@ class FluxDev:
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL"
+    CATEGORY = "FAL/Image"
 
     def generate_image(self, prompt, image_size, width, height, num_inference_steps, guidance_scale, num_images, enable_safety_checker, seed=-1):
         arguments = {
@@ -132,7 +132,7 @@ class FluxSchnell:
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL"
+    CATEGORY = "FAL/Image"
 
     def generate_image(self, prompt, image_size, width, height, num_inference_steps, num_images, enable_safety_checker, seed=-1):
         arguments = {
@@ -176,7 +176,7 @@ class FluxPro11:
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL"
+    CATEGORY = "FAL/Image"
 
     def generate_image(self, prompt, image_size, width, height, num_images, safety_tolerance, seed=-1, sync_mode=False):
         arguments = {
