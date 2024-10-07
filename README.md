@@ -1,6 +1,6 @@
 # ComfyUI-fal-API
 
-Custom nodes for using Flux models with fal API in ComfyUI.
+Custom nodes for using Flux models with  fal API in ComfyUI with only one API Key for all.
 
 ## Table of Contents
 
