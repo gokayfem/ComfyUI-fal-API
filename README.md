@@ -56,6 +56,7 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **Flux Dev (fal)**: Use the development version of Flux for image generation
 - **Flux Schnell (fal)**: Fast image generation with Flux Schnell
 - **Flux Pro 1.1 (fal)**: Latest version of Flux Pro for image generation
+- **Flux General (fal)**: ControlNets, Ipadapters, Loras for Flux Dev
 
 ### Video Generation
 
