@@ -42,7 +42,7 @@ class LLMNode:
         }
 
         try:
-            handler = submit("fal-ai/llm", arguments=arguments)
+            handler = submit("fal-ai/any-llm", arguments=arguments)
             result = handler.get()
             return (result["output"],)
         except Exception as e:
