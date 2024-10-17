@@ -61,6 +61,39 @@ def upload_image(image):
         if 'temp_file_path' in locals():
             os.unlink(temp_file_path)
 
+class MiniMaxNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image": ("IMAGE",),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, prompt, image):
+        try:
+            image_url = upload_image(image)
+            if not image_url:
+                return ("Error: Unable to upload image.",)
+
+            arguments = {
+                "prompt": prompt,
+                "image_url": image_url,
+            }
+
+            handler = submit("fal-ai/minimax-video/image-to-video", arguments=arguments)
+            result = handler.get()
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            print(f"Error generating video: {str(e)}")
+            return ("Error: Unable to generate video.",)
+
 class KlingNode:
     @classmethod
     def INPUT_TYPES(cls):
@@ -341,6 +374,7 @@ NODE_CLASS_MAPPINGS = {
     "RunwayGen3_fal": RunwayGen3Node,
     "LumaDreamMachine_fal": LumaDreamMachineNode,
     "LoadVideoURL": LoadVideoURL,
+    "MiniMax_fal": MiniMaxNode,
 }
 
 # Update Node display name mappings
@@ -350,4 +384,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "RunwayGen3_fal": "Runway Gen3 Image-to-Video (fal)",
     "LumaDreamMachine_fal": "Luma Dream Machine (fal)",
     "LoadVideoURL": "Load Video from URL",
+    "MiniMax_fal": "MiniMax Video Generation (fal)",
 }
