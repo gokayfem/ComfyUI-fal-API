@@ -93,6 +93,33 @@ class MiniMaxNode:
         except Exception as e:
             print(f"Error generating video: {str(e)}")
             return ("Error: Unable to generate video.",)
+        
+class MiniMaxTextToVideoNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, prompt):
+        try:
+            arguments = {
+                "prompt": prompt,
+            }
+
+            handler = submit("fal-ai/minimax-video", arguments=arguments)
+            result = handler.get()
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            print(f"Error generating video: {str(e)}")
+            return ("Error: Unable to generate video.",)
 
 class KlingNode:
     @classmethod
@@ -375,6 +402,7 @@ NODE_CLASS_MAPPINGS = {
     "LumaDreamMachine_fal": LumaDreamMachineNode,
     "LoadVideoURL": LoadVideoURL,
     "MiniMax_fal": MiniMaxNode,
+    "MiniMaxTextToVideo_fal": MiniMaxTextToVideoNode,
 }
 
 # Update Node display name mappings
@@ -385,4 +413,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LumaDreamMachine_fal": "Luma Dream Machine (fal)",
     "LoadVideoURL": "Load Video from URL",
     "MiniMax_fal": "MiniMax Video Generation (fal)",
+    "MiniMaxTextToVideo_fal": "MiniMax Text-to-Video (fal)",
 }
