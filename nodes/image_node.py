@@ -253,11 +253,11 @@ class FluxLora:
                 "guidance_scale": ("FLOAT", {"default": 3.0, "min": 0.0, "max": 20.0, "step": 0.1}),
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
                 "enable_safety_checker": ("BOOLEAN", {"default": True}),
-                "lora_path_1": ("STRING", {"default": ""}),
-                "lora_scale_1": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05}),
             },
             "optional": {
                 "seed": ("INT", {"default": -1}),
+                "lora_path_1": ("STRING", {"default": ""}),
+                "lora_scale_1": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05}),
                 "lora_path_2": ("STRING", {"default": ""}),
                 "lora_scale_2": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05}),
             }
@@ -267,7 +267,7 @@ class FluxLora:
     FUNCTION = "generate_image"
     CATEGORY = "FAL/Image"
 
-    def generate_image(self, prompt, image_size, width, height, num_inference_steps, guidance_scale, num_images, enable_safety_checker, lora_path_1, lora_scale_1, seed=-1, lora_path_2="", lora_scale_2=0.7):
+    def generate_image(self, prompt, image_size, width, height, num_inference_steps, guidance_scale, num_images, enable_safety_checker, seed=-1, lora_path_1="", lora_scale_1=1.0, lora_path_2="", lora_scale_2=1.0):
         arguments = {
             "prompt": prompt,
             "num_inference_steps": num_inference_steps,
@@ -318,8 +318,6 @@ class FluxGeneral:
             },
             "optional": {
                 "seed": ("INT", {"default": -1}),
-                "loras": (["None", "XLabs-AI/flux-RealismLora"], {"default": "None"}),
-                "lora_scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.1}),
                 "ip_adapter_scale": ("FLOAT", {"default": 0.6, "min": 0.0, "max": 1.0, "step": 0.1}),
                 "controlnet_conditioning_scale": ("FLOAT", {"default": 0.6, "min": 0.0, "max": 1.0, "step": 0.1}),
                 "ip_adapters": (["None", "XLabs-AI/flux-ip-adapter"], {"default": "None"}),
@@ -355,7 +353,7 @@ class FluxGeneral:
     FUNCTION = "generate_image"
     CATEGORY = "FAL/Image"
 
-    def generate_image(self, prompt, image_size, width, height, num_inference_steps, guidance_scale, real_cfg_scale, num_images, enable_safety_checker, use_real_cfg, sync_mode, seed=-1, loras="None", lora_scale=1.0, ip_adapter_scale=0.6, controlnet_conditioning_scale=0.6, controlnet_union_control_mode="canny", ip_adapters="None", controlnets="None", controlnet_unions="None", control_image=None, control_mask=None, ip_adapter_image=None, ip_adapter_mask=None, lora_path_1="", lora_scale_1=1.0, lora_path_2="", lora_scale_2=1.0):
+    def generate_image(self, prompt, image_size, width, height, num_inference_steps, guidance_scale, real_cfg_scale, num_images, enable_safety_checker, use_real_cfg, sync_mode, seed=-1, lora_path_1="", lora_scale_1=1.0, lora_path_2="", lora_scale_2=1.0, ip_adapter_scale=0.6, controlnet_conditioning_scale=0.6, controlnet_union_control_mode="canny", ip_adapters="None", controlnets="None", controlnet_unions="None", control_image=None, control_mask=None, ip_adapter_image=None, ip_adapter_mask=None):
         arguments = {
             "prompt": prompt,
             "num_inference_steps": num_inference_steps,
@@ -372,13 +370,6 @@ class FluxGeneral:
             arguments["image_size"] = image_size
         if seed != -1:
             arguments["seed"] = seed
-
-        # Add loras if selected
-        if loras != "None":
-            arguments["loras"] = [{
-                "path": loras,
-                "scale": str(lora_scale)
-            }]
 
         # Add ip_adapters if selected
         if ip_adapters != "None":
