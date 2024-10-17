@@ -254,12 +254,12 @@ class FluxLora:
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
                 "enable_safety_checker": ("BOOLEAN", {"default": True}),
                 "lora_path_1": ("STRING", {"default": ""}),
-                "lora_scale_1": ("FLOAT", {"default": 0.7, "min": 0.0, "max": 1.0, "step": 0.1}),
+                "lora_scale_1": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05}),
             },
             "optional": {
                 "seed": ("INT", {"default": -1}),
                 "lora_path_2": ("STRING", {"default": ""}),
-                "lora_scale_2": ("FLOAT", {"default": 0.7, "min": 0.0, "max": 1.0, "step": 0.1}),
+                "lora_scale_2": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05}),
             }
         }
 
@@ -345,9 +345,9 @@ class FluxGeneral:
                 "ip_adapter_image": ("IMAGE",),
                 "ip_adapter_mask": ("MASK",),
                 "lora_path_1": ("STRING", {"default": ""}),
-                "lora_scale_1": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.1}),
+                "lora_scale_1": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05}),
                 "lora_path_2": ("STRING", {"default": ""}),
-                "lora_scale_2": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.1}),
+                "lora_scale_2": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05}),
             }
         }
 
