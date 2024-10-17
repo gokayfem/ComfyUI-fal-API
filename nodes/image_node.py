@@ -504,7 +504,7 @@ def create_blank_image(self):
     return (img_tensor,)
 
 # Add common methods to all classes
-for cls in [FluxPro, FluxDev, FluxSchnell, FluxPro11, FluxGeneral]:
+for cls in [FluxPro, FluxDev, FluxSchnell, FluxPro11, FluxGeneral, FluxLora]:
     cls.process_result = process_result
     cls.create_blank_image = create_blank_image
 
