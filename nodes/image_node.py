@@ -60,6 +60,60 @@ def upload_image(image):
         if 'temp_file_path' in locals():
             os.unlink(temp_file_path)
 
+class Recraft:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image_size": (["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9", "custom"], {"default": "square_hd"}),
+                "width": ("INT", {"default": 512, "min": 512, "max": 2048, "step": 64}),
+                "height": ("INT", {"default": 512, "min": 512, "max": 2048, "step": 64}),
+                "style": ([
+                    "any", "realistic_image", "digital_illustration", "vector_illustration",
+                    "realistic_image/b_and_w", "realistic_image/hard_flash", "realistic_image/hdr",
+                    "realistic_image/natural_light", "realistic_image/studio_portrait",
+                    "realistic_image/enterprise", "realistic_image/motion_blur",
+                    "digital_illustration/pixel_art", "digital_illustration/hand_drawn",
+                    "digital_illustration/grain", "digital_illustration/infantile_sketch",
+                    "digital_illustration/2d_art_poster", "digital_illustration/handmade_3d",
+                    "digital_illustration/hand_drawn_outline", "digital_illustration/engraving_color",
+                    "digital_illustration/2d_art_poster_2", "vector_illustration/engraving",
+                    "vector_illustration/line_art", "vector_illustration/line_circuit",
+                    "vector_illustration/linocut"
+                ], {"default": "realistic_image"}),
+            },
+            "optional": {
+                "style_id": ("STRING", {"default": ""}),
+            }
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(self, prompt, image_size, width, height, style, style_id=""):
+        arguments = {
+            "prompt": prompt,
+            "style": style,
+        }
+        
+        if image_size == "custom":
+            arguments["image_size"] = {"width": width, "height": height}
+        else:
+            arguments["image_size"] = image_size
+            
+        if style_id:
+            arguments["style_id"] = style_id
+
+        try:
+            handler = submit("fal-ai/recraft-v3", arguments=arguments)
+            result = handler.get()
+            return self.process_result(result)
+        except Exception as e:
+            print(f"Error generating image with Recraft: {str(e)}")
+            return self.create_blank_image()
+
 class FluxPro:
     @classmethod
     def INPUT_TYPES(cls):
@@ -504,7 +558,7 @@ def create_blank_image(self):
     return (img_tensor,)
 
 # Add common methods to all classes
-for cls in [FluxPro, FluxDev, FluxSchnell, FluxPro11, FluxGeneral, FluxLora]:
+for cls in [FluxPro, FluxDev, FluxSchnell, FluxPro11, FluxGeneral, FluxLora, Recraft]:
     cls.process_result = process_result
     cls.create_blank_image = create_blank_image
 
@@ -515,7 +569,8 @@ NODE_CLASS_MAPPINGS = {
     "FluxSchnell_fal": FluxSchnell,
     "FluxPro11_fal": FluxPro11,
     "FluxGeneral_fal": FluxGeneral,
-    "FluxLora_fal": FluxLora
+    "FluxLora_fal": FluxLora,
+    "Recraft_fal": Recraft
 }
 
 # Node display name mappings
@@ -525,5 +580,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxSchnell_fal": "Flux Schnell (fal)",
     "FluxPro11_fal": "Flux Pro 1.1 (fal)",
     "FluxGeneral_fal": "Flux General (fal)",
-    "FluxLora_fal": "Flux LoRA (fal)"
+    "FluxLora_fal": "Flux LoRA (fal)",
+    "Recraft_fal": "Recraft V3 (fal)"
 }
