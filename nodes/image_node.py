@@ -294,6 +294,49 @@ class FluxPro11:
             print(f"Error generating image with FluxPro 1.1: {str(e)}")
             return self.create_blank_image()
 
+class FluxUltra:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "aspect_ratio": (["21:9", "16:9", "4:3", "1:1", "3:4", "9:16", "9:21"], {"default": "16:9"}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 1}),
+                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2"}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                "raw": ("BOOLEAN", {"default": False}),
+                "sync_mode": ("BOOLEAN", {"default": False}),
+            },
+            "optional": {
+                "seed": ("INT", {"default": -1}),
+            }
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(self, prompt, aspect_ratio, num_images, safety_tolerance, enable_safety_checker, raw, sync_mode, seed=-1):
+        arguments = {
+            "prompt": prompt,
+            "aspect_ratio": aspect_ratio,
+            "num_images": num_images,
+            "safety_tolerance": safety_tolerance,
+            "enable_safety_checker": enable_safety_checker,
+            "raw": raw,
+            "sync_mode": sync_mode
+        }
+        if seed != -1:
+            arguments["seed"] = seed
+
+        try:
+            handler = submit("fal-ai/flux-pro/v1.1-ultra", arguments=arguments)
+            result = handler.get()
+            return self.process_result(result)
+        except Exception as e:
+            print(f"Error generating image with FluxUltra: {str(e)}")
+            return self.create_blank_image()        
+
 class FluxLora:
     @classmethod
     def INPUT_TYPES(cls):
@@ -558,7 +601,7 @@ def create_blank_image(self):
     return (img_tensor,)
 
 # Add common methods to all classes
-for cls in [FluxPro, FluxDev, FluxSchnell, FluxPro11, FluxGeneral, FluxLora, Recraft]:
+for cls in [FluxPro, FluxDev, FluxSchnell, FluxPro11, FluxUltra, FluxGeneral, FluxLora, Recraft]:
     cls.process_result = process_result
     cls.create_blank_image = create_blank_image
 
@@ -568,6 +611,7 @@ NODE_CLASS_MAPPINGS = {
     "FluxDev_fal": FluxDev,
     "FluxSchnell_fal": FluxSchnell,
     "FluxPro11_fal": FluxPro11,
+    "FluxUltra_fal": FluxUltra,
     "FluxGeneral_fal": FluxGeneral,
     "FluxLora_fal": FluxLora,
     "Recraft_fal": Recraft
@@ -579,6 +623,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxDev_fal": "Flux Dev (fal)",
     "FluxSchnell_fal": "Flux Schnell (fal)",
     "FluxPro11_fal": "Flux Pro 1.1 (fal)",
+    "FluxUltra_fal": "Flux Ultra (fal)",
     "FluxGeneral_fal": "Flux General (fal)",
     "FluxLora_fal": "Flux LoRA (fal)",
     "Recraft_fal": "Recraft V3 (fal)"
