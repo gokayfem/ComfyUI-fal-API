@@ -24,7 +24,7 @@ Custom nodes for using Flux models with  fal API in ComfyUI with only one API Ke
 
 2. Clone this repository:
    ```
-   git clone https://github.com/gokayfem/ComfyUI-FLUX-fal-API.git
+   git clone https://github.com/gokayfem/ComfyUI-fal-API.git
    ```
 
 3. Install the required dependencies:
