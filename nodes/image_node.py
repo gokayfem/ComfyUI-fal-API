@@ -60,6 +60,58 @@ def upload_image(image):
         if 'temp_file_path' in locals():
             os.unlink(temp_file_path)
 
+class Sana:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image_size": (["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9", "custom"], {"default": "square_hd"}),
+                "width": ("INT", {"default": 3840, "min": 512, "max": 4096, "step": 16}),
+                "height": ("INT", {"default": 2160, "min": 512, "max": 4096, "step": 16}),
+                "num_inference_steps": ("INT", {"default": 18, "min": 1, "max": 50}),
+                "guidance_scale": ("FLOAT", {"default": 5.0, "min": 1.0, "max": 20.0, "step": 0.1}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+            },
+            "optional": {
+                "negative_prompt": ("STRING", {"default": "", "multiline": True}),
+                "seed": ("INT", {"default": -1}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                "output_format": (["png", "jpeg"], {"default": "png"}),
+            }
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(self, prompt, image_size, width, height, num_inference_steps, guidance_scale, num_images, negative_prompt="", seed=-1, enable_safety_checker=True, output_format="png"):
+        arguments = {
+            "prompt": prompt,
+            "negative_prompt": negative_prompt,
+            "num_inference_steps": num_inference_steps,
+            "guidance_scale": guidance_scale,
+            "num_images": num_images,
+            "enable_safety_checker": enable_safety_checker,
+            "output_format": output_format
+        }
+
+        if image_size == "custom":
+            arguments["image_size"] = {"width": width, "height": height}
+        else:
+            arguments["image_size"] = image_size
+
+        if seed != -1:
+            arguments["seed"] = seed
+
+        try:
+            handler = submit("fal-ai/sana", arguments=arguments)
+            result = handler.get()
+            return self.process_result(result)
+        except Exception as e:
+            print(f"Error generating image with Sana: {str(e)}")
+            return self.create_blank_image()
+
 class Recraft:
     @classmethod
     def INPUT_TYPES(cls):
@@ -67,8 +119,8 @@ class Recraft:
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
                 "image_size": (["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9", "custom"], {"default": "square_hd"}),
-                "width": ("INT", {"default": 512, "min": 512, "max": 2048, "step": 64}),
-                "height": ("INT", {"default": 512, "min": 512, "max": 2048, "step": 64}),
+                "width": ("INT", {"default": 512, "min": 512, "max": 2048, "step": 16}),
+                "height": ("INT", {"default": 512, "min": 512, "max": 2048, "step": 16}),
                 "style": ([
                     "any", "realistic_image", "digital_illustration", "vector_illustration",
                     "realistic_image/b_and_w", "realistic_image/hard_flash", "realistic_image/hdr",
@@ -601,7 +653,7 @@ def create_blank_image(self):
     return (img_tensor,)
 
 # Add common methods to all classes
-for cls in [FluxPro, FluxDev, FluxSchnell, FluxPro11, FluxUltra, FluxGeneral, FluxLora, Recraft]:
+for cls in [FluxPro, FluxDev, FluxSchnell, FluxPro11, FluxUltra, FluxGeneral, FluxLora, Recraft, Sana]:
     cls.process_result = process_result
     cls.create_blank_image = create_blank_image
 
@@ -614,7 +666,8 @@ NODE_CLASS_MAPPINGS = {
     "FluxUltra_fal": FluxUltra,
     "FluxGeneral_fal": FluxGeneral,
     "FluxLora_fal": FluxLora,
-    "Recraft_fal": Recraft
+    "Recraft_fal": Recraft,
+    "Sana_fal": Sana,
 }
 
 # Node display name mappings
@@ -626,5 +679,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxUltra_fal": "Flux Ultra (fal)",
     "FluxGeneral_fal": "Flux General (fal)",
     "FluxLora_fal": "Flux LoRA (fal)",
-    "Recraft_fal": "Recraft V3 (fal)"
+    "Recraft_fal": "Recraft V3 (fal)",
+    "Sana_fal": "Sana (fal)"
 }
