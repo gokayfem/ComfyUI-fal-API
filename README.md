@@ -36,7 +36,7 @@ Custom nodes for using Flux models with  fal API in ComfyUI with only one API Ke
 
 1. Get your fal API key from [fal.ai](https://fal.ai/dashboard/keys)
 
-2. Open the `config.ini` file in the root directory of this project
+2. Open the `config.ini` file inside custom_nodes/ComfyUI-fal-API
 
 3. Replace `<your_fal_api_key_here>` with your actual fal API key:
    ```ini
