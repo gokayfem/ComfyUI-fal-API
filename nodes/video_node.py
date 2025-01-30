@@ -423,6 +423,41 @@ class VideoUpscalerNode:
             print(f"Error upscaling video: {str(e)}")
             return ("Error: Unable to upscale video.",)
 
+class MiniMaxSubjectReferenceNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "subject_reference_image": ("IMAGE",),
+                "prompt_optimizer": ("BOOLEAN", {"default": True}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, prompt, subject_reference_image, prompt_optimizer):
+        try:
+            image_url = upload_image(subject_reference_image)
+            if not image_url:
+                return ("Error: Unable to upload subject reference image.",)
+
+            arguments = {
+                "prompt": prompt,
+                "subject_reference_image_url": image_url,
+                "prompt_optimizer": prompt_optimizer
+            }
+
+            handler = submit("fal-ai/minimax/video-01-subject-reference", arguments=arguments)
+            result = handler.get()
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            print(f"Error generating video: {str(e)}")
+            return ("Error: Unable to generate video.",)
+
 # Update Node class mappings
 NODE_CLASS_MAPPINGS = {
     "Kling_fal": KlingNode,
@@ -432,6 +467,7 @@ NODE_CLASS_MAPPINGS = {
     "LoadVideoURL": LoadVideoURL,
     "MiniMax_fal": MiniMaxNode,
     "MiniMaxTextToVideo_fal": MiniMaxTextToVideoNode,
+    "MiniMaxSubjectReference_fal": MiniMaxSubjectReferenceNode,
     "VideoUpscaler_fal": VideoUpscalerNode,
 }
 
@@ -444,5 +480,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LoadVideoURL": "Load Video from URL",
     "MiniMax_fal": "MiniMax Video Generation (fal)",
     "MiniMaxTextToVideo_fal": "MiniMax Text-to-Video (fal)",
+    "MiniMaxSubjectReference_fal": "MiniMax Subject Reference (fal)",
     "VideoUpscaler_fal": "Video Upscaler (fal)",
 }
