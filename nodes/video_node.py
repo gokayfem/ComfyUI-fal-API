@@ -394,24 +394,55 @@ class LoadVideoURL:
 
         return (frames, frame_count, video_info)
 
+class VideoUpscalerNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "video_url": ("STRING", {"default": ""}),
+                "scale": ("FLOAT", {"default": 2.0, "min": 1.0, "max": 4.0, "step": 0.5}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "upscale_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def upscale_video(self, video_url, scale):
+        try:
+            arguments = {
+                "video_url": video_url,
+                "scale": scale
+            }
+
+            handler = submit("fal-ai/video-upscaler", arguments=arguments)
+            result = handler.get()
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            print(f"Error upscaling video: {str(e)}")
+            return ("Error: Unable to upscale video.",)
+
 # Update Node class mappings
 NODE_CLASS_MAPPINGS = {
     "Kling_fal": KlingNode,
-    "KlingPro_fal": KlingProNode,  # Add this line
+    "KlingPro_fal": KlingProNode,
     "RunwayGen3_fal": RunwayGen3Node,
     "LumaDreamMachine_fal": LumaDreamMachineNode,
     "LoadVideoURL": LoadVideoURL,
     "MiniMax_fal": MiniMaxNode,
     "MiniMaxTextToVideo_fal": MiniMaxTextToVideoNode,
+    "VideoUpscaler_fal": VideoUpscalerNode,
 }
 
 # Update Node display name mappings
 NODE_DISPLAY_NAME_MAPPINGS = {
     "Kling_fal": "Kling Video Generation (fal)",
-    "KlingPro_fal": "Kling Pro Video Generation (fal)",  # Add this line
+    "KlingPro_fal": "Kling Pro Video Generation (fal)",
     "RunwayGen3_fal": "Runway Gen3 Image-to-Video (fal)",
     "LumaDreamMachine_fal": "Luma Dream Machine (fal)",
     "LoadVideoURL": "Load Video from URL",
     "MiniMax_fal": "MiniMax Video Generation (fal)",
     "MiniMaxTextToVideo_fal": "MiniMax Text-to-Video (fal)",
+    "VideoUpscaler_fal": "Video Upscaler (fal)",
 }
