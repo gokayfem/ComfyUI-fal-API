@@ -6,6 +6,7 @@ node_list = [
 "video_node",
 "llm_node",
 "vlm_node",
+"trainer_node",
 ]
 
 NODE_CLASS_MAPPINGS = {}
