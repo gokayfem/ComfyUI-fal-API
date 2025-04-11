@@ -1,6 +1,6 @@
 import os
 import configparser
-from fal_client import submit, upload_file
+from fal_client import submit, upload_file, AsyncClient
 import torch
 from PIL import Image
 import tempfile
@@ -8,6 +8,8 @@ import numpy as np
 import requests
 from urllib.parse import urlparse
 import cv2
+import asyncio
+import aiohttp
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
@@ -458,6 +460,127 @@ class MiniMaxSubjectReferenceNode:
             print(f"Error generating video: {str(e)}")
             return ("Error: Unable to generate video.",)
 
+class CombinedVideoGenerationNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image": ("IMAGE",),
+                "kling_duration": (["5", "10"], {"default": "5"}),
+                "kling_luma_aspect_ratio": (["16:9", "9:16", "1:1"], {"default": "16:9"}),
+                "luma_loop": ("BOOLEAN", {"default": False}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING", "STRING", "STRING")
+    RETURN_NAMES = ("klingpro_video", "minimax_video", "luma_video")
+    FUNCTION = "generate_videos"
+    CATEGORY = "FAL/VideoGeneration"
+
+    async def generate_klingpro_video(self, client, prompt, image_url, duration, aspect_ratio):
+        try:
+            arguments = {
+                "prompt": prompt,
+                "image_url": image_url,
+                "duration": duration,
+                "aspect_ratio": aspect_ratio,
+            }
+            handler = await client.submit("fal-ai/kling-video/v1/pro/image-to-video", arguments=arguments)
+            while True:
+                result = await handler.get()
+                # Check if the result contains a video URL (status 200)
+                if "video" in result and "url" in result["video"]:
+                    return result["video"]["url"]
+                # Check if the result indicates failure
+                elif result.get("status") == "FAILED":
+                    raise Exception("Video generation failed")
+                # Otherwise, it's still in progress (status 202)
+                await asyncio.sleep(1)  # Poll every second
+        except Exception as e:
+            print(f"Error generating KlingPro video: {str(e)}")
+            return "Error: Unable to generate KlingPro video."
+
+    async def generate_minimax_video(self, client, prompt, image_url):
+        try:
+            arguments = {
+                "prompt": prompt,
+                "image_url": image_url,
+            }
+            handler = await client.submit("fal-ai/minimax-video/image-to-video", arguments=arguments)
+            while True:
+                result = await handler.get()
+                # Check if the result contains a video URL (status 200)
+                if "video" in result and "url" in result["video"]:
+                    return result["video"]["url"]
+                # Check if the result indicates failure
+                elif result.get("status") == "FAILED":
+                    raise Exception("Video generation failed")
+                # Otherwise, it's still in progress (status 202)
+                await asyncio.sleep(1)  # Poll every second
+        except Exception as e:
+            print(f"Error generating MiniMax video: {str(e)}")
+            return "Error: Unable to generate MiniMax video."
+
+    async def generate_luma_video(self, client, prompt, image_url, aspect_ratio, luma_loop):
+        try:
+            arguments = {
+                "prompt": prompt,
+                "image_url": image_url,
+                "aspect_ratio": aspect_ratio,
+                "loop": luma_loop,
+            }
+            handler = await client.submit("fal-ai/luma-dream-machine/image-to-video", arguments=arguments)
+            while True:
+                result = await handler.get()
+                # Check if the result contains a video URL (status 200)
+                if "video" in result and "url" in result["video"]:
+                    return result["video"]["url"]
+                # Check if the result indicates failure
+                elif result.get("status") == "FAILED":
+                    raise Exception("Video generation failed")
+                # Otherwise, it's still in progress (status 202)
+                await asyncio.sleep(1)  # Poll every second
+        except Exception as e:
+            print(f"Error generating Luma video: {str(e)}")
+            return "Error: Unable to generate Luma video."
+
+    async def generate_all_videos(self, prompt, image_url, duration, aspect_ratio, luma_loop):
+        client = AsyncClient()
+        try:
+            tasks = [
+                self.generate_klingpro_video(client, prompt, image_url, duration, aspect_ratio),
+                self.generate_minimax_video(client, prompt, image_url),
+                self.generate_luma_video(client, prompt, image_url, aspect_ratio, luma_loop)
+            ]
+            return await asyncio.gather(*tasks)
+        except Exception as e:
+            print(f"Error in generate_all_videos: {str(e)}")
+            return ["Error: Unable to generate videos."] * 3
+        # No need to close the client as it doesn't have a close method
+
+    def generate_videos(self, prompt, image, duration, aspect_ratio, luma_loop):
+        try:
+            # Upload image once to be used by all services
+            image_url = upload_image(image)
+            if not image_url:
+                return ("Error: Unable to upload image.", "Error: Unable to upload image.", "Error: Unable to upload image.")
+
+            # Create event loop for async operations
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+            # Run all video generations concurrently
+            results = loop.run_until_complete(
+                self.generate_all_videos(prompt, image_url, duration, aspect_ratio, luma_loop)
+            )
+            loop.close()
+
+            return tuple(results)
+        except Exception as e:
+            print(f"Error in combined video generation: {str(e)}")
+            return ("Error: Unable to generate videos.", "Error: Unable to generate videos.", "Error: Unable to generate videos.")
+
 # Update Node class mappings
 NODE_CLASS_MAPPINGS = {
     "Kling_fal": KlingNode,
@@ -469,6 +592,7 @@ NODE_CLASS_MAPPINGS = {
     "MiniMaxTextToVideo_fal": MiniMaxTextToVideoNode,
     "MiniMaxSubjectReference_fal": MiniMaxSubjectReferenceNode,
     "VideoUpscaler_fal": VideoUpscalerNode,
+    "CombinedVideoGeneration_fal": CombinedVideoGenerationNode,
 }
 
 # Update Node display name mappings
@@ -482,4 +606,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "MiniMaxTextToVideo_fal": "MiniMax Text-to-Video (fal)",
     "MiniMaxSubjectReference_fal": "MiniMax Subject Reference (fal)",
     "VideoUpscaler_fal": "Video Upscaler (fal)",
+    "CombinedVideoGeneration_fal": "Combined Video Generation (fal)",
 }
