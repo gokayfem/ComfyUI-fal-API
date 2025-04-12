@@ -478,13 +478,13 @@ class CombinedVideoGenerationNode:
     FUNCTION = "generate_videos"
     CATEGORY = "FAL/VideoGeneration"
 
-    async def generate_klingpro_video(self, client, prompt, image_url, duration, aspect_ratio):
+    async def generate_klingpro_video(self, client, prompt, image_url, kling_duration, kling_luma_aspect_ratio):
         try:
             arguments = {
                 "prompt": prompt,
                 "image_url": image_url,
-                "duration": duration,
-                "aspect_ratio": aspect_ratio,
+                "duration": kling_duration,
+                "aspect_ratio": kling_luma_aspect_ratio,
             }
             handler = await client.submit("fal-ai/kling-video/v1/pro/image-to-video", arguments=arguments)
             while True:
@@ -522,12 +522,12 @@ class CombinedVideoGenerationNode:
             print(f"Error generating MiniMax video: {str(e)}")
             return "Error: Unable to generate MiniMax video."
 
-    async def generate_luma_video(self, client, prompt, image_url, aspect_ratio, luma_loop):
+    async def generate_luma_video(self, client, prompt, image_url, kling_luma_aspect_ratio, luma_loop):
         try:
             arguments = {
                 "prompt": prompt,
                 "image_url": image_url,
-                "aspect_ratio": aspect_ratio,
+                "aspect_ratio": kling_luma_aspect_ratio,
                 "loop": luma_loop,
             }
             handler = await client.submit("fal-ai/luma-dream-machine/image-to-video", arguments=arguments)
@@ -545,13 +545,13 @@ class CombinedVideoGenerationNode:
             print(f"Error generating Luma video: {str(e)}")
             return "Error: Unable to generate Luma video."
 
-    async def generate_all_videos(self, prompt, image_url, duration, aspect_ratio, luma_loop):
+    async def generate_all_videos(self, prompt, image_url, kling_duration, kling_luma_aspect_ratio, luma_loop):
         client = AsyncClient()
         try:
             tasks = [
-                self.generate_klingpro_video(client, prompt, image_url, duration, aspect_ratio),
+                self.generate_klingpro_video(client, prompt, image_url, kling_duration, kling_luma_aspect_ratio),
                 self.generate_minimax_video(client, prompt, image_url),
-                self.generate_luma_video(client, prompt, image_url, aspect_ratio, luma_loop)
+                self.generate_luma_video(client, prompt, image_url, kling_luma_aspect_ratio, luma_loop)
             ]
             return await asyncio.gather(*tasks)
         except Exception as e:
@@ -559,7 +559,7 @@ class CombinedVideoGenerationNode:
             return ["Error: Unable to generate videos."] * 3
         # No need to close the client as it doesn't have a close method
 
-    def generate_videos(self, prompt, image, duration, aspect_ratio, luma_loop):
+    def generate_videos(self, prompt, image, kling_duration, kling_luma_aspect_ratio, luma_loop):
         try:
             # Upload image once to be used by all services
             image_url = upload_image(image)
@@ -572,7 +572,7 @@ class CombinedVideoGenerationNode:
 
             # Run all video generations concurrently
             results = loop.run_until_complete(
-                self.generate_all_videos(prompt, image_url, duration, aspect_ratio, luma_loop)
+                self.generate_all_videos(prompt, image_url, kling_duration, kling_luma_aspect_ratio, luma_loop)
             )
             loop.close()
 
