@@ -1,13 +1,10 @@
 import os
 import configparser
-from fal_client import submit, upload_file
+from fal_client.client import SyncClient
+import tempfile
+import zipfile
 import torch
 from PIL import Image
-import tempfile
-import numpy as np
-import requests
-from urllib.parse import urlparse
-import cv2
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
@@ -22,464 +19,158 @@ try:
 except KeyError:
     print("Error: FAL_KEY not found in config.ini")
 
-def upload_image(image):
-    try:
-        # Convert the image tensor to a numpy array
-        if isinstance(image, torch.Tensor):
-            image_np = image.cpu().numpy()
-        else:
-            image_np = np.array(image)
+# Create the client with API key
+fal_client = SyncClient(key=fal_key)
 
-        # Ensure the image is in the correct format (H, W, C)
-        if image_np.ndim == 4:
-            image_np = image_np.squeeze(0)  # Remove batch dimension if present
-        if image_np.ndim == 2:
-            image_np = np.stack([image_np] * 3, axis=-1)  # Convert grayscale to RGB
-        elif image_np.shape[0] == 3:
-            image_np = np.transpose(image_np, (1, 2, 0))  # Change from (C, H, W) to (H, W, C)
+def create_zip_from_images(images):
+    """Create a zip file from a list of images."""
+    with tempfile.NamedTemporaryFile(suffix='.zip', delete=False) as temp_zip:
+        with zipfile.ZipFile(temp_zip, 'w') as zf:
+            for idx, img_tensor in enumerate(images):
+                # Convert tensor to PIL Image
+                if isinstance(img_tensor, torch.Tensor):
+                    # Convert to numpy and scale to 0-255 range
+                    img_np = (img_tensor.cpu().numpy() * 255).astype('uint8')
+                    # Handle different tensor formats
+                    if img_np.shape[0] == 3:  # If in format (C, H, W)
+                        img_np = img_np.transpose(1, 2, 0)
+                    img = Image.fromarray(img_np)
+                else:
+                    img = img_tensor
 
-        # Normalize the image data to 0-255 range
-        if image_np.dtype == np.float32 or image_np.dtype == np.float64:
-            image_np = (image_np * 255).astype(np.uint8)
-
-        # Convert to PIL Image
-        pil_image = Image.fromarray(image_np)
-
-        # Save the image to a temporary file
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_file:
-            pil_image.save(temp_file, format="PNG")
-            temp_file_path = temp_file.name
-
-        # Upload the temporary file
-        image_url = upload_file(temp_file_path)
-        return image_url
-    except Exception as e:
-        print(f"Error uploading image: {str(e)}")
-        return None
-    finally:
-        # Clean up the temporary file
-        if 'temp_file_path' in locals():
-            os.unlink(temp_file_path)
-
-class MiniMaxNode:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
-                "image": ("IMAGE",),
-            },
-        }
-
-    RETURN_TYPES = ("STRING",)
-    FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
-
-    def generate_video(self, prompt, image):
-        try:
-            image_url = upload_image(image)
-            if not image_url:
-                return ("Error: Unable to upload image.",)
-
-            arguments = {
-                "prompt": prompt,
-                "image_url": image_url,
-            }
-
-            handler = submit("fal-ai/minimax-video/image-to-video", arguments=arguments)
-            result = handler.get()
-            video_url = result["video"]["url"]
-            return (video_url,)
-        except Exception as e:
-            print(f"Error generating video: {str(e)}")
-            return ("Error: Unable to generate video.",)
+                # Save image to temporary file
+                with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_img:
+                    img.save(temp_img, format='PNG')
+                    temp_img_path = temp_img.name
+                
+                # Add to zip file
+                zf.write(temp_img_path, f'image_{idx}.png')
+                os.unlink(temp_img_path)
         
-class MiniMaxTextToVideoNode:
+        return fal_client.upload_file(temp_zip.name)
+
+class FluxLoraTrainerNode:
     @classmethod
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
-            },
-        }
-
-    RETURN_TYPES = ("STRING",)
-    FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
-
-    def generate_video(self, prompt):
-        try:
-            arguments = {
-                "prompt": prompt,
-            }
-
-            handler = submit("fal-ai/minimax-video", arguments=arguments)
-            result = handler.get()
-            video_url = result["video"]["url"]
-            return (video_url,)
-        except Exception as e:
-            print(f"Error generating video: {str(e)}")
-            return ("Error: Unable to generate video.",)
-
-class KlingNode:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
-                "duration": (["5", "10"], {"default": "5"}),
-                "aspect_ratio": (["16:9", "9:16", "1:1"], {"default": "16:9"}),
+                "images": ("IMAGE",),
+                "steps": ("INT", {"default": 1000, "min": 100, "max": 10000, "step": 100}),
+                "create_masks": ("BOOLEAN", {"default": True}),
+                "is_style": ("BOOLEAN", {"default": False}),
             },
             "optional": {
-                "image": ("IMAGE",),
-            },
+                "trigger_word": ("STRING", {"default": ""}),
+                "images_zip_url": ("STRING", {"default": ""}),
+                "is_input_format_already_preprocessed": ("BOOLEAN", {"default": False}),
+                "data_archive_format": ("STRING", {"default": ""}),
+            }
         }
-
+    
     RETURN_TYPES = ("STRING",)
-    FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    RETURN_NAMES = ("lora_file_url",)
+    FUNCTION = "train_lora"
+    CATEGORY = "FAL/Training"
 
-    def generate_video(self, prompt, duration, aspect_ratio, image=None):
-        arguments = {
-            "prompt": prompt,
-            "duration": duration,
-            "aspect_ratio": aspect_ratio,
-        }
-
+    def train_lora(self, images, steps, create_masks, is_style, trigger_word="", images_zip_url="", 
+                  is_input_format_already_preprocessed=False, data_archive_format=""):
         try:
-            if image is not None:
-                image_url = upload_image(image)
-                if image_url:
-                    arguments["image_url"] = image_url
-                    handler = submit("fal-ai/kling-video/v1/standard/image-to-video", arguments=arguments)
-                else:
-                    return ("Error: Unable to upload image.",)
-            else:
-                handler = submit("fal-ai/kling-video/v1/standard/text-to-video", arguments=arguments)
+            # Use provided zip URL if available, otherwise create and upload zip file
+            images_url = images_zip_url if images_zip_url else create_zip_from_images(images)
+            if not images_url:
+                return ("Error: Unable to upload images.", "")
 
+            # Prepare arguments for the API
+            arguments = {
+                "images_data_url": images_url,
+                "steps": steps,
+                "create_masks": create_masks,
+                "is_style": is_style,
+                "is_input_format_already_preprocessed": is_input_format_already_preprocessed,
+            }
+            
+            if trigger_word:
+                arguments["trigger_word"] = trigger_word
+            
+            if data_archive_format:
+                arguments["data_archive_format"] = data_archive_format
+
+            # Submit training job
+            handler = fal_client.submit("fal-ai/flux-lora-fast-training", arguments=arguments)
             result = handler.get()
-            video_url = result["video"]["url"]
-            return (video_url,)
-        except Exception as e:
-            print(f"Error generating video: {str(e)}")
-            return ("Error: Unable to generate video.",)
 
-class KlingProNode:
+            lora_url = result["diffusers_lora_file"]["url"]
+
+            return (lora_url, )
+
+        except Exception as e:
+            print(f"Error during LoRA training: {str(e)}")
+            return ("Error: Training failed.", "")
+
+class HunyuanVideoLoraTrainerNode:
     @classmethod
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
-                "duration": (["5", "10"], {"default": "5"}),
-                "aspect_ratio": (["16:9", "9:16", "1:1"], {"default": "16:9"}),
+                "images": ("IMAGE",),
+                "steps": ("INT", {"default": 1000, "min": 100, "max": 10000, "step": 100}),
             },
             "optional": {
-                "image": ("IMAGE",),
-            },
-        }
-
-    RETURN_TYPES = ("STRING",)
-    FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
-
-    def generate_video(self, prompt, duration, aspect_ratio, image=None):
-        arguments = {
-            "prompt": prompt,
-            "duration": duration,
-            "aspect_ratio": aspect_ratio,
-        }
-
-        try:
-            if image is not None:
-                image_url = upload_image(image)
-                if image_url:
-                    arguments["image_url"] = image_url
-                    handler = submit("fal-ai/kling-video/v1/pro/image-to-video", arguments=arguments)
-                else:
-                    return ("Error: Unable to upload image.",)
-            else:
-                handler = submit("fal-ai/kling-video/v1/pro/text-to-video", arguments=arguments)
-
-            result = handler.get()
-            video_url = result["video"]["url"]
-            return (video_url,)
-        except Exception as e:
-            print(f"Error generating video: {str(e)}")
-            return ("Error: Unable to generate video.",)
-
-class RunwayGen3Node:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
-                "image": ("IMAGE",),
-                "duration": (["5", "10"], {"default": "5"}),
-            },
-        }
-
-    RETURN_TYPES = ("STRING",)
-    FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
-
-    def generate_video(self, prompt, image, duration):
-        try:
-            image_url = upload_image(image)
-            if not image_url:
-                return ("Error: Unable to upload image.",)
-
-            arguments = {
-                "prompt": prompt,
-                "image_url": image_url,
-                "duration": duration,
+                "trigger_word": ("STRING", {"default": ""}),
+                "learning_rate": ("FLOAT", {"default": 0.0001, "min": 0.00001, "max": 0.01}),
+                "do_caption": ("BOOLEAN", {"default": True}),
+                "images_zip_url": ("STRING", {"default": ""}),
+                "data_archive_format": ("STRING", {"default": ""}),
             }
-
-            handler = submit("fal-ai/runway-gen3/turbo/image-to-video", arguments=arguments)
-            result = handler.get()
-            video_url = result["video"]["url"]
-            return (video_url,)
-        except Exception as e:
-            print(f"Error generating video: {str(e)}")
-            return ("Error: Unable to generate video.",)
-
-class LumaDreamMachineNode:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
-                "mode": (["text-to-video", "image-to-video"], {"default": "text-to-video"}),
-                "aspect_ratio": (["16:9", "9:16", "4:3", "3:4", "21:9", "9:21"], {"default": "16:9"}),
-            },
-            "optional": {
-                "image": ("IMAGE",),
-                "loop": ("BOOLEAN", {"default": False}),
-            },
         }
-
+    
     RETURN_TYPES = ("STRING",)
-    FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    RETURN_NAMES = ("lora_file_url",)
+    FUNCTION = "train_lora"
+    CATEGORY = "FAL/Training"
 
-    def generate_video(self, prompt, mode, aspect_ratio, image=None, loop=False):
-        arguments = {
-            "prompt": prompt,
-            "aspect_ratio": aspect_ratio,
-            "loop": loop,
-        }
-
+    def train_lora(self, images, steps, trigger_word="", learning_rate=0.0001, do_caption=True, 
+                  images_zip_url="", data_archive_format=""):
         try:
-            if mode == "image-to-video":
-                if image is None:
-                    return ("Error: Image is required for image-to-video mode.",)
-                image_url = upload_image(image)
-                if not image_url:
-                    return ("Error: Unable to upload image.",)
-                arguments["image_url"] = image_url
-                endpoint = "fal-ai/luma-dream-machine/image-to-video"
-            else:
-                endpoint = "fal-ai/luma-dream-machine"
+            # Use provided zip URL if available, otherwise create and upload zip file
+            images_url = images_zip_url if images_zip_url else create_zip_from_images(images)
+            if not images_url:
+                return ("Error: Unable to upload images.", "")
 
-            handler = submit(endpoint, arguments=arguments)
-            result = handler.get()
-            video_url = result["video"]["url"]
-            return (video_url,)
-        except Exception as e:
-            print(f"Error generating video: {str(e)}")
-            return ("Error: Unable to generate video.",)
-
-class LoadVideoURL:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "url": ("STRING", {"default": "https://example.com/video.mp4"}),
-                "force_rate": ("INT", {"default": 0, "min": 0, "max": 60, "step": 1}),
-                "force_size": (["Disabled", "Custom Height", "Custom Width", "Custom", "256x?", "?x256", "256x256", "512x?", "?x512", "512x512"],),
-                "custom_width": ("INT", {"default": 512, "min": 0, "max": 8192, "step": 8}),
-                "custom_height": ("INT", {"default": 512, "min": 0, "max": 8192, "step": 8}),
-                "frame_load_cap": ("INT", {"default": 0, "min": 0, "max": 1000000, "step": 1}),
-                "skip_first_frames": ("INT", {"default": 0, "min": 0, "max": 1000000, "step": 1}),
-                "select_every_nth": ("INT", {"default": 1, "min": 1, "max": 1000000, "step": 1}),
-            },
-        }
-
-    RETURN_TYPES = ("IMAGE", "INT", "VHS_VIDEOINFO")
-    RETURN_NAMES = ("frames", "frame_count", "video_info")
-    FUNCTION = "load_video_from_url"
-    CATEGORY = "video"
-
-    def load_video_from_url(self, url, force_rate, force_size, custom_width, custom_height, frame_load_cap, skip_first_frames, select_every_nth):
-        # Download the video to a temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_file:
-            response = requests.get(url, stream=True)
-            for chunk in response.iter_content(chunk_size=8192):
-                temp_file.write(chunk)
-            temp_file_path = temp_file.name
-
-        # Load the video using OpenCV
-        cap = cv2.VideoCapture(temp_file_path)
-        
-        # Get video properties
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        duration = total_frames / fps
-
-        # Calculate target size
-        if force_size != "Disabled":
-            if force_size == "Custom Width":
-                new_height = int(height * (custom_width / width))
-                new_width = custom_width
-            elif force_size == "Custom Height":
-                new_width = int(width * (custom_height / height))
-                new_height = custom_height
-            elif force_size == "Custom":
-                new_width, new_height = custom_width, custom_height
-            else:
-                target_width, target_height = map(int, force_size.replace("?", "0").split("x"))
-                if target_width == 0:
-                    new_width = int(width * (target_height / height))
-                    new_height = target_height
-                else:
-                    new_height = int(height * (target_width / width))
-                    new_width = target_width
-        else:
-            new_width, new_height = width, height
-
-        frames = []
-        frame_count = 0
-
-        for i in range(total_frames):
-            ret, frame = cap.read()
-            if not ret:
-                break
-
-            if i < skip_first_frames:
-                continue
-
-            if (i - skip_first_frames) % select_every_nth != 0:
-                continue
-
-            if force_size != "Disabled":
-                frame = cv2.resize(frame, (new_width, new_height))
-
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frame = torch.from_numpy(frame).float() / 255.0
-            frames.append(frame)
-
-            frame_count += 1
-
-            if frame_load_cap > 0 and frame_count >= frame_load_cap:
-                break
-
-        cap.release()
-        os.unlink(temp_file_path)
-
-        frames = torch.stack(frames)
-
-        video_info = {
-            "source_fps": fps,
-            "source_frame_count": total_frames,
-            "source_duration": duration,
-            "source_width": width,
-            "source_height": height,
-            "loaded_fps": fps if force_rate == 0 else force_rate,
-            "loaded_frame_count": frame_count,
-            "loaded_duration": frame_count / (fps if force_rate == 0 else force_rate),
-            "loaded_width": new_width,
-            "loaded_height": new_height,
-        }
-
-        return (frames, frame_count, video_info)
-
-class VideoUpscalerNode:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "video_url": ("STRING", {"default": ""}),
-                "scale": ("FLOAT", {"default": 2.0, "min": 1.0, "max": 4.0, "step": 0.5}),
-            },
-        }
-
-    RETURN_TYPES = ("STRING",)
-    FUNCTION = "upscale_video"
-    CATEGORY = "FAL/VideoGeneration"
-
-    def upscale_video(self, video_url, scale):
-        try:
+            # Prepare arguments for the API
             arguments = {
-                "video_url": video_url,
-                "scale": scale
+                "images_data_url": images_url,
+                "steps": steps,
+                "learning_rate": learning_rate,
+                "do_caption": do_caption
             }
+            
+            if trigger_word:
+                arguments["trigger_word"] = trigger_word
+                
+            if data_archive_format:
+                arguments["data_archive_format"] = data_archive_format
 
-            handler = submit("fal-ai/video-upscaler", arguments=arguments)
+            # Submit training job
+            handler = fal_client.submit("fal-ai/hunyuan-video-lora-training", arguments=arguments)
             result = handler.get()
-            video_url = result["video"]["url"]
-            return (video_url,)
+
+            lora_url = result["diffusers_lora_file"]["url"]
+
+            return (lora_url,)
+
         except Exception as e:
-            print(f"Error upscaling video: {str(e)}")
-            return ("Error: Unable to upscale video.",)
+            print(f"Error during LoRA training: {str(e)}")
+            return ("Error: Training failed.", "")
 
-class MiniMaxSubjectReferenceNode:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
-                "subject_reference_image": ("IMAGE",),
-                "prompt_optimizer": ("BOOLEAN", {"default": True}),
-            },
-        }
-
-    RETURN_TYPES = ("STRING",)
-    FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
-
-    def generate_video(self, prompt, subject_reference_image, prompt_optimizer):
-        try:
-            image_url = upload_image(subject_reference_image)
-            if not image_url:
-                return ("Error: Unable to upload subject reference image.",)
-
-            arguments = {
-                "prompt": prompt,
-                "subject_reference_image_url": image_url,
-                "prompt_optimizer": prompt_optimizer
-            }
-
-            handler = submit("fal-ai/minimax/video-01-subject-reference", arguments=arguments)
-            result = handler.get()
-            video_url = result["video"]["url"]
-            return (video_url,)
-        except Exception as e:
-            print(f"Error generating video: {str(e)}")
-            return ("Error: Unable to generate video.",)
-
-# Update Node class mappings
+# Node class mappings
 NODE_CLASS_MAPPINGS = {
-    "Kling_fal": KlingNode,
-    "KlingPro_fal": KlingProNode,
-    "RunwayGen3_fal": RunwayGen3Node,
-    "LumaDreamMachine_fal": LumaDreamMachineNode,
-    "LoadVideoURL": LoadVideoURL,
-    "MiniMax_fal": MiniMaxNode,
-    "MiniMaxTextToVideo_fal": MiniMaxTextToVideoNode,
-    "MiniMaxSubjectReference_fal": MiniMaxSubjectReferenceNode,
-    "VideoUpscaler_fal": VideoUpscalerNode,
+    "FluxLoraTrainer_fal": FluxLoraTrainerNode,
+    "HunyuanVideoLoraTrainer_fal": HunyuanVideoLoraTrainerNode,
 }
 
-# Update Node display name mappings
+# Node display name mappings
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "Kling_fal": "Kling Video Generation (fal)",
-    "KlingPro_fal": "Kling Pro Video Generation (fal)",
-    "RunwayGen3_fal": "Runway Gen3 Image-to-Video (fal)",
-    "LumaDreamMachine_fal": "Luma Dream Machine (fal)",
-    "LoadVideoURL": "Load Video from URL",
-    "MiniMax_fal": "MiniMax Video Generation (fal)",
-    "MiniMaxTextToVideo_fal": "MiniMax Text-to-Video (fal)",
-    "MiniMaxSubjectReference_fal": "MiniMax Subject Reference (fal)",
-    "VideoUpscaler_fal": "Video Upscaler (fal)",
+    "FluxLoraTrainer_fal": "Flux LoRA Trainer (fal)",
+    "HunyuanVideoLoraTrainer_fal": "Hunyuan Video LoRA Trainer (fal)",
 }

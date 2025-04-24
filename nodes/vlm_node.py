@@ -1,6 +1,6 @@
 import os
 import configparser
-from fal_client import submit, upload_file
+from fal_client.client import SyncClient
 import torch
 from PIL import Image
 import tempfile
@@ -18,6 +18,9 @@ try:
     os.environ["FAL_KEY"] = fal_key
 except KeyError:
     print("Error: FAL_KEY not found in config.ini")
+
+# Create the client with API key
+fal_client = SyncClient(key=fal_key)
 
 class VLMNode:
     @classmethod
@@ -66,7 +69,7 @@ class VLMNode:
                 temp_file_path = temp_file.name
 
             # Upload the temporary file
-            image_url = upload_file(temp_file_path)
+            image_url = fal_client.upload_file(temp_file_path)
 
             arguments = {
                 "model": model,
@@ -75,7 +78,7 @@ class VLMNode:
                 "image_url": image_url,
             }
 
-            handler = submit("fal-ai/any-llm/vision", arguments=arguments)
+            handler = fal_client.submit("fal-ai/any-llm/vision", arguments=arguments)
             result = handler.get()
             return (result["output"],)
         except Exception as e:

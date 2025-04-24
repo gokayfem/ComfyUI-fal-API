@@ -1,6 +1,6 @@
 import os
 import configparser
-from fal_client import submit, upload_file
+from fal_client.client import SyncClient
 import tempfile
 import zipfile
 import torch
@@ -18,6 +18,9 @@ try:
     os.environ["FAL_KEY"] = fal_key
 except KeyError:
     print("Error: FAL_KEY not found in config.ini")
+
+# Create the client with API key
+fal_client = SyncClient(key=fal_key)
 
 def create_zip_from_images(images):
     """Create a zip file from a list of images."""
@@ -44,7 +47,7 @@ def create_zip_from_images(images):
                 zf.write(temp_img_path, f'image_{idx}.png')
                 os.unlink(temp_img_path)
         
-        return upload_file(temp_zip.name)
+        return fal_client.upload_file(temp_zip.name)
 
 class FluxLoraTrainerNode:
     @classmethod
@@ -93,7 +96,7 @@ class FluxLoraTrainerNode:
                 arguments["data_archive_format"] = data_archive_format
 
             # Submit training job
-            handler = submit("fal-ai/flux-lora-fast-training", arguments=arguments)
+            handler = fal_client.submit("fal-ai/flux-lora-fast-training", arguments=arguments)
             result = handler.get()
 
             lora_url = result["diffusers_lora_file"]["url"]
@@ -149,7 +152,7 @@ class HunyuanVideoLoraTrainerNode:
                 arguments["data_archive_format"] = data_archive_format
 
             # Submit training job
-            handler = submit("fal-ai/hunyuan-video-lora-training", arguments=arguments)
+            handler = fal_client.submit("fal-ai/hunyuan-video-lora-training", arguments=arguments)
             result = handler.get()
 
             lora_url = result["diffusers_lora_file"]["url"]
