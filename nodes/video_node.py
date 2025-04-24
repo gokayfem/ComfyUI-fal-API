@@ -1,6 +1,5 @@
 import os
 import configparser
-from fal_client import submit, upload_file
 import torch
 from PIL import Image
 import tempfile
@@ -8,19 +7,25 @@ import numpy as np
 import requests
 from urllib.parse import urlparse
 import cv2
+from fal_client.client import SyncClient
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 config_path = os.path.join(parent_dir, "config.ini")
-
 config = configparser.ConfigParser()
 config.read(config_path)
 
+# First set environment variable
 try:
     fal_key = config['API']['FAL_KEY']
+
     os.environ["FAL_KEY"] = fal_key
+
 except KeyError:
     print("Error: FAL_KEY not found in config.ini")
+
+# Create the client with your API key
+fal_client = SyncClient(key=fal_key)
 
 def upload_image(image):
     try:
@@ -50,14 +55,14 @@ def upload_image(image):
             pil_image.save(temp_file, format="PNG")
             temp_file_path = temp_file.name
 
-        # Upload the temporary file
-        image_url = upload_file(temp_file_path)
+        # Use the client instance instead of the imported function
+        image_url = fal_client.upload_file(temp_file_path)
         return image_url
     except Exception as e:
         print(f"Error uploading image: {str(e)}")
         return None
     finally:
-        # Clean up the temporary file
+        # Clean up temp file
         if 'temp_file_path' in locals():
             os.unlink(temp_file_path)
 
@@ -86,7 +91,7 @@ class MiniMaxNode:
                 "image_url": image_url,
             }
 
-            handler = submit("fal-ai/minimax-video/image-to-video", arguments=arguments)
+            handler = fal_client.submit("fal-ai/minimax-video/image-to-video", arguments=arguments)
             result = handler.get()
             video_url = result["video"]["url"]
             return (video_url,)
@@ -113,7 +118,7 @@ class MiniMaxTextToVideoNode:
                 "prompt": prompt,
             }
 
-            handler = submit("fal-ai/minimax-video", arguments=arguments)
+            handler = fal_client.submit("fal-ai/minimax-video", arguments=arguments)
             result = handler.get()
             video_url = result["video"]["url"]
             return (video_url,)
@@ -151,11 +156,11 @@ class KlingNode:
                 image_url = upload_image(image)
                 if image_url:
                     arguments["image_url"] = image_url
-                    handler = submit("fal-ai/kling-video/v1/standard/image-to-video", arguments=arguments)
+                    handler = fal_client.submit("fal-ai/kling-video/v1/standard/image-to-video", arguments=arguments)
                 else:
                     return ("Error: Unable to upload image.",)
             else:
-                handler = submit("fal-ai/kling-video/v1/standard/text-to-video", arguments=arguments)
+                handler = fal_client.submit("fal-ai/kling-video/v1/standard/text-to-video", arguments=arguments)
 
             result = handler.get()
             video_url = result["video"]["url"]
@@ -194,11 +199,11 @@ class KlingProNode:
                 image_url = upload_image(image)
                 if image_url:
                     arguments["image_url"] = image_url
-                    handler = submit("fal-ai/kling-video/v1/pro/image-to-video", arguments=arguments)
+                    handler = fal_client.submit("fal-ai/kling-video/v1/pro/image-to-video", arguments=arguments)
                 else:
                     return ("Error: Unable to upload image.",)
             else:
-                handler = submit("fal-ai/kling-video/v1/pro/text-to-video", arguments=arguments)
+                handler = fal_client.submit("fal-ai/kling-video/v1/pro/text-to-video", arguments=arguments)
 
             result = handler.get()
             video_url = result["video"]["url"]
@@ -234,7 +239,7 @@ class RunwayGen3Node:
                 "duration": duration,
             }
 
-            handler = submit("fal-ai/runway-gen3/turbo/image-to-video", arguments=arguments)
+            handler = fal_client.submit("fal-ai/runway-gen3/turbo/image-to-video", arguments=arguments)
             result = handler.get()
             video_url = result["video"]["url"]
             return (video_url,)
@@ -280,7 +285,7 @@ class LumaDreamMachineNode:
             else:
                 endpoint = "fal-ai/luma-dream-machine"
 
-            handler = submit(endpoint, arguments=arguments)
+            handler = fal_client.submit(endpoint, arguments=arguments)
             result = handler.get()
             video_url = result["video"]["url"]
             return (video_url,)
@@ -415,7 +420,7 @@ class VideoUpscalerNode:
                 "scale": scale
             }
 
-            handler = submit("fal-ai/video-upscaler", arguments=arguments)
+            handler = fal_client.submit("fal-ai/video-upscaler", arguments=arguments)
             result = handler.get()
             video_url = result["video"]["url"]
             return (video_url,)
@@ -450,7 +455,44 @@ class MiniMaxSubjectReferenceNode:
                 "prompt_optimizer": prompt_optimizer
             }
 
-            handler = submit("fal-ai/minimax/video-01-subject-reference", arguments=arguments)
+            handler = fal_client.submit("fal-ai/minimax/video-01-subject-reference", arguments=arguments)
+            result = handler.get()
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            print(f"Error generating video: {str(e)}")
+            return ("Error: Unable to generate video.",)
+
+class Veo2ImageToVideoNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image": ("IMAGE",),
+                "aspect_ratio": (["auto", "auto_prefer_portrait", "16:9", "9:16"], {"default": "auto"}),
+                "duration": (["5s", "6s", "7s", "8s"], {"default": "5s"}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, prompt, image, aspect_ratio, duration):
+        try:
+            image_url = upload_image(image)
+            if not image_url:
+                return ("Error: Unable to upload image.",)
+
+            arguments = {
+                "prompt": prompt,
+                "image_url": image_url,
+                "aspect_ratio": aspect_ratio,
+                "duration": duration,
+            }
+
+            handler = fal_client.submit("fal-ai/veo2/image-to-video", arguments=arguments)
             result = handler.get()
             video_url = result["video"]["url"]
             return (video_url,)
@@ -469,6 +511,7 @@ NODE_CLASS_MAPPINGS = {
     "MiniMaxTextToVideo_fal": MiniMaxTextToVideoNode,
     "MiniMaxSubjectReference_fal": MiniMaxSubjectReferenceNode,
     "VideoUpscaler_fal": VideoUpscalerNode,
+    "Veo2ImageToVideo_fal": Veo2ImageToVideoNode,
 }
 
 # Update Node display name mappings
@@ -482,4 +525,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "MiniMaxTextToVideo_fal": "MiniMax Text-to-Video (fal)",
     "MiniMaxSubjectReference_fal": "MiniMax Subject Reference (fal)",
     "VideoUpscaler_fal": "Video Upscaler (fal)",
+    "Veo2ImageToVideo_fal": "Google Veo2 Image-to-Video (fal)",
 }

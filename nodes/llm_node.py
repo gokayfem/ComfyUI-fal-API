@@ -1,6 +1,6 @@
 import os
 import configparser
-from fal_client import submit
+from fal_client.client import SyncClient
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
@@ -14,6 +14,9 @@ try:
     os.environ["FAL_KEY"] = fal_key
 except KeyError:
     print("Error: FAL_KEY not found in config.ini")
+
+# Create the client with API key
+fal_client = SyncClient(key=fal_key)
 
 class LLMNode:
     @classmethod
@@ -42,7 +45,7 @@ class LLMNode:
         }
 
         try:
-            handler = submit("fal-ai/any-llm", arguments=arguments)
+            handler = fal_client.submit("fal-ai/any-llm", arguments=arguments)
             result = handler.get()
             return (result["output"],)
         except Exception as e:
