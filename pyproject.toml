@@ -1,0 +1,15 @@
+[project]
+name = "fal-api"
+description = "Custom nodes for using fal API. Video generation with Kling, Runway, Luma. Image generation with Flux. LLMs and VLMs OpenAI, Claude, Llama and Gemini."
+version = "1.0.0"
+license = {file = "LICENSE"}
+dependencies = ["fal-client", "torch"]
+
+[project.urls]
+Repository = "https://github.com/gokayfem/ComfyUI-fal-API"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = ""
+DisplayName = "ComfyUI-fal-API"
+Icon = ""
