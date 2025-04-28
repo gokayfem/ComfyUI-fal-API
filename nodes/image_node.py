@@ -6,7 +6,7 @@ import torch
 import os
 import configparser
 import tempfile
-from fal_client import submit, upload_file
+from fal_client.client import SyncClient
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
@@ -20,6 +20,9 @@ try:
     os.environ["FAL_KEY"] = fal_key
 except KeyError:
     print("Error: FAL_KEY not found in config.ini")
+
+# Create the client with API key
+fal_client = SyncClient(key=fal_key)
 
 def upload_image(image):
     try:
@@ -50,7 +53,7 @@ def upload_image(image):
             temp_file_path = temp_file.name
 
         # Upload the temporary file
-        image_url = upload_file(temp_file_path)
+        image_url = fal_client.upload_file(temp_file_path)
         return image_url
     except Exception as e:
         print(f"Error uploading image: {str(e)}")
@@ -105,7 +108,7 @@ class Sana:
             arguments["seed"] = seed
 
         try:
-            handler = submit("fal-ai/sana", arguments=arguments)
+            handler = fal_client.submit("fal-ai/sana", arguments=arguments)
             result = handler.get()
             return self.process_result(result)
         except Exception as e:
@@ -159,7 +162,7 @@ class Recraft:
             arguments["style_id"] = style_id
 
         try:
-            handler = submit("fal-ai/recraft-v3", arguments=arguments)
+            handler = fal_client.submit("fal-ai/recraft-v3", arguments=arguments)
             result = handler.get()
             return self.process_result(result)
         except Exception as e:
@@ -205,7 +208,7 @@ class FluxPro:
             arguments["seed"] = seed
 
         try:
-            handler = submit("fal-ai/flux-pro", arguments=arguments)
+            handler = fal_client.submit("fal-ai/flux-pro", arguments=arguments)
             result = handler.get()
             return self.process_result(result)
         except Exception as e:
@@ -251,7 +254,7 @@ class FluxDev:
             arguments["seed"] = seed
 
         try:
-            handler = submit("fal-ai/flux/dev", arguments=arguments)
+            handler = fal_client.submit("fal-ai/flux/dev", arguments=arguments)
             result = handler.get()
             return self.process_result(result)
         except Exception as e:
@@ -295,7 +298,7 @@ class FluxSchnell:
             arguments["seed"] = seed
 
         try:
-            handler = submit("fal-ai/flux/schnell", arguments=arguments)
+            handler = fal_client.submit("fal-ai/flux/schnell", arguments=arguments)
             result = handler.get()
             return self.process_result(result)
         except Exception as e:
@@ -339,7 +342,7 @@ class FluxPro11:
             arguments["seed"] = seed
 
         try:
-            handler = submit("fal-ai/flux-pro/v1.1", arguments=arguments)
+            handler = fal_client.submit("fal-ai/flux-pro/v1.1", arguments=arguments)
             result = handler.get()
             return self.process_result(result)
         except Exception as e:
@@ -382,7 +385,7 @@ class FluxUltra:
             arguments["seed"] = seed
 
         try:
-            handler = submit("fal-ai/flux-pro/v1.1-ultra", arguments=arguments)
+            handler = fal_client.submit("fal-ai/flux-pro/v1.1-ultra", arguments=arguments)
             result = handler.get()
             return self.process_result(result)
         except Exception as e:
@@ -441,7 +444,7 @@ class FluxLora:
             arguments["loras"] = loras
 
         try:
-            handler = submit("fal-ai/flux-lora", arguments=arguments)
+            handler = fal_client.submit("fal-ai/flux-lora", arguments=arguments)
             result = handler.get()
             return self.process_result(result)
         except Exception as e:
@@ -617,7 +620,7 @@ class FluxGeneral:
             arguments["loras"] = loras
 
         try:
-            handler = submit("fal-ai/flux-general", arguments=arguments)
+            handler = fal_client.submit("fal-ai/flux-general", arguments=arguments)
             result = handler.get()
             return self.process_result(result)
         except Exception as e:
