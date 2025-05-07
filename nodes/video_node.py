@@ -172,7 +172,113 @@ class KlingNode:
             print(f"Error generating video: {str(e)}")
             return ("Error: Unable to generate video.",)
 
-class KlingProNode:
+class KlingPro10Node:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "duration": (["5", "10"], {"default": "5"}),
+                "aspect_ratio": (["16:9", "9:16", "1:1"], {"default": "16:9"}),
+            },
+            "optional": {
+                "image": ("IMAGE",),
+                "tail_image": ("IMAGE",),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, prompt, duration, aspect_ratio, image=None, tail_image=None):
+        arguments = {
+            "prompt": prompt,
+            "duration": duration,
+            "aspect_ratio": aspect_ratio,
+        }
+
+        try:
+            if image is not None:
+                image_url = upload_image(image)
+                if image_url:
+                    arguments["image_url"] = image_url
+                    
+                    # Handle tail image if provided
+                    if tail_image is not None:
+                        tail_image_url = upload_image(tail_image)
+                        if tail_image_url:
+                            arguments["tail_image_url"] = tail_image_url
+                        else:
+                            return ("Error: Unable to upload tail image.",)
+                    
+                    handler = fal_client.submit("fal-ai/kling-video/v1/pro/image-to-video", arguments=arguments)
+                else:
+                    return ("Error: Unable to upload image.",)
+            else:
+                handler = fal_client.submit("fal-ai/kling-video/v1/pro/text-to-video", arguments=arguments)
+
+            result = handler.get()
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            print(f"Error generating video: {str(e)}")
+            return ("Error: Unable to generate video.",)
+
+class KlingPro16Node:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "duration": (["5", "10"], {"default": "5"}),
+                "aspect_ratio": (["16:9", "9:16", "1:1"], {"default": "16:9"}),
+            },
+            "optional": {
+                "image": ("IMAGE",),
+                "tail_image": ("IMAGE",),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, prompt, duration, aspect_ratio, image=None, tail_image=None):
+        arguments = {
+            "prompt": prompt,
+            "duration": duration,
+            "aspect_ratio": aspect_ratio,
+        }
+
+        try:
+            if image is not None:
+                image_url = upload_image(image)
+                if image_url:
+                    arguments["image_url"] = image_url
+                    
+                    # Handle tail image if provided
+                    if tail_image is not None:
+                        tail_image_url = upload_image(tail_image)
+                        if tail_image_url:
+                            arguments["tail_image_url"] = tail_image_url
+                        else:
+                            return ("Error: Unable to upload tail image.",)
+                    
+                    handler = fal_client.submit("fal-ai/kling-video/v1.6/pro/image-to-video", arguments=arguments)
+                else:
+                    return ("Error: Unable to upload image.",)
+            else:
+                handler = fal_client.submit("fal-ai/kling-video/v1.6/pro/text-to-video", arguments=arguments)
+
+            result = handler.get()
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            print(f"Error generating video: {str(e)}")
+            return ("Error: Unable to generate video.",)
+
+class KlingMasterNode:
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -202,11 +308,11 @@ class KlingProNode:
                 image_url = upload_image(image)
                 if image_url:
                     arguments["image_url"] = image_url
-                    handler = fal_client.submit("fal-ai/kling-video/v1/pro/image-to-video", arguments=arguments)
+                    handler = fal_client.submit("fal-ai/kling-video/v2/master/image-to-video", arguments=arguments)
                 else:
                     return ("Error: Unable to upload image.",)
             else:
-                handler = fal_client.submit("fal-ai/kling-video/v1/pro/text-to-video", arguments=arguments)
+                handler = fal_client.submit("fal-ai/kling-video/v2/master/text-to-video", arguments=arguments)
 
             result = handler.get()
             video_url = result["video"]["url"]
@@ -515,11 +621,16 @@ class CombinedVideoGenerationNode:
                 "luma_loop": ("BOOLEAN", {"default": False}),
                 "veo2_aspect_ratio": (["auto", "auto_prefer_portrait", "16:9", "9:16"], {"default": "auto"}),
                 "veo2_duration": (["5s", "6s", "7s", "8s"], {"default": "5s"}),
+                "enable_klingpro": ("BOOLEAN", {"default": True}),
+                "enable_klingmaster": ("BOOLEAN", {"default": True}),
+                "enable_minimax": ("BOOLEAN", {"default": True}),
+                "enable_luma": ("BOOLEAN", {"default": True}),
+                "enable_veo2": ("BOOLEAN", {"default": True}),
             },
         }
 
-    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING")
-    RETURN_NAMES = ("klingpro_video", "minimax_video", "luma_video", "veo2_video")
+    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING", "STRING")
+    RETURN_NAMES = ("klingpro_v1.6_video", "klingmaster_v2.0_video", "minimax_video", "luma_video", "veo2_video")
     FUNCTION = "generate_videos"
     CATEGORY = "FAL/VideoGeneration"
 
@@ -531,20 +642,37 @@ class CombinedVideoGenerationNode:
                 "duration": kling_duration,
                 "aspect_ratio": kling_luma_aspect_ratio,
             }
-            handler = await client.submit("fal-ai/kling-video/v1/pro/image-to-video", arguments=arguments)
+            handler = await client.submit("fal-ai/kling-video/v1.6/pro/image-to-video", arguments=arguments)
             while True:
                 result = await handler.get()
-                # Check if the result contains a video URL (status 200)
                 if "video" in result and "url" in result["video"]:
                     return result["video"]["url"]
-                # Check if the result indicates failure
                 elif result.get("status") == "FAILED":
                     raise Exception("Video generation failed")
-                # Otherwise, it's still in progress (status 202)
-                await asyncio.sleep(1)  # Poll every second
+                await asyncio.sleep(1)
         except Exception as e:
             print(f"Error generating KlingPro video: {str(e)}")
             return "Error: Unable to generate KlingPro video."
+
+    async def generate_klingmaster_video(self, client, prompt, image_url, kling_duration, kling_luma_aspect_ratio):
+        try:
+            arguments = {
+                "prompt": prompt,
+                "image_url": image_url,
+                "duration": kling_duration,
+                "aspect_ratio": kling_luma_aspect_ratio,
+            }
+            handler = await client.submit("fal-ai/kling-video/v2/master/image-to-video", arguments=arguments)
+            while True:
+                result = await handler.get()
+                if "video" in result and "url" in result["video"]:
+                    return result["video"]["url"]
+                elif result.get("status") == "FAILED":
+                    raise Exception("Video generation failed")
+                await asyncio.sleep(1)
+        except Exception as e:
+            print(f"Error generating KlingMaster video: {str(e)}")
+            return "Error: Unable to generate KlingMaster video."
 
     async def generate_minimax_video(self, client, prompt, image_url):
         try:
@@ -555,14 +683,11 @@ class CombinedVideoGenerationNode:
             handler = await client.submit("fal-ai/minimax-video/image-to-video", arguments=arguments)
             while True:
                 result = await handler.get()
-                # Check if the result contains a video URL (status 200)
                 if "video" in result and "url" in result["video"]:
                     return result["video"]["url"]
-                # Check if the result indicates failure
                 elif result.get("status") == "FAILED":
                     raise Exception("Video generation failed")
-                # Otherwise, it's still in progress (status 202)
-                await asyncio.sleep(1)  # Poll every second
+                await asyncio.sleep(1)
         except Exception as e:
             print(f"Error generating MiniMax video: {str(e)}")
             return "Error: Unable to generate MiniMax video."
@@ -578,14 +703,11 @@ class CombinedVideoGenerationNode:
             handler = await client.submit("fal-ai/luma-dream-machine/image-to-video", arguments=arguments)
             while True:
                 result = await handler.get()
-                # Check if the result contains a video URL (status 200)
                 if "video" in result and "url" in result["video"]:
                     return result["video"]["url"]
-                # Check if the result indicates failure
                 elif result.get("status") == "FAILED":
                     raise Exception("Video generation failed")
-                # Otherwise, it's still in progress (status 202)
-                await asyncio.sleep(1)  # Poll every second
+                await asyncio.sleep(1)
         except Exception as e:
             print(f"Error generating Luma video: {str(e)}")
             return "Error: Unable to generate Luma video."
@@ -601,38 +723,74 @@ class CombinedVideoGenerationNode:
             handler = await client.submit("fal-ai/veo2/image-to-video", arguments=arguments)
             while True:
                 result = await handler.get()
-                # Check if the result contains a video URL (status 200)
                 if "video" in result and "url" in result["video"]:
                     return result["video"]["url"]
-                # Check if the result indicates failure
                 elif result.get("status") == "FAILED":
                     raise Exception("Video generation failed")
-                # Otherwise, it's still in progress (status 202)
-                await asyncio.sleep(1)  # Poll every second
+                await asyncio.sleep(1)
         except Exception as e:
             print(f"Error generating Veo2 video: {str(e)}")
             return "Error: Unable to generate Veo2 video."
 
-    async def generate_all_videos(self, prompt, image_url, kling_duration, kling_luma_aspect_ratio, luma_loop, veo2_aspect_ratio, veo2_duration):
-        client = AsyncClient()
+    async def generate_all_videos(self, prompt, image_url, kling_duration, kling_luma_aspect_ratio, luma_loop, veo2_aspect_ratio, veo2_duration, enable_klingpro, enable_klingmaster, enable_minimax, enable_luma, enable_veo2):
         try:
-            tasks = [
-                self.generate_klingpro_video(client, prompt, image_url, kling_duration, kling_luma_aspect_ratio),
-                self.generate_minimax_video(client, prompt, image_url),
-                self.generate_luma_video(client, prompt, image_url, kling_luma_aspect_ratio, luma_loop),
-                self.generate_veo2_video(client, prompt, image_url, veo2_aspect_ratio, veo2_duration)
-            ]
-            return await asyncio.gather(*tasks)
+            tasks = []
+            results = [None] * 5  # Initialize results list with None values
+
+            # Create async client with the same key as the sync client
+            client = AsyncClient(key=fal_key)
+
+            # Add tasks based on enabled services
+            if enable_klingpro:
+                tasks.append(self.generate_klingpro_video(client, prompt, image_url, kling_duration, kling_luma_aspect_ratio))
+            else:
+                tasks.append(None)
+
+            if enable_klingmaster:
+                tasks.append(self.generate_klingmaster_video(client, prompt, image_url, kling_duration, kling_luma_aspect_ratio))
+            else:
+                tasks.append(None)
+
+            if enable_minimax:
+                tasks.append(self.generate_minimax_video(client, prompt, image_url))
+            else:
+                tasks.append(None)
+
+            if enable_luma:
+                tasks.append(self.generate_luma_video(client, prompt, image_url, kling_luma_aspect_ratio, luma_loop))
+            else:
+                tasks.append(None)
+
+            if enable_veo2:
+                tasks.append(self.generate_veo2_video(client, prompt, image_url, veo2_aspect_ratio, veo2_duration))
+            else:
+                tasks.append(None)
+
+            # Filter out None tasks and execute them
+            valid_tasks = [task for task in tasks if task is not None]
+            if valid_tasks:
+                completed_results = await asyncio.gather(*valid_tasks)
+                
+                # Place results in their correct positions
+                result_index = 0
+                for i, task in enumerate(tasks):
+                    if task is not None:
+                        results[i] = completed_results[result_index]
+                        result_index += 1
+                    else:
+                        results[i] = "Service disabled"
+
+            return results
         except Exception as e:
             print(f"Error in generate_all_videos: {str(e)}")
-            return ["Error: Unable to generate videos."] * 4
+            return ["Error: Unable to generate videos."] * 5
 
-    def generate_videos(self, prompt, image, kling_duration, kling_luma_aspect_ratio, luma_loop, veo2_aspect_ratio, veo2_duration):
+    def generate_videos(self, prompt, image, kling_duration, kling_luma_aspect_ratio, luma_loop, veo2_aspect_ratio, veo2_duration, enable_klingpro, enable_klingmaster, enable_minimax, enable_luma, enable_veo2):
         try:
             # Upload image once to be used by all services
             image_url = upload_image(image)
             if not image_url:
-                return ("Error: Unable to upload image.",) * 4
+                return ("Error: Unable to upload image.",) * 5
 
             # Create event loop for async operations
             loop = asyncio.new_event_loop()
@@ -640,19 +798,21 @@ class CombinedVideoGenerationNode:
 
             # Run all video generations concurrently
             results = loop.run_until_complete(
-                self.generate_all_videos(prompt, image_url, kling_duration, kling_luma_aspect_ratio, luma_loop, veo2_aspect_ratio, veo2_duration)
+                self.generate_all_videos(prompt, image_url, kling_duration, kling_luma_aspect_ratio, luma_loop, veo2_aspect_ratio, veo2_duration, enable_klingpro, enable_klingmaster, enable_minimax, enable_luma, enable_veo2)
             )
             loop.close()
 
             return tuple(results)
         except Exception as e:
             print(f"Error in combined video generation: {str(e)}")
-            return ("Error: Unable to generate videos.",) * 4
+            return ("Error: Unable to generate videos.",) * 5
 
 # Update Node class mappings
 NODE_CLASS_MAPPINGS = {
     "Kling_fal": KlingNode,
-    "KlingPro_fal": KlingProNode,
+    "KlingPro10_fal": KlingPro10Node,
+    "KlingPro16_fal": KlingPro16Node,
+    "KlingMaster_fal": KlingMasterNode,
     "RunwayGen3_fal": RunwayGen3Node,
     "LumaDreamMachine_fal": LumaDreamMachineNode,
     "LoadVideoURL": LoadVideoURL,
@@ -667,7 +827,9 @@ NODE_CLASS_MAPPINGS = {
 # Update Node display name mappings
 NODE_DISPLAY_NAME_MAPPINGS = {
     "Kling_fal": "Kling Video Generation (fal)",
-    "KlingPro_fal": "Kling Pro Video Generation (fal)",
+    "KlingPro10_fal": "Kling Pro v1.0 Video Generation (fal)",
+    "KlingPro16_fal": "Kling Pro v1.6 Video Generation (fal)",
+    "KlingMaster_fal": "Kling Master v2.0 Video Generation (fal)",
     "RunwayGen3_fal": "Runway Gen3 Image-to-Video (fal)",
     "LumaDreamMachine_fal": "Luma Dream Machine (fal)",
     "LoadVideoURL": "Load Video from URL",
