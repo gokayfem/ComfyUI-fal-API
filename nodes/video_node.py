@@ -94,7 +94,7 @@ class MiniMaxNode:
                 "image_url": image_url,
             }
 
-            handler = fal_client.submit("fal-ai/minimax-video/image-to-video", arguments=arguments)
+            handler = fal_client.submit("fal-ai/minimax/video-01-live/image-to-video", arguments=arguments)
             result = handler.get()
             video_url = result["video"]["url"]
             return (video_url,)
@@ -367,6 +367,7 @@ class LumaDreamMachineNode:
             },
             "optional": {
                 "image": ("IMAGE",),
+                "end_image": ("IMAGE",),
                 "loop": ("BOOLEAN", {"default": False}),
             },
         }
@@ -375,7 +376,7 @@ class LumaDreamMachineNode:
     FUNCTION = "generate_video"
     CATEGORY = "FAL/VideoGeneration"
 
-    def generate_video(self, prompt, mode, aspect_ratio, image=None, loop=False):
+    def generate_video(self, prompt, mode, aspect_ratio, image=None, end_image=None, loop=False):
         arguments = {
             "prompt": prompt,
             "aspect_ratio": aspect_ratio,
@@ -390,9 +391,17 @@ class LumaDreamMachineNode:
                 if not image_url:
                     return ("Error: Unable to upload image.",)
                 arguments["image_url"] = image_url
-                endpoint = "fal-ai/luma-dream-machine/image-to-video"
+                
+                if end_image is not None:
+                    end_image_url = upload_image(end_image)
+                    if end_image_url:
+                        arguments["end_image_url"] = end_image_url
+                    else:
+                        return ("Error: Unable to upload end image.",)
+
+                endpoint = "fal-ai/luma-dream-machine/ray-2/image-to-video"
             else:
-                endpoint = "fal-ai/luma-dream-machine"
+                endpoint = "fal-ai/luma-dream-machine/ray-2"
 
             handler = fal_client.submit(endpoint, arguments=arguments)
             result = handler.get()
@@ -626,11 +635,12 @@ class CombinedVideoGenerationNode:
                 "enable_minimax": ("BOOLEAN", {"default": True}),
                 "enable_luma": ("BOOLEAN", {"default": True}),
                 "enable_veo2": ("BOOLEAN", {"default": True}),
+                "enable_wanpro": ("BOOLEAN", {"default": True}),
             },
         }
 
-    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING", "STRING")
-    RETURN_NAMES = ("klingpro_v1.6_video", "klingmaster_v2.0_video", "minimax_video", "luma_video", "veo2_video")
+    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING", "STRING", "STRING")
+    RETURN_NAMES = ("klingpro_v1.6_video", "klingmaster_v2.0_video", "minimax_video", "luma_video", "veo2_video", "wanpro_video")
     FUNCTION = "generate_videos"
     CATEGORY = "FAL/VideoGeneration"
 
@@ -680,7 +690,7 @@ class CombinedVideoGenerationNode:
                 "prompt": prompt,
                 "image_url": image_url,
             }
-            handler = await client.submit("fal-ai/minimax-video/image-to-video", arguments=arguments)
+            handler = await client.submit("fal-ai/minimax/video-01-live/image-to-video", arguments=arguments)
             while True:
                 result = await handler.get()
                 if "video" in result and "url" in result["video"]:
@@ -700,7 +710,7 @@ class CombinedVideoGenerationNode:
                 "aspect_ratio": kling_luma_aspect_ratio,
                 "loop": luma_loop,
             }
-            handler = await client.submit("fal-ai/luma-dream-machine/image-to-video", arguments=arguments)
+            handler = await client.submit("fal-ai/luma-dream-machine/ray-2/image-to-video", arguments=arguments)
             while True:
                 result = await handler.get()
                 if "video" in result and "url" in result["video"]:
@@ -732,10 +742,31 @@ class CombinedVideoGenerationNode:
             print(f"Error generating Veo2 video: {str(e)}")
             return "Error: Unable to generate Veo2 video."
 
-    async def generate_all_videos(self, prompt, image_url, kling_duration, kling_luma_aspect_ratio, luma_loop, veo2_aspect_ratio, veo2_duration, enable_klingpro, enable_klingmaster, enable_minimax, enable_luma, enable_veo2):
+    async def generate_wanpro_video(self, client, prompt, image_url):
+        try:
+            arguments = {
+                "prompt": prompt,
+                "image_url": image_url,
+                "enable_safety_checker": True,
+                "seed": None  # Let the API choose a random seed
+            }
+
+            handler = await client.submit("fal-ai/wan-pro/image-to-video", arguments=arguments)
+            while True:
+                result = await handler.get()
+                if "video" in result and "url" in result["video"]:
+                    return result["video"]["url"]
+                elif result.get("status") == "FAILED":
+                    raise Exception("Video generation failed")
+                await asyncio.sleep(1)
+        except Exception as e:
+            print(f"Error generating Wan Pro video: {str(e)}")
+            return "Error: Unable to generate Wan Pro video."
+
+    async def generate_all_videos(self, prompt, image_url, kling_duration, kling_luma_aspect_ratio, luma_loop, veo2_aspect_ratio, veo2_duration, enable_klingpro, enable_klingmaster, enable_minimax, enable_luma, enable_veo2, enable_wanpro):
         try:
             tasks = []
-            results = [None] * 5  # Initialize results list with None values
+            results = [None] * 6  # Initialize results list with None values
 
             # Create async client with the same key as the sync client
             client = AsyncClient(key=fal_key)
@@ -766,6 +797,11 @@ class CombinedVideoGenerationNode:
             else:
                 tasks.append(None)
 
+            if enable_wanpro:
+                tasks.append(self.generate_wanpro_video(client, prompt, image_url))
+            else:
+                tasks.append(None)
+
             # Filter out None tasks and execute them
             valid_tasks = [task for task in tasks if task is not None]
             if valid_tasks:
@@ -783,14 +819,14 @@ class CombinedVideoGenerationNode:
             return results
         except Exception as e:
             print(f"Error in generate_all_videos: {str(e)}")
-            return ["Error: Unable to generate videos."] * 5
+            return ["Error: Unable to generate videos."] * 6
 
-    def generate_videos(self, prompt, image, kling_duration, kling_luma_aspect_ratio, luma_loop, veo2_aspect_ratio, veo2_duration, enable_klingpro, enable_klingmaster, enable_minimax, enable_luma, enable_veo2):
+    def generate_videos(self, prompt, image, kling_duration, kling_luma_aspect_ratio, luma_loop, veo2_aspect_ratio, veo2_duration, enable_klingpro, enable_klingmaster, enable_minimax, enable_luma, enable_veo2, enable_wanpro):
         try:
             # Upload image once to be used by all services
             image_url = upload_image(image)
             if not image_url:
-                return ("Error: Unable to upload image.",) * 5
+                return ("Error: Unable to upload image.",) * 6
 
             # Create event loop for async operations
             loop = asyncio.new_event_loop()
@@ -798,14 +834,56 @@ class CombinedVideoGenerationNode:
 
             # Run all video generations concurrently
             results = loop.run_until_complete(
-                self.generate_all_videos(prompt, image_url, kling_duration, kling_luma_aspect_ratio, luma_loop, veo2_aspect_ratio, veo2_duration, enable_klingpro, enable_klingmaster, enable_minimax, enable_luma, enable_veo2)
+                self.generate_all_videos(prompt, image_url, kling_duration, kling_luma_aspect_ratio, luma_loop, veo2_aspect_ratio, veo2_duration, enable_klingpro, enable_klingmaster, enable_minimax, enable_luma, enable_veo2, enable_wanpro)
             )
             loop.close()
 
             return tuple(results)
         except Exception as e:
             print(f"Error in combined video generation: {str(e)}")
-            return ("Error: Unable to generate videos.",) * 5
+            return ("Error: Unable to generate videos.",) * 6
+
+class WanProNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image": ("IMAGE",),
+            },
+            "optional": {
+                "seed": ("INT", {"default": 0, "min": 0, "max": 2147483647}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, prompt, image, seed=0, enable_safety_checker=True):
+        try:
+            image_url = upload_image(image)
+            if not image_url:
+                return ("Error: Unable to upload image.",)
+
+            arguments = {
+                "prompt": prompt,
+                "image_url": image_url,
+                "enable_safety_checker": enable_safety_checker,
+            }
+
+            # Only add seed if it's not 0 (default)
+            if seed != 0:
+                arguments["seed"] = seed
+
+            handler = fal_client.submit("fal-ai/wan-pro/image-to-video", arguments=arguments)
+            result = handler.get()
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            print(f"Error generating video: {str(e)}")
+            return ("Error: Unable to generate video.",)
 
 # Update Node class mappings
 NODE_CLASS_MAPPINGS = {
@@ -822,6 +900,7 @@ NODE_CLASS_MAPPINGS = {
     "VideoUpscaler_fal": VideoUpscalerNode,
     "CombinedVideoGeneration_fal": CombinedVideoGenerationNode,
     "Veo2ImageToVideo_fal": Veo2ImageToVideoNode,
+    "WanPro_fal": WanProNode,
 }
 
 # Update Node display name mappings
@@ -839,4 +918,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "VideoUpscaler_fal": "Video Upscaler (fal)",
     "CombinedVideoGeneration_fal": "Combined Video Generation (fal)",
     "Veo2ImageToVideo_fal": "Google Veo2 Image-to-Video (fal)",
+    "WanPro_fal": "Wan Pro Image-to-Video (fal)",
 }
