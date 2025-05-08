@@ -61,9 +61,21 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 ### Video Generation
 
 - **Kling Video Generation (fal)**: Generate videos using the Kling model
-- **Kling Pro Video Generation (fal)**: Advanced video generation with Kling Pro
+- **Kling Pro v1.0 Video Generation (fal)**: Original version of Kling Pro for video generation
+- **Kling Pro v1.6 Video Generation (fal)**: Latest version of Kling Pro with improved quality
+- **Kling Master v2.0 Video Generation (fal)**: Advanced video generation with Kling Master
 - **Runway Gen3 Image-to-Video (fal)**: Convert images to videos using Runway Gen3
 - **Luma Dream Machine (fal)**: Create videos with Luma Dream Machine
+- **MiniMax Video Generation (fal)**: Generate videos using MiniMax model
+- **MiniMax Text-to-Video (fal)**: Create videos from text prompts using MiniMax
+- **MiniMax Subject Reference (fal)**: Generate videos with subject reference using MiniMax
+- **Google Veo2 Image-to-Video (fal)**: Convert images to videos using Google's Veo2 model
+- **Wan Pro Image-to-Video (fal)**: High-quality video generation with Wan Pro model
+- **Video Upscaler (fal)**: Upscale video quality using AI
+- **Combined Video Generation (fal)**: Generate videos using multiple services simultaneously
+  - Supports Kling Pro v1.6, Kling Master v2.0, MiniMax, Luma, Veo2, and Wan Pro
+  - Each service can be individually enabled/disabled
+  - Wan Pro runs with safety checker enabled and automatic seed selection
 - **Load Video from URL**: Load and process videos from a given URL
 
 ### Language Models (LLMs)
