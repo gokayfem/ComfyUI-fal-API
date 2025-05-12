@@ -20,12 +20,14 @@ config.read(config_path)
 
 # First set environment variable
 try:
-    fal_key = config['API']['FAL_KEY']
-
-    os.environ["FAL_KEY"] = fal_key
+    if os.environ.get("FAL_KEY"):
+        fal_key = os.environ["FAL_KEY"]
+    else:
+        fal_key = config['API']['FAL_KEY']
+        os.environ["FAL_KEY"] = fal_key
 
 except KeyError:
-    print("Error: FAL_KEY not found in config.ini")
+    print("Error: FAL_KEY not found in config.ini or environment variables")
 
 # Create the client with your API key
 fal_client = SyncClient(key=fal_key)
