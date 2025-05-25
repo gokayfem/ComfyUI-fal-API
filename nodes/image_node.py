@@ -169,6 +169,98 @@ class Recraft:
             print(f"Error generating image with Recraft: {str(e)}")
             return self.create_blank_image()
 
+class HidreamFull:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image_size": (["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9", "custom"], {"default": "landscape_4_3"}),
+                "width": ("INT", {"default": 1024, "min": 512, "max": 1440, "step": 32}),
+                "height": ("INT", {"default": 768, "min": 512, "max": 1440, "step": 32}),
+                "num_inference_steps": ("INT", {"default": 28, "min": 1, "max": 100}),
+                "guidance_scale": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 20.0}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 10}),
+                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2"}),
+            },
+            "optional": {
+                "seed": ("INT", {"default": -1}),
+            }
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(self, prompt, image_size, width, height, num_inference_steps, guidance_scale, num_images, safety_tolerance, seed=-1):
+        arguments = {
+            "prompt": prompt,
+            "num_inference_steps": num_inference_steps,
+            "guidance_scale": guidance_scale,
+            "num_images": num_images,
+            "safety_tolerance": safety_tolerance
+        }
+        if image_size == "custom":
+            arguments["image_size"] = {"width": width, "height": height}
+        else:
+            arguments["image_size"] = image_size
+        if seed != -1:
+            arguments["seed"] = seed
+
+        try:
+            handler = fal_client.submit("fal-ai/hidream-i1-full", arguments=arguments)
+            result = handler.get()
+            return self.process_result(result)
+        except Exception as e:
+            print(f"Error generating image with Hidream Full: {str(e)}")
+            return self.create_blank_image()
+
+class Ideogram:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image_size": (["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9", "custom"], {"default": "landscape_4_3"}),
+                "width": ("INT", {"default": 1024, "min": 512, "max": 1440, "step": 32}),
+                "height": ("INT", {"default": 768, "min": 512, "max": 1440, "step": 32}),
+                "num_inference_steps": ("INT", {"default": 28, "min": 1, "max": 100}),
+                "guidance_scale": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 20.0}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 10}),
+                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2"}),
+            },
+            "optional": {
+                "seed": ("INT", {"default": -1}),
+            }
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(self, prompt, image_size, width, height, num_inference_steps, guidance_scale, num_images, safety_tolerance, seed=-1):
+        arguments = {
+            "prompt": prompt,
+            "num_inference_steps": num_inference_steps,
+            "guidance_scale": guidance_scale,
+            "num_images": num_images,
+            "safety_tolerance": safety_tolerance
+        }
+        if image_size == "custom":
+            arguments["image_size"] = {"width": width, "height": height}
+        else:
+            arguments["image_size"] = image_size
+        if seed != -1:
+            arguments["seed"] = seed
+
+        try:
+            handler = fal_client.submit("fal-ai/ideogram/v2", arguments=arguments)
+            result = handler.get()
+            return self.process_result(result)
+        except Exception as e:
+            print(f"Error generating image with Ideogram: {str(e)}")
+            return self.create_blank_image()
+
 class FluxPro:
     @classmethod
     def INPUT_TYPES(cls):
@@ -449,7 +541,7 @@ class FluxLora:
             return self.process_result(result)
         except Exception as e:
             print(f"Error generating image with FluxLora: {str(e)}")
-            return self.create_blank_image()
+            return self.create_blank_image()  
 
 class FluxGeneral:
     @classmethod
@@ -656,12 +748,14 @@ def create_blank_image(self):
     return (img_tensor,)
 
 # Add common methods to all classes
-for cls in [FluxPro, FluxDev, FluxSchnell, FluxPro11, FluxUltra, FluxGeneral, FluxLora, Recraft, Sana]:
+for cls in [Ideogram,HidreamFull, FluxPro, FluxDev, FluxSchnell, FluxPro11, FluxUltra, FluxGeneral, FluxLora, Recraft, Sana]:
     cls.process_result = process_result
     cls.create_blank_image = create_blank_image
 
 # Node class mappings
 NODE_CLASS_MAPPINGS = {
+    "Ideogram_fal":Ideogram,
+    "Hidreamfull_fal": HidreamFull,
     "FluxPro_fal": FluxPro,
     "FluxDev_fal": FluxDev,
     "FluxSchnell_fal": FluxSchnell,
@@ -675,6 +769,8 @@ NODE_CLASS_MAPPINGS = {
 
 # Node display name mappings
 NODE_DISPLAY_NAME_MAPPINGS = {
+    "Ideogram_fal": "Ideogram (fal)",
+    "Hidreamfull_fal": "HidreamFull (fal)",
     "FluxPro_fal": "Flux Pro (fal)",
     "FluxDev_fal": "Flux Dev (fal)",
     "FluxSchnell_fal": "Flux Schnell (fal)",
