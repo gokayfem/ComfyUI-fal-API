@@ -215,7 +215,7 @@ class HidreamFull:
             print(f"Error generating image with Hidream Full: {str(e)}")
             return self.create_blank_image()
 
-class Ideogram:
+class Ideogramv3:
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -254,11 +254,11 @@ class Ideogram:
             arguments["seed"] = seed
 
         try:
-            handler = fal_client.submit("fal-ai/ideogram/v2", arguments=arguments)
+            handler = fal_client.submit("fal-ai/ideogram/v3", arguments=arguments)
             result = handler.get()
             return self.process_result(result)
         except Exception as e:
-            print(f"Error generating image with Ideogram: {str(e)}")
+            print(f"Error generating image with Ideogramv3: {str(e)}")
             return self.create_blank_image()
 
 class FluxPro:
@@ -748,13 +748,13 @@ def create_blank_image(self):
     return (img_tensor,)
 
 # Add common methods to all classes
-for cls in [Ideogram,HidreamFull, FluxPro, FluxDev, FluxSchnell, FluxPro11, FluxUltra, FluxGeneral, FluxLora, Recraft, Sana]:
+for cls in [Ideogramv3,HidreamFull, FluxPro, FluxDev, FluxSchnell, FluxPro11, FluxUltra, FluxGeneral, FluxLora, Recraft, Sana]:
     cls.process_result = process_result
     cls.create_blank_image = create_blank_image
 
 # Node class mappings
 NODE_CLASS_MAPPINGS = {
-    "Ideogram_fal":Ideogram,
+    "Ideogramv3_fal":Ideogramv3,
     "Hidreamfull_fal": HidreamFull,
     "FluxPro_fal": FluxPro,
     "FluxDev_fal": FluxDev,
@@ -769,7 +769,7 @@ NODE_CLASS_MAPPINGS = {
 
 # Node display name mappings
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "Ideogram_fal": "Ideogram (fal)",
+    "Ideogramv3_fal": "Ideogramv3 (fal)",
     "Hidreamfull_fal": "HidreamFull (fal)",
     "FluxPro_fal": "Flux Pro (fal)",
     "FluxDev_fal": "Flux Dev (fal)",
