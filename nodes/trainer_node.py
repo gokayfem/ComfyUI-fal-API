@@ -163,14 +163,143 @@ class HunyuanVideoLoraTrainerNode:
             print(f"Error during LoRA training: {str(e)}")
             return ("Error: Training failed.", "")
 
+class WanLoraTrainerNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "training_data_url": ("STRING", {"default": ""}),
+                "number_of_steps": ("INT", {"default": 400, "min": 5, "max": 10000, "step": 1}),
+                "learning_rate": ("FLOAT", {"default": 0.0002, "min": 0.00001, "max": 0.01}),
+            },
+            "optional": {
+                "trigger_phrase": ("STRING", {"default": ""}),
+                "auto_scale_input": ("BOOLEAN", {"default": True}),
+            }
+        }
+    
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("lora_file_url",)
+    FUNCTION = "train_lora"
+    CATEGORY = "FAL/Training"
+
+    def train_lora(self, training_data_url, number_of_steps, learning_rate, trigger_phrase="", auto_scale_input=True):
+        try:
+            if not training_data_url:
+                return ("Error: No training data URL provided.",)
+
+            # Prepare arguments for the API
+            arguments = {
+                "training_data_url": training_data_url,
+                "number_of_steps": number_of_steps,
+                "learning_rate": learning_rate,
+                "auto_scale_input": auto_scale_input
+            }
+            
+            if trigger_phrase:
+                arguments["trigger_phrase"] = trigger_phrase
+
+            # Submit training job
+            handler = fal_client.submit("fal-ai/wan-trainer", arguments=arguments)
+            result = handler.get()
+
+            lora_url = result["lora_file"]["url"]
+
+            return (lora_url,)
+
+        except Exception as e:
+            print(f"Error during LoRA training: {str(e)}")
+            return ("Error: Training failed.",)
+
+class LtxVideoTrainerNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "training_data_url": ("STRING", {"default": ""}),
+                "rank": (["8", "16", "32", "64", "128"], {"default": "128"}),
+                "number_of_steps": ("INT", {"default": 1000, "min": 100, "max": 10000, "step": 1}),
+                "number_of_frames": ("INT", {"default": 81, "min": 1, "max": 1000}),
+                "frame_rate": ("INT", {"default": 25, "min": 1, "max": 60}),
+                "resolution": (["low", "medium", "high"], {"default": "medium"}),
+                "aspect_ratio": (["16:9", "1:1", "9:16"], {"default": "1:1"}),
+                "learning_rate": ("FLOAT", {"default": 0.0002, "min": 0.00001, "max": 0.01}),
+            },
+            "optional": {
+                "trigger_phrase": ("STRING", {"default": ""}),
+                "auto_scale_input": ("BOOLEAN", {"default": False}),
+                "split_input_into_scenes": ("BOOLEAN", {"default": True}),
+                "split_input_duration_threshold": ("FLOAT", {"default": 30.0, "min": 1.0, "max": 300.0}),
+                "validation_negative_prompt": ("STRING", {"default": "blurry, low quality, bad quality, out of focus"}),
+                "validation_number_of_frames": ("INT", {"default": 81, "min": 1, "max": 1000}),
+                "validation_resolution": (["low", "medium", "high"], {"default": "high"}),
+                "validation_aspect_ratio": (["16:9", "1:1", "9:16"], {"default": "1:1"}),
+                "validation_reverse": ("BOOLEAN", {"default": False}),
+            }
+        }
+    
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("lora_file_url",)
+    FUNCTION = "train_lora"
+    CATEGORY = "FAL/Training"
+
+    def train_lora(self, training_data_url, rank, number_of_steps, number_of_frames, frame_rate, 
+                  resolution, aspect_ratio, learning_rate, trigger_phrase="", auto_scale_input=False,
+                  split_input_into_scenes=True, split_input_duration_threshold=30.0,
+                  validation_negative_prompt="blurry, low quality, bad quality, out of focus",
+                  validation_number_of_frames=81, validation_resolution="high",
+                  validation_aspect_ratio="1:1", validation_reverse=False):
+        try:
+            if not training_data_url:
+                return ("Error: No training data URL provided.",)
+
+            # Prepare arguments for the API
+            arguments = {
+                "training_data_url": training_data_url,
+                "rank": int(rank),
+                "number_of_steps": number_of_steps,
+                "number_of_frames": number_of_frames,
+                "frame_rate": frame_rate,
+                "resolution": resolution,
+                "aspect_ratio": aspect_ratio,
+                "learning_rate": learning_rate,
+                "auto_scale_input": auto_scale_input,
+                "split_input_into_scenes": split_input_into_scenes,
+                "split_input_duration_threshold": split_input_duration_threshold,
+                "validation_negative_prompt": validation_negative_prompt,
+                "validation_number_of_frames": validation_number_of_frames,
+                "validation_resolution": validation_resolution,
+                "validation_aspect_ratio": validation_aspect_ratio,
+                "validation_reverse": validation_reverse
+            }
+            
+            if trigger_phrase:
+                arguments["trigger_phrase"] = trigger_phrase
+
+            # Submit training job
+            handler = fal_client.submit("fal-ai/ltx-video-trainer", arguments=arguments)
+            result = handler.get()
+
+            lora_url = result["lora_file"]["url"]
+
+            return (lora_url,)
+
+        except Exception as e:
+            print(f"Error during LoRA training: {str(e)}")
+            return ("Error: Training failed.",)
+
 # Node class mappings
 NODE_CLASS_MAPPINGS = {
     "FluxLoraTrainer_fal": FluxLoraTrainerNode,
     "HunyuanVideoLoraTrainer_fal": HunyuanVideoLoraTrainerNode,
+    "WanLoraTrainer_fal": WanLoraTrainerNode,
+    "LtxVideoTrainer_fal": LtxVideoTrainerNode,
 }
 
 # Node display name mappings
 NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxLoraTrainer_fal": "Flux LoRA Trainer (fal)",
     "HunyuanVideoLoraTrainer_fal": "Hunyuan Video LoRA Trainer (fal)",
+    "WanLoraTrainer_fal": "WAN LoRA Trainer (fal)",
+    "LtxVideoTrainer_fal": "LTX Video LoRA Trainer (fal)",
 }
