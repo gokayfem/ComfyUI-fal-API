@@ -732,7 +732,7 @@ class FluxProKontext:
                 "image": ("IMAGE",),
             },
             "optional": {
-                "aspect_ratio": (["21:9", "16:9", "4:3", "3:2", "1:1", "2:3", "3:4", "9:16", "9:21"], {"default": "1:1"}),
+                "aspect_ratio": ([None, "21:9", "16:9", "4:3", "3:2", "1:1", "2:3", "3:4", "9:16", "9:21"], {"default": None}),
                 "max_quality": ("BOOLEAN", {"default": False}),
                 "guidance_scale": ("FLOAT", {"default": 3.5, "min": 1.0, "max": 20.0, "step": 0.1}),
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
@@ -793,7 +793,7 @@ class FluxProKontextMulti:
             "optional": {
                 "image_3": ("IMAGE",),
                 "image_4": ("IMAGE",),
-                "aspect_ratio": (["21:9", "16:9", "4:3", "3:2", "1:1", "2:3", "3:4", "9:16", "9:21"], {"default": "1:1"}),
+                "aspect_ratio": ([None, "21:9", "16:9", "4:3", "3:2", "1:1", "2:3", "3:4", "9:16", "9:21"], {"default": None}),
                 "max_quality": ("BOOLEAN", {"default": False}),
                 "guidance_scale": ("FLOAT", {"default": 3.5, "min": 1.0, "max": 20.0, "step": 0.1}),
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
