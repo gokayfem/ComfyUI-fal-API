@@ -825,7 +825,7 @@ class FluxProKontextMulti:
             return self.create_blank_image()
 
         # Dynamic endpoint selection based on max_quality toggle
-        endpoint = "fal-ai/flux-pro/kontext/max" if max_quality else "fal-ai/flux-pro/kontext"
+        endpoint = "fal-ai/flux-pro/kontext/max/multi" if max_quality else "fal-ai/flux-pro/kontext/multi"
 
         arguments = {
             "prompt": prompt,
