@@ -1,3 +1,2 @@
 fal-client
 torch
-opencv-python
