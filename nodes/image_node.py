@@ -732,6 +732,7 @@ class FluxProKontext:
                 "image": ("IMAGE",),
             },
             "optional": {
+                "aspect_ratio": (["21:9", "16:9", "4:3", "3:2", "1:1", "2:3", "3:4", "9:16", "9:21"], {"default": "1:1"}),
                 "max_quality": ("BOOLEAN", {"default": False}),
                 "guidance_scale": ("FLOAT", {"default": 3.5, "min": 1.0, "max": 20.0, "step": 0.1}),
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
@@ -746,7 +747,7 @@ class FluxProKontext:
     FUNCTION = "generate_image"
     CATEGORY = "FAL/Image"
 
-    def generate_image(self, prompt, image, max_quality=False, guidance_scale=3.5, num_images=1, safety_tolerance="2", output_format="jpeg", sync_mode=False, seed=0):
+    def generate_image(self, prompt, image, aspect_ratio="1:1", max_quality=False, guidance_scale=3.5, num_images=1, safety_tolerance="2", output_format="jpeg", sync_mode=False, seed=0):
         # Upload the input image to get URL
         image_url = upload_image(image)
         if not image_url:
@@ -760,6 +761,7 @@ class FluxProKontext:
         arguments = {
             "prompt": prompt,
             "image_url": image_url,
+            "aspect_ratio": aspect_ratio,
             "guidance_scale": guidance_scale,
             "num_images": num_images,
             "safety_tolerance": safety_tolerance,
@@ -791,6 +793,7 @@ class FluxProKontextMulti:
             "optional": {
                 "image_3": ("IMAGE",),
                 "image_4": ("IMAGE",),
+                "aspect_ratio": (["21:9", "16:9", "4:3", "3:2", "1:1", "2:3", "3:4", "9:16", "9:21"], {"default": "1:1"}),
                 "max_quality": ("BOOLEAN", {"default": False}),
                 "guidance_scale": ("FLOAT", {"default": 3.5, "min": 1.0, "max": 20.0, "step": 0.1}),
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
@@ -805,7 +808,7 @@ class FluxProKontextMulti:
     FUNCTION = "generate_image"
     CATEGORY = "FAL/Image"
 
-    def generate_image(self, prompt, image_1, image_2, image_3=None, image_4=None, max_quality=False, guidance_scale=3.5, num_images=1, safety_tolerance="2", output_format="jpeg", sync_mode=False, seed=0):
+    def generate_image(self, prompt, image_1, image_2, image_3=None, image_4=None, aspect_ratio="1:1", max_quality=False, guidance_scale=3.5, num_images=1, safety_tolerance="2", output_format="jpeg", sync_mode=False, seed=0):
         # Upload all provided images
         image_urls = []
         
@@ -830,6 +833,7 @@ class FluxProKontextMulti:
         arguments = {
             "prompt": prompt,
             "image_urls": image_urls,
+            "aspect_ratio": aspect_ratio,
             "guidance_scale": guidance_scale,
             "num_images": num_images,
             "safety_tolerance": safety_tolerance,
@@ -874,7 +878,7 @@ class FluxProKontextTextToImage:
 
     def generate_image(self, prompt, aspect_ratio="1:1", max_quality=False, guidance_scale=3.5, num_images=1, safety_tolerance="2", output_format="jpeg", sync_mode=False, seed=0):
         # Dynamic endpoint selection based on max_quality toggle
-        endpoint = "fal-ai/flux-pro/kontext/max" if max_quality else "fal-ai/flux-pro/kontext"
+        endpoint = "fal-ai/flux-pro/kontext/max/text-to-image" if max_quality else "fal-ai/flux-pro/kontext/text-to-image"
         
         arguments = {
             "prompt": prompt,
