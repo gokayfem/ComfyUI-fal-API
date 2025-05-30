@@ -56,7 +56,16 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **Flux Dev (fal)**: Use the development version of Flux for image generation
 - **Flux Schnell (fal)**: Fast image generation with Flux Schnell
 - **Flux Pro 1.1 (fal)**: Latest version of Flux Pro for image generation
+- **Flux Ultra (fal)**: Ultra-high quality image generation with advanced controls
 - **Flux General (fal)**: ControlNets, Ipadapters, Loras for Flux Dev
+- **Flux LoRA (fal)**: Flux with dual LoRA support for custom styles
+- **Flux Pro Kontext (fal)**: Context-aware single image-to-image generation with max_quality toggle
+- **Flux Pro Kontext Multi (fal)**: Multi-image composition (2-4 images) with context awareness and max_quality toggle
+- **Flux Pro Kontext Text-to-Image (fal)**: Text-to-image with aspect ratio controls and max_quality toggle
+- **Recraft V3 (fal)**: Professional design generation with multiple style options
+- **Sana (fal)**: High-quality image synthesis with ultra-high resolution support
+- **HiDream Full (fal)**: Advanced image generation with comprehensive parameter control
+- **Ideogram v3 (fal)**: Advanced text-to-image generation with typography support
 
 ### Video Generation
 
@@ -113,7 +122,7 @@ If you encounter any errors during installation or usage, try the following:
 1. Ensure you have the latest version of ComfyUI installed
 2. Update this custom node package:
    ```
-   cd custom_nodes/ComfyUI-FLUX-fal-API
+   cd custom_nodes/ComfyUI-fal-API
    git pull
    pip install -r requirements.txt
    ```
