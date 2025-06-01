@@ -16,10 +16,25 @@ config = configparser.ConfigParser()
 config.read(config_path)
 
 try:
-    fal_key = config['API']['FAL_KEY']
-    os.environ["FAL_KEY"] = fal_key
+    if os.environ.get("FAL_KEY") is not None:
+        print("FAL_KEY found in environment variables")
+        fal_key = os.environ["FAL_KEY"]
+    else:
+        print("FAL_KEY not found in environment variables")
+        fal_key = config['API']['FAL_KEY']
+        print("FAL_KEY found in config.ini")
+        os.environ["FAL_KEY"] = fal_key
+        print("FAL_KEY set in environment variables")
+
+    # Check if FAL key is the default placeholder
+    if fal_key == "<your_fal_api_key_here>":
+        print("WARNING: You are using the default FAL API key placeholder!")
+        print("Please set your actual FAL API key in either:")
+        print("1. The config.ini file under [API] section")
+        print("2. Or as an environment variable named FAL_KEY")
+        print("Get your API key from: https://fal.ai/dashboard/keys")
 except KeyError:
-    print("Error: FAL_KEY not found in config.ini")
+    print("Error: FAL_KEY not found in config.ini or environment variables")
 
 # Create the client with API key
 fal_client = SyncClient(key=fal_key)
