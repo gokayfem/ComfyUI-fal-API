@@ -44,6 +44,11 @@ Custom nodes for using Flux models with  fal API in ComfyUI with only one API Ke
    FAL_KEY = your_actual_api_key
    ```
 
+4. Alternatively, you can set the FAL_KEY environment variable:
+   ```bash
+   export FAL_KEY=your_actual_api_key
+   ```
+
 ## Usage
 
 After installation and configuration, restart ComfyUI. The new nodes will be available in the node browser under the "FAL" category.
