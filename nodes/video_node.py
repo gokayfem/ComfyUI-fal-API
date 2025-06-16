@@ -1050,6 +1050,48 @@ class LoadVideoURL:
 # Update Node class mappings
 NODE_CLASS_MAPPINGS = {
     "Kling_fal": KlingNode,
+}
+
+class SeedanceImageToVideoNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image": ("IMAGE",),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, prompt, image):
+        try:
+            image_url = ImageUtils.upload_image(image)
+            if not image_url:
+                return ApiHandler.handle_video_generation_error(
+                    "fal-ai/bytedance/seedance/v1/lite/image-to-video", "Failed to upload image"
+                )
+
+            arguments = {
+                "prompt": prompt,
+                "image_url": image_url,
+            }
+
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/bytedance/seedance/v1/lite/image-to-video", arguments
+            )
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "fal-ai/bytedance/seedance/v1/lite/image-to-video", str(e)
+            )
+
+# Update Node class mappings
+NODE_CLASS_MAPPINGS = {
+    "Kling_fal": KlingNode,
     "KlingPro10_fal": KlingPro10Node,
     "KlingPro16_fal": KlingPro16Node,
     "KlingMaster_fal": KlingMasterNode,
@@ -1063,6 +1105,7 @@ NODE_CLASS_MAPPINGS = {
     "CombinedVideoGeneration_fal": CombinedVideoGenerationNode,
     "Veo2ImageToVideo_fal": Veo2ImageToVideoNode,
     "WanPro_fal": WanProNode,
+    "SeedanceImageToVideo_fal": SeedanceImageToVideoNode,
 }
 
 # Update Node display name mappings
@@ -1081,4 +1124,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "CombinedVideoGeneration_fal": "Combined Video Generation (fal)",
     "Veo2ImageToVideo_fal": "Google Veo2 Image-to-Video (fal)",
     "WanPro_fal": "Wan Pro Image-to-Video (fal)",
+    "SeedanceImageToVideo_fal": "Seedance Image-to-Video (fal)",
 }
