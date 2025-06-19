@@ -1060,6 +1060,7 @@ class FluxProKontext:
                     ],
                     {"default": None},
                 ),
+                "max_quality": ("BOOLEAN", {"default": False}),
                 "guidance_scale": (
                     "FLOAT",
                     {"default": 3.5, "min": 1.0, "max": 20.0, "step": 0.1},
@@ -1081,6 +1082,7 @@ class FluxProKontext:
         prompt,
         image,
         aspect_ratio="1:1",
+        max_quality=False,
         guidance_scale=3.5,
         num_images=1,
         safety_tolerance="2",
@@ -1091,11 +1093,14 @@ class FluxProKontext:
         # Upload the input image to get URL
         image_url = ImageUtils.upload_image(image)
         if not image_url:
-            model_name = "Flux Pro Kontext"
+            model_name = "Flux Pro Kontext Max" if max_quality else "Flux Pro Kontext"
             print(f"Error: Failed to upload image for {model_name}")
             return ResultProcessor.create_blank_image()
 
-        endpoint = "fal-ai/flux-pro/kontext"
+        # Dynamic endpoint selection based on max_quality toggle
+        endpoint = (
+            "fal-ai/flux-pro/kontext/max" if max_quality else "fal-ai/flux-pro/kontext"
+        )
 
         arguments = {
             "prompt": prompt,
@@ -1115,90 +1120,7 @@ class FluxProKontext:
             result = ApiHandler.submit_and_get_result(endpoint, arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
-            model_name = "Flux Pro Kontext"
-            return ApiHandler.handle_image_generation_error(model_name, e)
-
-
-class FluxProKontextMax:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
-                "image": ("IMAGE",),
-            },
-            "optional": {
-                "aspect_ratio": (
-                    [
-                        None,
-                        "21:9",
-                        "16:9",
-                        "4:3",
-                        "3:2",
-                        "1:1",
-                        "2:3",
-                        "3:4",
-                        "9:16",
-                        "9:21",
-                    ],
-                    {"default": None},
-                ),
-                "guidance_scale": (
-                    "FLOAT",
-                    {"default": 3.5, "min": 1.0, "max": 20.0, "step": 0.1},
-                ),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
-                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2"}),
-                "output_format": (["jpeg", "png"], {"default": "jpeg"}),
-                "sync_mode": ("BOOLEAN", {"default": False}),
-                "seed": ("INT", {"default": 0, "min": 0, "max": 2**32 - 1}),
-            },
-        }
-
-    RETURN_TYPES = ("IMAGE",)
-    FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
-
-    def generate_image(
-        self,
-        prompt,
-        image,
-        aspect_ratio="1:1",
-        guidance_scale=3.5,
-        num_images=1,
-        safety_tolerance="2",
-        output_format="jpeg",
-        sync_mode=False,
-        seed=0,
-    ):
-        # Upload the input image to get URL
-        image_url = ImageUtils.upload_image(image)
-        if not image_url:
-            model_name = "Flux Pro Kontext Max"
-            print(f"Error: Failed to upload image for {model_name}")
-            return ResultProcessor.create_blank_image()
-
-        endpoint = "fal-ai/flux-pro/kontext/max"
-
-        arguments = {
-            "prompt": prompt,
-            "image_url": image_url,
-            "aspect_ratio": aspect_ratio,
-            "guidance_scale": guidance_scale,
-            "num_images": num_images,
-            "safety_tolerance": safety_tolerance,
-            "output_format": output_format,
-            "sync_mode": sync_mode,
-        }
-
-        if seed > 0:
-            arguments["seed"] = seed
-
-        try:
-            result = ApiHandler.submit_and_get_result(endpoint, arguments)
-            return ResultProcessor.process_image_result(result)
-        except Exception as e:
-            model_name = "Flux Pro Kontext Max"
+            model_name = "Flux Pro Kontext Max" if max_quality else "Flux Pro Kontext"
             return ApiHandler.handle_image_generation_error(model_name, e)
 
 
@@ -1229,6 +1151,7 @@ class FluxProKontextMulti:
                     ],
                     {"default": None},
                 ),
+                "max_quality": ("BOOLEAN", {"default": False}),
                 "guidance_scale": (
                     "FLOAT",
                     {"default": 3.5, "min": 1.0, "max": 20.0, "step": 0.1},
@@ -1253,6 +1176,7 @@ class FluxProKontextMulti:
         image_3=None,
         image_4=None,
         aspect_ratio="1:1",
+        max_quality=False,
         guidance_scale=3.5,
         num_images=1,
         safety_tolerance="2",
@@ -1269,16 +1193,29 @@ class FluxProKontextMulti:
                 if url:
                     image_urls.append(url)
                 else:
-                    model_name = "Flux Pro Kontext Multi"
+                    model_name = (
+                        "Flux Pro Kontext Max Multi"
+                        if max_quality
+                        else "Flux Pro Kontext Multi"
+                    )
                     print(f"Error: Failed to upload image {i} for {model_name}")
                     return ResultProcessor.create_blank_image()
 
         if len(image_urls) < 2:
-            model_name = "Flux Pro Kontext Multi"
+            model_name = (
+                "Flux Pro Kontext Max Multi"
+                if max_quality
+                else "Flux Pro Kontext Multi"
+            )
             print(f"Error: At least 2 images required for {model_name}")
             return ResultProcessor.create_blank_image()
 
-        endpoint = "fal-ai/flux-pro/kontext/multi"
+        # Dynamic endpoint selection based on max_quality toggle
+        endpoint = (
+            "fal-ai/flux-pro/kontext/max/multi"
+            if max_quality
+            else "fal-ai/flux-pro/kontext/multi"
+        )
 
         arguments = {
             "prompt": prompt,
@@ -1298,107 +1235,11 @@ class FluxProKontextMulti:
             result = ApiHandler.submit_and_get_result(endpoint, arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
-            model_name = "Flux Pro Kontext Multi"
-            return ApiHandler.handle_image_generation_error(model_name, e)
-
-
-class FluxProKontextMaxMulti:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
-                "image_1": ("IMAGE",),
-                "image_2": ("IMAGE",),
-            },
-            "optional": {
-                "image_3": ("IMAGE",),
-                "image_4": ("IMAGE",),
-                "aspect_ratio": (
-                    [
-                        None,
-                        "21:9",
-                        "16:9",
-                        "4:3",
-                        "3:2",
-                        "1:1",
-                        "2:3",
-                        "3:4",
-                        "9:16",
-                        "9:21",
-                    ],
-                    {"default": None},
-                ),
-                "guidance_scale": (
-                    "FLOAT",
-                    {"default": 3.5, "min": 1.0, "max": 20.0, "step": 0.1},
-                ),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
-                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2"}),
-                "output_format": (["jpeg", "png"], {"default": "jpeg"}),
-                "sync_mode": ("BOOLEAN", {"default": False}),
-                "seed": ("INT", {"default": 0, "min": 0, "max": 2**32 - 1}),
-            },
-        }
-
-    RETURN_TYPES = ("IMAGE",)
-    FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
-
-    def generate_image(
-        self,
-        prompt,
-        image_1,
-        image_2,
-        image_3=None,
-        image_4=None,
-        aspect_ratio="1:1",
-        guidance_scale=3.5,
-        num_images=1,
-        safety_tolerance="2",
-        output_format="jpeg",
-        sync_mode=False,
-        seed=0,
-    ):
-        # Upload all provided images
-        image_urls = []
-
-        for i, img in enumerate([image_1, image_2, image_3, image_4], 1):
-            if img is not None:
-                url = ImageUtils.upload_image(img)
-                if url:
-                    image_urls.append(url)
-                else:
-                    model_name = "Flux Pro Kontext Max Multi"
-                    print(f"Error: Failed to upload image {i} for {model_name}")
-                    return ResultProcessor.create_blank_image()
-
-        if len(image_urls) < 2:
-            model_name = "Flux Pro Kontext Max Multi"
-            print(f"Error: At least 2 images required for {model_name}")
-            return ResultProcessor.create_blank_image()
-
-        endpoint = "fal-ai/flux-pro/kontext/max/multi"
-
-        arguments = {
-            "prompt": prompt,
-            "image_urls": image_urls,
-            "aspect_ratio": aspect_ratio,
-            "guidance_scale": guidance_scale,
-            "num_images": num_images,
-            "safety_tolerance": safety_tolerance,
-            "output_format": output_format,
-            "sync_mode": sync_mode,
-        }
-
-        if seed > 0:
-            arguments["seed"] = seed
-
-        try:
-            result = ApiHandler.submit_and_get_result(endpoint, arguments)
-            return ResultProcessor.process_image_result(result)
-        except Exception as e:
-            model_name = "Flux Pro Kontext Max Multi"
+            model_name = (
+                "Flux Pro Kontext Max Multi"
+                if max_quality
+                else "Flux Pro Kontext Multi"
+            )
             return ApiHandler.handle_image_generation_error(model_name, e)
 
 
@@ -1414,6 +1255,7 @@ class FluxProKontextTextToImage:
                     ["21:9", "16:9", "4:3", "3:2", "1:1", "2:3", "3:4", "9:16", "9:21"],
                     {"default": "1:1"},
                 ),
+                "max_quality": ("BOOLEAN", {"default": False}),
                 "guidance_scale": (
                     "FLOAT",
                     {"default": 3.5, "min": 1.0, "max": 20.0, "step": 0.1},
@@ -1434,6 +1276,7 @@ class FluxProKontextTextToImage:
         self,
         prompt,
         aspect_ratio="1:1",
+        max_quality=False,
         guidance_scale=3.5,
         num_images=1,
         safety_tolerance="2",
@@ -1441,7 +1284,12 @@ class FluxProKontextTextToImage:
         sync_mode=False,
         seed=0,
     ):
-        endpoint = "fal-ai/flux-pro/kontext/text-to-image"
+        # Dynamic endpoint selection based on max_quality toggle
+        endpoint = (
+            "fal-ai/flux-pro/kontext/max/text-to-image"
+            if max_quality
+            else "fal-ai/flux-pro/kontext/text-to-image"
+        )
 
         arguments = {
             "prompt": prompt,
@@ -1460,69 +1308,11 @@ class FluxProKontextTextToImage:
             result = ApiHandler.submit_and_get_result(endpoint, arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
-            model_name = "Flux Pro Kontext Text-to-Image"
-            return ApiHandler.handle_image_generation_error(model_name, e)
-
-
-class FluxProKontextMaxTextToImage:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
-            },
-            "optional": {
-                "aspect_ratio": (
-                    ["21:9", "16:9", "4:3", "3:2", "1:1", "2:3", "3:4", "9:16", "9:21"],
-                    {"default": "1:1"},
-                ),
-                "guidance_scale": (
-                    "FLOAT",
-                    {"default": 3.5, "min": 1.0, "max": 20.0, "step": 0.1},
-                ),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
-                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2"}),
-                "output_format": (["jpeg", "png"], {"default": "jpeg"}),
-                "sync_mode": ("BOOLEAN", {"default": False}),
-                "seed": ("INT", {"default": 0, "min": 0, "max": 2**32 - 1}),
-            },
-        }
-
-    RETURN_TYPES = ("IMAGE",)
-    FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
-
-    def generate_image(
-        self,
-        prompt,
-        aspect_ratio="1:1",
-        guidance_scale=3.5,
-        num_images=1,
-        safety_tolerance="2",
-        output_format="jpeg",
-        sync_mode=False,
-        seed=0,
-    ):
-        endpoint = "fal-ai/flux-pro/kontext/max/text-to-image"
-
-        arguments = {
-            "prompt": prompt,
-            "aspect_ratio": aspect_ratio,
-            "guidance_scale": guidance_scale,
-            "num_images": num_images,
-            "safety_tolerance": safety_tolerance,
-            "output_format": output_format,
-            "sync_mode": sync_mode,
-        }
-
-        if seed > 0:
-            arguments["seed"] = seed
-
-        try:
-            result = ApiHandler.submit_and_get_result(endpoint, arguments)
-            return ResultProcessor.process_image_result(result)
-        except Exception as e:
-            model_name = "Flux Pro Kontext Max Text-to-Image"
+            model_name = (
+                "Flux Pro Kontext Max Text-to-Image"
+                if max_quality
+                else "Flux Pro Kontext Text-to-Image"
+            )
             return ApiHandler.handle_image_generation_error(model_name, e)
 
 
@@ -1570,11 +1360,8 @@ NODE_CLASS_MAPPINGS = {
     "Recraft_fal": Recraft,
     "Sana_fal": Sana,
     "FluxProKontext_fal": FluxProKontext,
-    "FluxProKontextMax_fal": FluxProKontextMax,
     "FluxProKontextMulti_fal": FluxProKontextMulti,
-    "FluxProKontextMaxMulti_fal": FluxProKontextMaxMulti,
     "FluxProKontextTextToImage_fal": FluxProKontextTextToImage,
-    "FluxProKontextMaxTextToImage_fal": FluxProKontextMaxTextToImage,
     "Imagen4Preview_fal": Imagen4PreviewNode,
 }
 
@@ -1593,10 +1380,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "Recraft_fal": "Recraft V3 (fal)",
     "Sana_fal": "Sana (fal)",
     "FluxProKontext_fal": "Flux Pro Kontext (fal)",
-    "FluxProKontextMax_fal": "Flux Pro Kontext Max (fal)",
     "FluxProKontextMulti_fal": "Flux Pro Kontext Multi (fal)",
-    "FluxProKontextMaxMulti_fal": "Flux Pro Kontext Max Multi (fal)",
     "FluxProKontextTextToImage_fal": "Flux Pro Kontext Text-to-Image (fal)",
-    "FluxProKontextMaxTextToImage_fal": "Flux Pro Kontext Max Text-to-Image (fal)",
     "Imagen4Preview_fal": "Imagen4 Preview (fal)",
 }
