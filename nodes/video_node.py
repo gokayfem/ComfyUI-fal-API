@@ -1144,6 +1144,57 @@ class SeedanceTextToVideoNode:
             )
 
 
+class Veo3Node:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "aspect_ratio": (["16:9", "9:16", "1:1"], {"default": "16:9"}),
+                "duration": (["8s"], {"default": "8s"}),
+            },
+            "optional": {
+                "negative_prompt": ("STRING", {"default": "", "multiline": True}),
+                "enhance_prompt": ("BOOLEAN", {"default": True}),
+                "seed": ("INT", {"default": -1, "min": -1, "max": 2147483647}),
+                "generate_audio": ("BOOLEAN", {"default": True}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(
+        self,
+        prompt,
+        aspect_ratio,
+        duration,
+        negative_prompt="",
+        enhance_prompt=True,
+        seed=-1,
+        generate_audio=True,
+    ):
+        arguments = {
+            "prompt": prompt,
+            "aspect_ratio": aspect_ratio,
+            "duration": duration,
+            "negative_prompt": negative_prompt,
+            "enhance_prompt": enhance_prompt,
+            "generate_audio": generate_audio,
+        }
+
+        if seed != -1:
+            arguments["seed"] = seed
+
+        try:
+            result = ApiHandler.submit_and_get_result("fal-ai/veo3", arguments)
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error("veo3", str(e))
+
+
 # Update Node class mappings
 NODE_CLASS_MAPPINGS = {
     "Kling_fal": KlingNode,
@@ -1162,6 +1213,7 @@ NODE_CLASS_MAPPINGS = {
     "WanPro_fal": WanProNode,
     "SeedanceImageToVideo_fal": SeedanceImageToVideoNode,
     "SeedanceTextToVideo_fal": SeedanceTextToVideoNode,
+    "Veo3_fal": Veo3Node,
 }
 
 # Update Node display name mappings
@@ -1182,4 +1234,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "WanPro_fal": "Wan Pro Image-to-Video (fal)",
     "SeedanceImageToVideo_fal": "Seedance Image-to-Video (fal)",
     "SeedanceTextToVideo_fal": "Seedance Text-to-Video (fal)",
+    "Veo3_fal": "Veo3 Video Generation (fal)",
 }
