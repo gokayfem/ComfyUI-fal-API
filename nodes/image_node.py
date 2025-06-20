@@ -1316,6 +1316,36 @@ class FluxProKontextTextToImage:
             return ApiHandler.handle_image_generation_error(model_name, e)
 
 
+class Imagen4PreviewNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        prompt,
+    ):
+        arguments = {
+            "prompt": prompt,
+        }
+
+        try:
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/imagen4/preview", arguments
+            )
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("Imagen4 Preview", e)
+
+
 # Node class mappings
 NODE_CLASS_MAPPINGS = {
     "Ideogramv3_fal": Ideogramv3,
@@ -1332,9 +1362,11 @@ NODE_CLASS_MAPPINGS = {
     "FluxProKontext_fal": FluxProKontext,
     "FluxProKontextMulti_fal": FluxProKontextMulti,
     "FluxProKontextTextToImage_fal": FluxProKontextTextToImage,
+    "Imagen4Preview_fal": Imagen4PreviewNode,
 }
 
-# Node display name mappings
+
+# Display name mappings
 NODE_DISPLAY_NAME_MAPPINGS = {
     "Ideogramv3_fal": "Ideogramv3 (fal)",
     "Hidreamfull_fal": "HidreamFull (fal)",
@@ -1350,4 +1382,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxProKontext_fal": "Flux Pro Kontext (fal)",
     "FluxProKontextMulti_fal": "Flux Pro Kontext Multi (fal)",
     "FluxProKontextTextToImage_fal": "Flux Pro Kontext Text-to-Image (fal)",
+    "Imagen4Preview_fal": "Imagen4 Preview (fal)",
 }
