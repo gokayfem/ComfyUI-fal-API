@@ -1,7 +1,7 @@
 [project]
 name = "fal-api"
 description = "Custom nodes for using fal API. Video generation with Kling, Runway, Luma. Image generation with Flux. LLMs and VLMs OpenAI, Claude, Llama and Gemini."
-version = "1.0.3"
+version = "1.0.4"
 license = {file = "LICENSE"}
 dependencies = ["fal-client", "torch"]
 
