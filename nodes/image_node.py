@@ -1368,7 +1368,7 @@ NODE_CLASS_MAPPINGS = {
 
 # Display name mappings
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "Ideogramv3_fal": "Ideogram v3 (fal)",
+    "Ideogramv3_fal": "Ideogramv3 (fal)",
     "Hidreamfull_fal": "HidreamFull (fal)",
     "FluxPro_fal": "Flux Pro (fal)",
     "FluxDev_fal": "Flux Dev (fal)",
