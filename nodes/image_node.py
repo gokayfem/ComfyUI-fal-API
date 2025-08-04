@@ -1390,6 +1390,380 @@ class FluxProKontextTextToImage:
             return ApiHandler.handle_image_generation_error(model_name, e)
 
 
+class FluxKreaImageToImage:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "image": ("IMAGE",),
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "strength": (
+                    "FLOAT",
+                    {"default": 0.95, "min": 0.0, "max": 1.0, "step": 0.05},
+                ),
+                "num_inference_steps": ("INT", {"default": 40, "min": 1, "max": 100}),
+                "guidance_scale": (
+                    "FLOAT",
+                    {"default": 4.5, "min": 0.0, "max": 20.0, "step": 0.1},
+                ),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                "output_format": (["jpeg", "png"], {"default": "jpeg"}),
+                "acceleration": (["none", "regular", "high"], {"default": "none"}),
+            },
+            "optional": {
+                "seed": ("INT", {"default": -1}),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        image,
+        prompt,
+        strength,
+        num_inference_steps,
+        guidance_scale,
+        num_images,
+        enable_safety_checker,
+        output_format,
+        acceleration,
+        seed=-1,
+    ):
+        # Upload the input image to get URL
+        image_url = ImageUtils.upload_image(image)
+        if not image_url:
+            print("Error: Failed to upload image for Flux Krea Image-to-Image")
+            return ResultProcessor.create_blank_image()
+
+        arguments = {
+            "image_url": image_url,
+            "prompt": prompt,
+            "strength": strength,
+            "num_inference_steps": num_inference_steps,
+            "guidance_scale": guidance_scale,
+            "num_images": num_images,
+            "enable_safety_checker": enable_safety_checker,
+            "output_format": output_format,
+            "acceleration": acceleration,
+        }
+
+        if seed != -1:
+            arguments["seed"] = seed
+
+        try:
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/flux/krea/image-to-image", arguments
+            )
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("Flux Krea Image-to-Image", e)
+
+
+class FluxKreaRedux:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "image": ("IMAGE",),
+                "image_size": (
+                    [
+                        "square_hd",
+                        "square",
+                        "portrait_4_3",
+                        "portrait_16_9",
+                        "landscape_4_3",
+                        "landscape_16_9",
+                        "custom",
+                    ],
+                    {"default": "square_hd"},
+                ),
+                "width": (
+                    "INT",
+                    {"default": 1024, "min": 512, "max": 1536, "step": 16},
+                ),
+                "height": (
+                    "INT",
+                    {"default": 1024, "min": 512, "max": 1536, "step": 16},
+                ),
+                "num_inference_steps": ("INT", {"default": 28, "min": 1, "max": 100}),
+                "guidance_scale": (
+                    "FLOAT",
+                    {"default": 11.5, "min": 0.0, "max": 20.0, "step": 0.1},
+                ),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                "output_format": (["png", "jpeg"], {"default": "png"}),
+                "acceleration": (["none", "regular", "high"], {"default": "regular"}),
+            },
+            "optional": {
+                "seed": ("INT", {"default": -1}),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        image,
+        image_size,
+        width,
+        height,
+        num_inference_steps,
+        guidance_scale,
+        num_images,
+        enable_safety_checker,
+        output_format,
+        acceleration,
+        seed=-1,
+    ):
+        # Upload the input image to get URL
+        image_url = ImageUtils.upload_image(image)
+        if not image_url:
+            print("Error: Failed to upload image for Flux Krea Redux")
+            return ResultProcessor.create_blank_image()
+
+        arguments = {
+            "image_url": image_url,
+            "num_inference_steps": num_inference_steps,
+            "guidance_scale": guidance_scale,
+            "num_images": num_images,
+            "enable_safety_checker": enable_safety_checker,
+            "output_format": output_format,
+            "acceleration": acceleration,
+        }
+
+        if image_size == "custom":
+            arguments["image_size"] = {"width": width, "height": height}
+        else:
+            arguments["image_size"] = image_size
+
+        if seed != -1:
+            arguments["seed"] = seed
+
+        try:
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/flux/krea/redux", arguments
+            )
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("Flux Krea Redux", e)
+
+
+class FluxKreaLoraInpainting:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "image": ("IMAGE",),
+                "mask": ("MASK",),
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "strength": (
+                    "FLOAT",
+                    {"default": 0.85, "min": 0.0, "max": 1.0, "step": 0.05},
+                ),
+                "num_inference_steps": ("INT", {"default": 28, "min": 1, "max": 100}),
+                "guidance_scale": (
+                    "FLOAT",
+                    {"default": 3.5, "min": 0.0, "max": 20.0, "step": 0.1},
+                ),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                "output_format": (["png", "jpeg"], {"default": "png"}),
+            },
+            "optional": {
+                "seed": ("INT", {"default": -1}),
+                "lora_path_1": ("STRING", {"default": ""}),
+                "lora_scale_1": (
+                    "FLOAT",
+                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05},
+                ),
+                "lora_path_2": ("STRING", {"default": ""}),
+                "lora_scale_2": (
+                    "FLOAT",
+                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05},
+                ),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        image,
+        mask,
+        prompt,
+        strength,
+        num_inference_steps,
+        guidance_scale,
+        num_images,
+        enable_safety_checker,
+        output_format,
+        seed=-1,
+        lora_path_1="",
+        lora_scale_1=1.0,
+        lora_path_2="",
+        lora_scale_2=1.0,
+    ):
+        # Upload the input image to get URL
+        image_url = ImageUtils.upload_image(image)
+        if not image_url:
+            print("Error: Failed to upload image for Flux Krea LoRA Inpainting")
+            return ResultProcessor.create_blank_image()
+
+        # Convert mask to image and upload
+        mask_image = ImageUtils.mask_to_image(mask)
+        mask_url = ImageUtils.upload_image(mask_image)
+        if not mask_url:
+            print("Error: Failed to upload mask for Flux Krea LoRA Inpainting")
+            return ResultProcessor.create_blank_image()
+
+        arguments = {
+            "prompt": prompt,
+            "image_url": image_url,
+            "mask_url": mask_url,
+            "strength": strength,
+            "num_inference_steps": num_inference_steps,
+            "guidance_scale": guidance_scale,
+            "num_images": num_images,
+            "enable_safety_checker": enable_safety_checker,
+            "output_format": output_format,
+        }
+
+        if seed != -1:
+            arguments["seed"] = seed
+
+        # Add LoRAs
+        loras = []
+        if lora_path_1:
+            loras.append({"path": lora_path_1, "scale": lora_scale_1})
+        if lora_path_2:
+            loras.append({"path": lora_path_2, "scale": lora_scale_2})
+        if loras:
+            arguments["loras"] = loras
+
+        try:
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/flux-krea-lora/inpainting", arguments
+            )
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("Flux Krea LoRA Inpainting", e)
+
+
+class FluxKreaLora:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image_size": (
+                    [
+                        "square_hd",
+                        "square",
+                        "portrait_4_3",
+                        "portrait_16_9",
+                        "landscape_4_3",
+                        "landscape_16_9",
+                        "custom",
+                    ],
+                    {"default": "square_hd"},
+                ),
+                "width": (
+                    "INT",
+                    {"default": 1024, "min": 512, "max": 1536, "step": 16},
+                ),
+                "height": (
+                    "INT",
+                    {"default": 1024, "min": 512, "max": 1536, "step": 16},
+                ),
+                "num_inference_steps": ("INT", {"default": 28, "min": 1, "max": 100}),
+                "guidance_scale": (
+                    "FLOAT",
+                    {"default": 3.5, "min": 0.0, "max": 20.0, "step": 0.1},
+                ),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                "output_format": (["png", "jpeg"], {"default": "png"}),
+            },
+            "optional": {
+                "seed": ("INT", {"default": -1}),
+                "lora_path_1": ("STRING", {"default": ""}),
+                "lora_scale_1": (
+                    "FLOAT",
+                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05},
+                ),
+                "lora_path_2": ("STRING", {"default": ""}),
+                "lora_scale_2": (
+                    "FLOAT",
+                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05},
+                ),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        prompt,
+        image_size,
+        width,
+        height,
+        num_inference_steps,
+        guidance_scale,
+        num_images,
+        enable_safety_checker,
+        output_format,
+        seed=-1,
+        lora_path_1="",
+        lora_scale_1=1.0,
+        lora_path_2="",
+        lora_scale_2=1.0,
+    ):
+        arguments = {
+            "prompt": prompt,
+            "num_inference_steps": num_inference_steps,
+            "guidance_scale": guidance_scale,
+            "num_images": num_images,
+            "enable_safety_checker": enable_safety_checker,
+            "output_format": output_format,
+        }
+
+        if image_size == "custom":
+            arguments["image_size"] = {"width": width, "height": height}
+        else:
+            arguments["image_size"] = image_size
+
+        if seed != -1:
+            arguments["seed"] = seed
+
+        # Add LoRAs
+        loras = []
+        if lora_path_1:
+            loras.append({"path": lora_path_1, "scale": lora_scale_1})
+        if lora_path_2:
+            loras.append({"path": lora_path_2, "scale": lora_scale_2})
+        if loras:
+            arguments["loras"] = loras
+
+        try:
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/flux-krea-lora", arguments
+            )
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("Flux Krea LoRA", e)
+
+
 class Imagen4PreviewNode:
     @classmethod
     def INPUT_TYPES(cls):
@@ -1427,6 +1801,10 @@ NODE_CLASS_MAPPINGS = {
     "FluxPro_fal": FluxPro,
     "FluxDev_fal": FluxDev,
     "FluxKrea_fal": FluxKrea,
+    "FluxKreaImageToImage_fal": FluxKreaImageToImage,
+    "FluxKreaRedux_fal": FluxKreaRedux,
+    "FluxKreaLora_fal": FluxKreaLora,
+    "FluxKreaLoraInpainting_fal": FluxKreaLoraInpainting,
     "FluxSchnell_fal": FluxSchnell,
     "FluxPro11_fal": FluxPro11,
     "FluxUltra_fal": FluxUltra,
@@ -1448,6 +1826,10 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxPro_fal": "Flux Pro (fal)",
     "FluxDev_fal": "Flux Dev (fal)",
     "FluxKrea_fal": "Flux Krea (fal)",
+    "FluxKreaImageToImage_fal": "Flux Krea Image-to-Image (fal)",
+    "FluxKreaRedux_fal": "Flux Krea Redux (fal)",
+    "FluxKreaLora_fal": "Flux Krea LoRA (fal)",
+    "FluxKreaLoraInpainting_fal": "Flux Krea LoRA Inpainting (fal)",
     "FluxSchnell_fal": "Flux Schnell (fal)",
     "FluxPro11_fal": "Flux Pro 1.1 (fal)",
     "FluxUltra_fal": "Flux Ultra (fal)",
