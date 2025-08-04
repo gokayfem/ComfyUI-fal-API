@@ -467,6 +467,77 @@ class FluxDev:
         except Exception as e:
             return ApiHandler.handle_image_generation_error("FluxDev", e)
 
+class FluxKrea:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image_size": (
+                    [
+                        "square_hd",
+                        "square",
+                        "portrait_4_3",
+                        "portrait_16_9",
+                        "landscape_4_3",
+                        "landscape_16_9",
+                        "custom",
+                    ],
+                    {"default": "landscape_4_3"},
+                ),
+                "width": (
+                    "INT",
+                    {"default": 1024, "min": 512, "max": 1536, "step": 16},
+                ),
+                "height": (
+                    "INT",
+                    {"default": 768, "min": 512, "max": 1536, "step": 16},
+                ),
+                "num_inference_steps": ("INT", {"default": 28, "min": 1, "max": 100}),
+                "guidance_scale": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 20.0}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 10}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+            },
+            "optional": {
+                "seed": ("INT", {"default": -1}),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        prompt,
+        image_size,
+        width,
+        height,
+        num_inference_steps,
+        guidance_scale,
+        num_images,
+        enable_safety_checker,
+        seed=-1,
+    ):
+        arguments = {
+            "prompt": prompt,
+            "num_inference_steps": num_inference_steps,
+            "guidance_scale": guidance_scale,
+            "num_images": num_images,
+            "enable_safety_checker": enable_safety_checker,
+        }
+        if image_size == "custom":
+            arguments["image_size"] = {"width": width, "height": height}
+        else:
+            arguments["image_size"] = image_size
+        if seed != -1:
+            arguments["seed"] = seed
+
+        try:
+            result = ApiHandler.submit_and_get_result("fal-ai/flux/krea", arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("FluxDev", e)
 
 class FluxSchnell:
     @classmethod
@@ -1346,63 +1417,13 @@ class Imagen4PreviewNode:
             return ApiHandler.handle_image_generation_error("Imagen4 Preview", e)
 
 
-# https://fal.ai/api/openapi/queue/openapi.json?endpoint_id=fal-ai/bytedance/seededit/v3/edit-image
-class SeedEditV3:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
-                "image": ("IMAGE",),
-            },
-            "optional": {
-                "guidance_scale": (
-                    "FLOAT",
-                    {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.1},
-                ),
-                "seed": ("INT", {"default": -1, "min": -1, "max": 2**32 - 1}),
-            },
-        }
-
-    RETURN_TYPES = ("IMAGE",)
-    FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
-
-    def generate_image(
-        self,
-        prompt,
-        image,
-        guidance_scale=0.5,
-        seed=-1,
-    ):
-        model_name = "SeedEdit 3.0"
-        image_url = ImageUtils.upload_image(image)
-        if not image_url:
-            print(f"Error: Failed to upload image for {model_name}")
-            return ResultProcessor.create_blank_image()
-
-        endpoint = "fal-ai/bytedance/seededit/v3/edit-image"
-        arguments = {
-            "prompt": prompt,
-            "image_url": image_url,
-            "guidance_scale": guidance_scale,
-        }
-        if seed != -1:
-            arguments["seed"] = seed
-
-        try:
-            result = ApiHandler.submit_and_get_result(endpoint, arguments)
-            return ResultProcessor.process_single_image_result(result)
-        except Exception as e:
-            return ApiHandler.handle_image_generation_error(model_name, e)
-
-
 # Node class mappings
 NODE_CLASS_MAPPINGS = {
     "Ideogramv3_fal": Ideogramv3,
     "Hidreamfull_fal": HidreamFull,
     "FluxPro_fal": FluxPro,
     "FluxDev_fal": FluxDev,
+    "FluxKrea_fal": FluxKrea,
     "FluxSchnell_fal": FluxSchnell,
     "FluxPro11_fal": FluxPro11,
     "FluxUltra_fal": FluxUltra,
@@ -1414,7 +1435,6 @@ NODE_CLASS_MAPPINGS = {
     "FluxProKontextMulti_fal": FluxProKontextMulti,
     "FluxProKontextTextToImage_fal": FluxProKontextTextToImage,
     "Imagen4Preview_fal": Imagen4PreviewNode,
-    "SeedEditV3_fal": SeedEditV3,
 }
 
 
@@ -1424,6 +1444,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "Hidreamfull_fal": "HidreamFull (fal)",
     "FluxPro_fal": "Flux Pro (fal)",
     "FluxDev_fal": "Flux Dev (fal)",
+    "FluxKrea_fal": "Flux Krea (fal)",
     "FluxSchnell_fal": "Flux Schnell (fal)",
     "FluxPro11_fal": "Flux Pro 1.1 (fal)",
     "FluxUltra_fal": "Flux Ultra (fal)",
@@ -1435,5 +1456,4 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxProKontextMulti_fal": "Flux Pro Kontext Multi (fal)",
     "FluxProKontextTextToImage_fal": "Flux Pro Kontext Text-to-Image (fal)",
     "Imagen4Preview_fal": "Imagen4 Preview (fal)",
-    "SeedEditV3_fal": "SeedEdit 3.0 (fal)",
 }
