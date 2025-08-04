@@ -483,15 +483,15 @@ class FluxKrea:
                         "landscape_16_9",
                         "custom",
                     ],
-                    {"default": "landscape_4_3"},
+                    {"default": "square_hd"},
                 ),
                 "width": (
                     "INT",
-                    {"default": 1024, "min": 512, "max": 1536, "step": 16},
+                    {"default": 1024, "min": 512, "max": 2048, "step": 16},
                 ),
                 "height": (
                     "INT",
-                    {"default": 768, "min": 512, "max": 1536, "step": 16},
+                    {"default": 1024, "min": 512, "max": 2048, "step": 16},
                 ),
                 "num_inference_steps": ("INT", {"default": 28, "min": 1, "max": 100}),
                 "guidance_scale": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 20.0}),
@@ -500,6 +500,7 @@ class FluxKrea:
             },
             "optional": {
                 "seed": ("INT", {"default": -1}),
+                "acceleration": (["none", "regular", "high"], {"default": "regular"}),
             },
         }
 
@@ -518,6 +519,7 @@ class FluxKrea:
         num_images,
         enable_safety_checker,
         seed=-1,
+        acceleration="regular",
     ):
         arguments = {
             "prompt": prompt,
@@ -525,6 +527,7 @@ class FluxKrea:
             "guidance_scale": guidance_scale,
             "num_images": num_images,
             "enable_safety_checker": enable_safety_checker,
+            "acceleration": acceleration,
         }
         if image_size == "custom":
             arguments["image_size"] = {"width": width, "height": height}
