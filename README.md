@@ -4,16 +4,21 @@ Custom nodes for using Flux models with  fal API in ComfyUI with only one API Ke
 
 ## Table of Contents
 
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Usage](#usage)
-- [Available Nodes](#available-nodes)
-  - [Image Generation](#image-generation)
-  - [Video Generation](#video-generation)
-  - [Language Models (LLMs)](#language-models-llms)
-  - [Vision Language Models (VLMs)](#vision-language-models-vlms)
-- [Troubleshooting](#troubleshooting)
-- [License](#license)
+- [ComfyUI-fal-API](#comfyui-fal-api)
+  - [Table of Contents](#table-of-contents)
+  - [Installation](#installation)
+  - [Configuration](#configuration)
+  - [Usage](#usage)
+  - [Available Nodes](#available-nodes)
+    - [Image Generation](#image-generation)
+      - [NEW](#new)
+    - [Video Generation](#video-generation)
+    - [Language Models (LLMs)](#language-models-llms)
+    - [Vision Language Models (VLMs)](#vision-language-models-vlms)
+  - [Troubleshooting](#troubleshooting)
+  - [License](#license)
+  - [Contributing](#contributing)
+  - [Support](#support)
 
 ## Installation
 
@@ -71,6 +76,14 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **Sana (fal)**: High-quality image synthesis with ultra-high resolution support
 - **HiDream Full (fal)**: Advanced image generation with comprehensive parameter control
 - **Ideogram v3 (fal)**: Advanced text-to-image generation with typography support
+
+#### NEW
+
+- **Flux Krea (fal)**: High-quality text-to-image generation with acceleration options (none, regular, high)
+- **Flux Krea Image-to-Image (fal)**: Transform existing images with prompts, featuring strength control and acceleration options
+- **Flux Krea Redux (fal)**: Generate variations of input images without text prompts using Redux technique
+- **Flux Krea LoRA (fal)**: Text-to-image generation with dual LoRA support for custom styling and fine-tuned models
+- **Flux Krea LoRA Inpainting (fal)**: Advanced inpainting with dual LoRA support for precise region editing
 
 ### Video Generation
 
