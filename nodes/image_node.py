@@ -487,11 +487,11 @@ class FluxKrea:
                 ),
                 "width": (
                     "INT",
-                    {"default": 1024, "min": 512, "max": 2048, "step": 16},
+                    {"default": 1024, "min": 512, "max": 1536, "step": 16},
                 ),
                 "height": (
                     "INT",
-                    {"default": 1024, "min": 512, "max": 2048, "step": 16},
+                    {"default": 1024, "min": 512, "max": 1536, "step": 16},
                 ),
                 "num_inference_steps": ("INT", {"default": 28, "min": 1, "max": 100}),
                 "guidance_scale": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 20.0}),
