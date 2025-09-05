@@ -1397,6 +1397,67 @@ class SeedEditV3:
             return ApiHandler.handle_image_generation_error(model_name, e)
 
 
+class NanoBananaEdit:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image_1": ("IMAGE",),
+                "image_2": ("IMAGE",),
+            },
+            "optional": {
+                "image_3": ("IMAGE",),
+                "image_4": ("IMAGE",),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "output_format": (["jpeg", "png"], {"default": "jpeg"}),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        prompt,
+        image_1,
+        image_2,
+        image_3=None,
+        image_4=None,
+        num_images=1,
+        output_format="jpeg",
+    ):
+        # Upload all provided images
+        image_urls = []
+
+        for i, img in enumerate([image_1, image_2, image_3, image_4], 1):
+            if img is not None:
+                url = ImageUtils.upload_image(img)
+                if url:
+                    image_urls.append(url)
+                else:
+                    print(f"Error: Failed to upload image {i} for Nano Banana Edit")
+                    return ResultProcessor.create_blank_image()
+
+        if len(image_urls) < 2:
+            print("Error: At least 2 images required for Nano Banana Edit")
+            return ResultProcessor.create_blank_image()
+
+        arguments = {
+            "prompt": prompt,
+            "image_urls": image_urls,
+            "num_images": num_images,
+            "output_format": output_format,
+        }
+
+        try:
+            result = ApiHandler.submit_and_get_result("fal-ai/nano-banana/edit", arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("Nano Banana Edit", e)
+
+
 # Node class mappings
 NODE_CLASS_MAPPINGS = {
     "Ideogramv3_fal": Ideogramv3,
@@ -1415,6 +1476,7 @@ NODE_CLASS_MAPPINGS = {
     "FluxProKontextTextToImage_fal": FluxProKontextTextToImage,
     "Imagen4Preview_fal": Imagen4PreviewNode,
     "SeedEditV3_fal": SeedEditV3,
+    "NanoBananaEdit_fal": NanoBananaEdit,
 }
 
 
@@ -1436,4 +1498,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxProKontextTextToImage_fal": "Flux Pro Kontext Text-to-Image (fal)",
     "Imagen4Preview_fal": "Imagen4 Preview (fal)",
     "SeedEditV3_fal": "SeedEdit 3.0 (fal)",
+    "NanoBananaEdit_fal": "Nano Banana Edit (fal)",
 }
