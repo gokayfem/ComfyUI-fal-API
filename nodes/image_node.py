@@ -1505,9 +1505,9 @@ class NanoBananaEdit:
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
                 "image_1": ("IMAGE",),
-                "image_2": ("IMAGE",),
             },
             "optional": {
+                "image_2": ("IMAGE",),
                 "image_3": ("IMAGE",),
                 "image_4": ("IMAGE",),
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
@@ -1523,7 +1523,7 @@ class NanoBananaEdit:
         self,
         prompt,
         image_1,
-        image_2,
+        image_2=None,
         image_3=None,
         image_4=None,
         num_images=1,
@@ -1541,9 +1541,6 @@ class NanoBananaEdit:
                     print(f"Error: Failed to upload image {i} for Nano Banana Edit")
                     return ResultProcessor.create_blank_image()
 
-        if len(image_urls) < 2:
-            print("Error: At least 2 images required for Nano Banana Edit")
-            return ResultProcessor.create_blank_image()
 
         arguments = {
             "prompt": prompt,
