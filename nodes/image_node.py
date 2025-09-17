@@ -1498,6 +1498,132 @@ class SeedEditV3:
             return ApiHandler.handle_image_generation_error(model_name, e)
 
 
+# https://fal.ai/api/openapi/queue/openapi.json?endpoint_id=fal-ai/bytedance/seedream/v4/edit
+class SeedreamV4Edit:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image_1": ("IMAGE",),
+                "image_size": (
+                    [
+                        "square_hd",
+                        "square",
+                        "portrait_4_3",
+                        "portrait_16_9",
+                        "landscape_4_3",
+                        "landscape_16_9",
+                        "custom",
+                    ],
+                    {"default": "square_hd"},
+                ),
+                "width": ("INT", {"default": 1280, "min": 1024, "max": 4096}),
+                "height": ("INT", {"default": 1280, "min": 1024, "max": 4096}),
+            },
+            "optional": {
+                "image_2": ("IMAGE",),
+                "image_3": ("IMAGE",),
+                "image_4": ("IMAGE",),
+                "image_5": ("IMAGE",),
+                "image_6": ("IMAGE",),
+                "image_7": ("IMAGE",),
+                "image_8": ("IMAGE",),
+                "image_9": ("IMAGE",),
+                "image_10": ("IMAGE",),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 6}),
+                "max_images": ("INT", {"default": 1, "min": 1, "max": 6}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                "sync_mode": ("BOOLEAN", {"default": False}),
+                "seed": ("INT", {"default": -1, "min": -1, "max": 2**32 - 1}),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        prompt,
+        image_1,
+        image_size,
+        width,
+        height,
+        num_images,
+        max_images,
+        image_2=None,
+        image_3=None,
+        image_4=None,
+        image_5=None,
+        image_6=None,
+        image_7=None,
+        image_8=None,
+        image_9=None,
+        image_10=None,
+        enable_safety_checker=True,
+        seed=-1,
+        sync_mode=False,
+    ):
+        model_name = "Seedream 4.0 Edit"
+
+        image_urls = []
+        for i, img in enumerate(
+            [
+                image_1,
+                image_2,
+                image_3,
+                image_4,
+                image_5,
+                image_6,
+                image_7,
+                image_8,
+                image_9,
+                image_10,
+            ],
+            1,
+        ):
+            if img is not None:
+                url = ImageUtils.upload_image(img)
+                if url:
+                    image_urls.append(url)
+                else:
+                    print(f"Error: Failed to upload image {i} for {model_name}")
+                    return ResultProcessor.create_blank_image()
+
+        # the total number of images (image inputs + image outputs) must not exceed 15
+        max_total_images = 15
+        potential_total = len(image_urls) + (num_images * max_images)
+        if potential_total > max_total_images:
+            print(
+                f"Error: Total images (inputs + outputs) must be <= {max_total_images}. "
+                f"inputs={len(image_urls)}, num_images={num_images}, max_images={max_images}"
+            )
+            return ResultProcessor.create_blank_image()
+
+        endpoint = "fal-ai/bytedance/seedream/v4/edit"
+        arguments = {
+            "prompt": prompt,
+            "image_urls": image_urls,
+            "num_images": num_images,
+            "max_images": max_images,
+            "enable_safety_checker": enable_safety_checker,
+            "sync_mode": sync_mode,
+        }
+        if image_size == "custom":
+            arguments["image_size"] = {"width": width, "height": height}
+        else:
+            arguments["image_size"] = image_size
+        if seed != -1:
+            arguments["seed"] = seed
+
+        try:
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error(model_name, e)
+
+
 class NanoBananaEdit:
     @classmethod
     def INPUT_TYPES(cls):
@@ -1575,6 +1701,7 @@ NODE_CLASS_MAPPINGS = {
     "Imagen4Preview_fal": Imagen4PreviewNode,
     "QwenImageEdit_fal": QwenImageEdit,
     "SeedEditV3_fal": SeedEditV3,
+    "SeedreamV4Edit_fal": SeedreamV4Edit,
     "NanoBananaEdit_fal": NanoBananaEdit,
 }
 
@@ -1598,5 +1725,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "Imagen4Preview_fal": "Imagen4 Preview (fal)",
     "QwenImageEdit_fal": "Qwen Image Edit (fal)",
     "SeedEditV3_fal": "SeedEdit 3.0 (fal)",
+    "SeedreamV4Edit_fal": "Seedream 4.0 Edit (fal)",
     "NanoBananaEdit_fal": "Nano Banana Edit (fal)",
 }
