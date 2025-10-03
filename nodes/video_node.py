@@ -542,6 +542,72 @@ class WanProNode:
         except Exception as e:
             return ApiHandler.handle_video_generation_error("wan-pro", str(e))
 
+class Wan25Node:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image": ("IMAGE",),
+            },
+            "optional": {
+                "seed": ("INT", {"default": 0, "min": 0, "max": 2147483647}),
+                "resolution": (
+                    ["480p", "720p", "1080p"],
+                    {"default": "1080p"}),
+                "duration": (
+                    ["5", "10"],
+                    {"default": "5"}),
+                "negative_prompt": ("STRING", {"default": "low resolution, error, worst quality, low quality, defects", "multiline": True}),
+                "enable_prompt_expansion": ("BOOLEAN", {"default": True}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(
+        self,
+        prompt,
+        image,
+        seed=0,
+        resolution="1080p",
+        duration="5",
+        negative_prompt="low resolution, error, worst quality, low quality, defects",
+        enable_prompt_expansion=True,
+    ):
+        try:
+            image_url = ImageUtils.upload_image(image)
+            if not image_url:
+                return ApiHandler.handle_video_generation_error(
+                    "wan-25", "Failed to upload image"
+                )
+
+            arguments = {
+                "prompt": prompt,
+                "image_url": image_url,
+                "resolution": resolution,
+                "duration": duration,
+                "negative_prompt": negative_prompt,
+                "enable_prompt_expansion": enable_prompt_expansion,
+            }
+
+            # include seed if non-default
+            if seed != 0:
+                arguments["seed"] = seed
+
+
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/wan-25-preview/image-to-video", arguments
+            )
+
+            video_url = result["video"]["url"]
+            return (video_url,)
+
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error("wan-25", str(e))
+
 
 class CombinedVideoGenerationNode:
     @classmethod
@@ -1211,6 +1277,7 @@ NODE_CLASS_MAPPINGS = {
     "CombinedVideoGeneration_fal": CombinedVideoGenerationNode,
     "Veo2ImageToVideo_fal": Veo2ImageToVideoNode,
     "WanPro_fal": WanProNode,
+    "Wan25_preview_fal": Wan25Node,
     "SeedanceImageToVideo_fal": SeedanceImageToVideoNode,
     "SeedanceTextToVideo_fal": SeedanceTextToVideoNode,
     "Veo3_fal": Veo3Node,
@@ -1235,4 +1302,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "SeedanceImageToVideo_fal": "Seedance Image-to-Video (fal)",
     "SeedanceTextToVideo_fal": "Seedance Text-to-Video (fal)",
     "Veo3_fal": "Veo3 Video Generation (fal)",
+    "Wan25_preview_fal": "Wan 2.5 Preview Image-to-Video (fal)"
 }
