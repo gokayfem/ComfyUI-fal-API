@@ -85,7 +85,7 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **MiniMax Subject Reference (fal)**: Generate videos with subject reference using MiniMax
 - **Google Veo2 Image-to-Video (fal)**: Convert images to videos using Google's Veo2 model
 - **Wan Pro Image-to-Video (fal)**: High-quality video generation with Wan Pro model
-- **Wan 2.5 Preview Image-to-Video (fal)**: High-quality video generation with Wan Pro model
+- **Wan 2.5 Preview Image-to-Video (fal)**: Image-to-video generation with the latest Wan 2.5 preview model
 - **Video Upscaler (fal)**: Upscale video quality using AI
 - **Combined Video Generation (fal)**: Generate videos using multiple services simultaneously
   - Supports Kling Pro v1.6, Kling Master v2.0, MiniMax, Luma, Veo2, and Wan Pro
