@@ -1518,8 +1518,8 @@ class SeedreamV4Edit:
                     ],
                     {"default": "square_hd"},
                 ),
-                "width": ("INT", {"default": 1280, "min": 1024, "max": 4096}),
-                "height": ("INT", {"default": 1280, "min": 1024, "max": 4096}),
+                "width": ("INT", {"default": 3840, "min": 1024, "max": 4096}),
+                "height": ("INT", {"default": 2160, "min": 1024, "max": 4096}),
             },
             "optional": {
                 "image_2": ("IMAGE",),
