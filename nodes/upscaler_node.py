@@ -4,7 +4,7 @@ from .fal_utils import ApiHandler, FalConfig, ImageUtils, ResultProcessor
 fal_config = FalConfig()
 
 
-class ClarityUpscalerNode:
+class UpscalerNode:
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -140,7 +140,7 @@ class SeedvrUpscalerNode:
 
 # Node class mappings
 NODE_CLASS_MAPPINGS = {
-    "Upscaler_fal": ClarityUpscalerNode,
+    "Upscaler_fal": UpscalerNode,
     "Seedvr_Upscaler_fal": SeedvrUpscalerNode,
 }
 
