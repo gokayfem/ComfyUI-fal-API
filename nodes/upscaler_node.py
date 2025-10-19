@@ -88,12 +88,64 @@ class UpscalerNode:
             return ApiHandler.handle_image_generation_error("clarity-upscaler", str(e))
 
 
+class SeedvrUpscalerNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "image": ("IMAGE",),
+                "upscale_factor": (
+                    "FLOAT",
+                    {"default": 2.0, "min": 1.0, "max": 4.0, "step": 0.5},
+                ),
+            },
+            "optional": {
+                "seed": ("INT", {"default": -1}),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_upscaled_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_upscaled_image(
+        self,
+        image,
+        upscale_factor,
+        seed=-1,
+    ):
+        try:
+            # Upload the image using ImageUtils
+            image_url = ImageUtils.upload_image(image)
+            if not image_url:
+                return ApiHandler.handle_image_generation_error(
+                    "seedvr-upscaler", "Failed to upload image for upscaling"
+                )
+
+            arguments = {
+                "image_url": image_url,
+                "upscale_factor": upscale_factor,
+            }
+
+            if seed != -1:
+                arguments["seed"] = seed
+
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/seedvr/upscale/image", arguments
+            )
+            return ResultProcessor.process_single_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("seedvr-upscaler", str(e))
+
+
 # Node class mappings
 NODE_CLASS_MAPPINGS = {
     "Upscaler_fal": UpscalerNode,
+    "Seedvr_Upscaler_fal": SeedvrUpscalerNode,
 }
 
 # Node display name mappings
 NODE_DISPLAY_NAME_MAPPINGS = {
     "Upscaler_fal": "Clarity Upscaler (fal)",
+    "Seedvr_Upscaler_fal": "Seedvr Upscaler (fal)",
 }
