@@ -71,6 +71,8 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **Sana (fal)**: High-quality image synthesis with ultra-high resolution support
 - **HiDream Full (fal)**: Advanced image generation with comprehensive parameter control
 - **Ideogram v3 (fal)**: Advanced text-to-image generation with typography support
+- **Clarity Upscaler (fal)**: Clarity upscaler for upscaling images with high very fidelity
+- **Seedvr Upscaler (fal)**: Use SeedVR2 to upscale your images
 
 ### Video Generation
 
