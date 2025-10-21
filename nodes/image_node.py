@@ -1624,6 +1624,52 @@ class SeedreamV4Edit:
             return ApiHandler.handle_image_generation_error(model_name, e)
 
 
+
+class NanoBananaTextToImage:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+            },
+            "optional": {
+                "aspect_ratio": (
+                    ["21:9", "1:1", "4:3", "3:2", "2:3", "5:4", "4:5", "3:4", "16:9", "9:16"],
+                    {"default": "1:1"},
+                ),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "output_format": (["jpeg", "png"], {"default": "png"}),
+                "sync_mode": ("BOOLEAN", {"default": False}),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        prompt,
+        aspect_ratio="1:1",
+        num_images=1,
+        output_format="png",
+        sync_mode=False,
+    ):
+        arguments = {
+            "prompt": prompt,
+            "aspect_ratio": aspect_ratio,
+            "num_images": num_images,
+            "output_format": output_format,
+            "sync_mode": sync_mode,
+        }
+
+        try:
+            result = ApiHandler.submit_and_get_result("fal-ai/nano-banana", arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("Nano Banana Text-to-Image", e)
+
+
 class NanoBananaEdit:
     @classmethod
     def INPUT_TYPES(cls):
@@ -1682,6 +1728,109 @@ class NanoBananaEdit:
             return ApiHandler.handle_image_generation_error("Nano Banana Edit", e)
 
 
+class ReveTextToImage:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+            },
+            "optional": {
+                "aspect_ratio": (
+                    ["16:9", "4:3", "3:2", "1:1", "2:3", "3:4", "9:16"],
+                    {"default": "3:2"},
+                ),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "output_format": (["jpeg", "png"], {"default": "png"}),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        prompt,
+        aspect_ratio="1:1",
+        num_images=1,
+        output_format="png",
+    ):
+        arguments = {
+            "prompt": prompt,
+            "aspect_ratio": aspect_ratio,
+            "num_images": num_images,
+            "output_format": output_format,
+        }
+
+        try:
+            result = ApiHandler.submit_and_get_result("fal-ai/reve/text-to-image", arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("Reve Text-to-Image", e)
+
+
+class Dreamina31TextToImage:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image_size": (
+                    [
+                        "square_hd",
+                        "square",
+                        "portrait_4_3",
+                        "portrait_16_9",
+                        "landscape_4_3",
+                        "landscape_16_9",
+                        "custom",
+                    ],
+                    {"default": "square_hd"},
+                ),
+            },
+            "optional": {
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "sync_mode": ("BOOLEAN", {"default": False}),
+                "output_format": (["jpeg", "png"], {"default": "png"}),
+                "seed": ("INT", {"default": -1, "min": -1, "max": 2**32 - 1}),
+                "enhance_prompt": ("BOOLEAN", {"default": False}),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        prompt,
+        image_size,
+        num_images=1,
+        sync_mode=False,
+        output_format="png",
+        seed=-1,
+        enhance_prompt=False,
+    ):
+        arguments = {
+            "prompt": prompt,
+            "image_size": image_size,
+            "num_images": num_images,
+            "sync_mode": sync_mode,
+            "output_format": output_format,
+            "enhance_prompt": enhance_prompt,
+        }
+
+        if seed > 0:
+            arguments["seed"] = seed
+
+        try:
+            result = ApiHandler.submit_and_get_result("fal-ai/bytedance/dreamina/v3.1/text-to-image", arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("Dreamina v3.1 Text-to-Image", e)
+
+
 # Node class mappings
 NODE_CLASS_MAPPINGS = {
     "Ideogramv3_fal": Ideogramv3,
@@ -1702,7 +1851,10 @@ NODE_CLASS_MAPPINGS = {
     "QwenImageEdit_fal": QwenImageEdit,
     "SeedEditV3_fal": SeedEditV3,
     "SeedreamV4Edit_fal": SeedreamV4Edit,
+    "NanoBananaTextToImage_fal": NanoBananaTextToImage,
     "NanoBananaEdit_fal": NanoBananaEdit,
+    "ReveTextToImage_fal": ReveTextToImage,
+    "Dreamina31TextToImage_fal": Dreamina31TextToImage,
 }
 
 
@@ -1726,5 +1878,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "QwenImageEdit_fal": "Qwen Image Edit (fal)",
     "SeedEditV3_fal": "SeedEdit 3.0 (fal)",
     "SeedreamV4Edit_fal": "Seedream 4.0 Edit (fal)",
+    "NanoBananaTextToImage_fal": "Nano Banana Text-to-Image (fal)",
     "NanoBananaEdit_fal": "Nano Banana Edit (fal)",
+    "ReveTextToImage_fal": "Reve Text-to-Image (fal)",
+    "Dreamina31TextToImage_fal": "Dreamina v3.1 Text-to-Image (fal)",
 }

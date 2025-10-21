@@ -73,6 +73,14 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **Ideogram v3 (fal)**: Advanced text-to-image generation with typography support
 - **Clarity Upscaler (fal)**: Clarity upscaler for upscaling images with high very fidelity
 - **Seedvr Upscaler (fal)**: Use SeedVR2 to upscale your images
+- **Imagen4 Preview (fal)**: Use Imagen4 (Preview version) to generate images
+- **Qwen Image Edit (fal)**: Use Qwen to edit images
+- **SeedEdit 3.0 (fal)**: Use SeedEdit 3.0 to edit images
+- **Seedream 4.0 Edit (fal)**: Use Seedream 4.0 to edit images
+- **Nano Banana Text-to-Image (fal)**: Use Nano Banana to generate images
+- **Nano Banana Edit (fal)**: Use Nano Banana to edit images
+- **Reve Text-to-Image (fal)**: Use Reve's image model to generate images
+- **Dreamina v3.1 Text-to-Image (fal)**: Use Dreamina v3.1 to generate images
 
 ### Video Generation
 
