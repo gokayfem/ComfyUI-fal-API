@@ -12,7 +12,6 @@ from .fal_utils import ApiHandler, FalConfig, ImageUtils
 # Initialize FalConfig
 fal_config = FalConfig()
 
-
 class MiniMaxNode:
     @classmethod
     def INPUT_TYPES(cls):
@@ -607,6 +606,100 @@ class Wan25Node:
 
         except Exception as e:
             return ApiHandler.handle_video_generation_error("wan-25", str(e))
+class WanVACEVideoEditNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "video": ("VIDEO",),
+            },
+            "optional": {
+                "images": ("IMAGE", {"default": None, "multiple": True}),
+                "video_type": (["auto", "general", "human"], {"default": "auto"}),
+                "resolution": (
+                    ["auto", "240p", "360p", "480p", "580p", "720p", "1080p"],
+                    {"default": "auto"}
+                ),
+                "acceleration": (["regular", "low", "none", "default"], {"default": "regular"}),
+                "enable_auto_downsample": ("BOOLEAN", {"default": True}),
+                "aspect_ratio": (["auto", "16:9", "9:16", "1:1"], {"default": "auto"}),
+                "auto_downsample_min_fps": ("INT", {"default": 15, "min": 1, "max": 60}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "edit_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def edit_video(
+        self,
+        prompt,
+        video,
+        images=None,
+        video_type="auto",
+        resolution="auto",
+        acceleration="regular",
+        enable_auto_downsample=True,
+        aspect_ratio="auto",
+        auto_downsample_min_fps=15,
+        enable_safety_checker=True,
+    ):
+        try:
+            video_url = ImageUtils.upload_file(video.get_stream_source())
+            if not video_url:
+                return ApiHandler.handle_video_generation_error(
+                    "wan-vace", "Failed to upload video"
+                )
+            arguments = {
+                "prompt": prompt,
+                "video_url": video_url,
+                "video_type": video_type,
+                "resolution": resolution,
+                "acceleration": acceleration,
+                "enable_auto_downsample": enable_auto_downsample,
+                "aspect_ratio": aspect_ratio,
+                "auto_downsample_min_fps": auto_downsample_min_fps,
+                "enable_safety_checker": enable_safety_checker,
+            }
+
+            image_urls = []
+
+            if images is not None:
+                import torch
+
+                if isinstance(images, torch.Tensor):
+                    if images.ndim == 4 and images.shape[0] > 1:
+                        for i in range(images.shape[0]):
+                            single_img = images[i:i+1]
+                            img_url = ImageUtils.upload_image(single_img)
+                            if img_url:
+                                image_urls.append(img_url)
+                    else:
+                        img_url = ImageUtils.upload_image(images)
+                        if img_url:
+                            image_urls.append(img_url)
+
+                elif isinstance(images, (list, tuple)):
+                    for img in images:
+                        img_url = ImageUtils.upload_image(img)
+                        if img_url:
+                            image_urls.append(img_url)
+
+            if image_urls:
+                arguments["image_urls"] = image_urls
+
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/wan-vace-apps/video-edit",
+                arguments,
+            )
+
+            return (result["video"]["url"],)
+
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error("wan-vace", str(e))
+
 
 
 class CombinedVideoGenerationNode:
@@ -1278,9 +1371,10 @@ NODE_CLASS_MAPPINGS = {
     "Veo2ImageToVideo_fal": Veo2ImageToVideoNode,
     "WanPro_fal": WanProNode,
     "Wan25_preview_fal": Wan25Node,
+    "WanVACEVideoEdit_fal": WanVACEVideoEditNode,
     "SeedanceImageToVideo_fal": SeedanceImageToVideoNode,
     "SeedanceTextToVideo_fal": SeedanceTextToVideoNode,
-    "Veo3_fal": Veo3Node,
+    "Veo3_fal": Veo3Node
 }
 
 # Update Node display name mappings
@@ -1302,5 +1396,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "SeedanceImageToVideo_fal": "Seedance Image-to-Video (fal)",
     "SeedanceTextToVideo_fal": "Seedance Text-to-Video (fal)",
     "Veo3_fal": "Veo3 Video Generation (fal)",
-    "Wan25_preview_fal": "Wan 2.5 Preview Image-to-Video (fal)"
+    "Wan25_preview_fal": "Wan 2.5 Preview Image-to-Video (fal)",
+    "WanVACEVideoEdit_fal": "Wan VACE Video Edit (fal)"
 }
