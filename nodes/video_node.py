@@ -630,6 +630,7 @@ class WanVACEVideoEditNode:
         }
 
     RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("video_url",)
     FUNCTION = "edit_video"
     CATEGORY = "FAL/VideoGeneration"
 
