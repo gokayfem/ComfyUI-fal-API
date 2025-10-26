@@ -121,7 +121,18 @@ class ImageUtils:
             # Clean up the temporary file
             if "temp_file_path" in locals():
                 os.unlink(temp_file_path)
-
+                
+    @staticmethod
+    def upload_file(file_path):
+        """Upload a file to FAL and return URL."""
+        try:
+            client = FalConfig().get_client()
+            file_url = client.upload_file(file_path)
+            return file_url
+        except Exception as e:
+            print(f"Error uploading file: {str(e)}")
+            return None
+        
     @staticmethod
     def mask_to_image(mask):
         """Convert mask tensor to image tensor."""
