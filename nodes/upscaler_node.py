@@ -137,6 +137,75 @@ class SeedvrUpscalerNode:
         except Exception as e:
             return ApiHandler.handle_image_generation_error("seedvr-upscaler", str(e))
 
+class SeedvrUpscaleVideoNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "upscale_factor": (
+                    "FLOAT",
+                    {"default": 2.0, "min": 0.00, "max": 5.0, "step": 0.01},
+                ),
+            },
+            "optional": {
+                "video": ("VIDEO",),
+                "input_video_url": ("STRING", {"default": ""}),
+                "upscale_mode": (["factor", "target_resolution"], {"default": "factor"}),
+                "target_resolution": (["720p", "1080p", "1440p", "2160p"], {"default": "1080p"}),
+                "noise_scale": ("FLOAT", {"default": 0.1, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "output_quality": (["low", "medium", "high", "maximum"], {"default": "high"}),
+                "output_write_mode": (["fast", "balanced", "small"], {"default": "balanced" }),
+                "output_format": (["X264 (.mp4)", "VP9 (.webm)","PRORES444 (.mov)","GIF (.gif)"], {"default": "X264 (.mp4)"}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("video_url",)
+    FUNCTION = "generate_upscaled_video"
+    CATEGORY = "FAL/Image"
+
+    def generate_upscaled_video(
+        self,
+        upscale_factor= 2.0,
+        video =None,
+        input_video_url=None,
+        upscale_mode="factor",
+        target_resolution="1080p",
+        noise_scale=0.1,
+        output_format="X264 (.mp4)",
+        output_quality="high",
+        output_write_mode="balanced",
+    ):
+        # try:
+            
+        video_url = input_video_url
+        if video is not None:
+            video_url = ImageUtils.upload_file(video.get_stream_source())
+        if not video_url or video_url=="":
+            return ApiHandler.handle_video_generation_error(
+                "bria-video-increase-resolution", "Failed to upload video for upscaling. No video URL provided, or Video provided."
+            )
+        arguments={
+"video_url": video_url,
+"upscale_mode": upscale_mode,
+"upscale_factor": upscale_factor,
+"target_resolution": target_resolution  ,
+"noise_scale": noise_scale,
+"output_format": output_format,
+"output_quality": output_quality,
+"output_write_mode": output_write_mode
+}
+        print(arguments)
+        result = ApiHandler.submit_and_get_result(
+            "fal-ai/seedvr/upscale/video", arguments
+        )
+        print(result)
+        return (result["video"]["url"],)
+        # except Exception as e:
+        #     return ApiHandler.handle_video_generation_error(
+        #         "fal-ai/seedvr/upscale/video", str(e)
+        #     )
+
 class BriaVideoIncreaseResolutionNode:
     @classmethod
     def INPUT_TYPES(cls):
@@ -151,7 +220,7 @@ class BriaVideoIncreaseResolutionNode:
             "optional": {
                 "video": ("VIDEO",),
                 "input_video_url": ("STRING", {"default": ""}),
-                "output_container_and_codec": ("STRING", {"default": "mp4_h264", "options": ["mp4_h264", "mp4_h265","mov_h265","mov_proresks", "webm_vp9","mkv_h265","mkv_h265", "mkv_vp9", "gif"]}),
+                "output_container_and_codec": (["mp4_h264", "mp4_h265","mov_h265","mov_proresks", "webm_vp9","mkv_h265","mkv_h265", "mkv_vp9", "gif"], {"default": "mp4_h264"}),
             },
         }
 
@@ -181,7 +250,6 @@ class BriaVideoIncreaseResolutionNode:
         "desired_increase": str(upscale_factor),
         "output_container_and_codec": output_container_and_codec
     }
-            print(arguments)
             result = ApiHandler.submit_and_get_result(
                 "bria/video/increase-resolution", arguments
             )
@@ -196,6 +264,7 @@ class BriaVideoIncreaseResolutionNode:
 NODE_CLASS_MAPPINGS = {
     "Upscaler_fal": UpscalerNode,
     "Seedvr_Upscaler_fal": SeedvrUpscalerNode,
+    "Seedvr_Upscale_Video_fal": SeedvrUpscaleVideoNode,
     "Bria_Video_Increase_Resolution_fal": BriaVideoIncreaseResolutionNode,
 }
 
@@ -203,5 +272,6 @@ NODE_CLASS_MAPPINGS = {
 NODE_DISPLAY_NAME_MAPPINGS = {
     "Upscaler_fal": "Clarity Upscaler (fal)",
     "Seedvr_Upscaler_fal": "Seedvr Upscaler (fal)",
+    "Seedvr_Upscale_Video_fal": "Seedvr Upscale Video (fal)",
     "Bria_Video_Increase_Resolution_fal": "Bria Video Increase Resolution (fal)",
 }
