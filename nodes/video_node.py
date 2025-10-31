@@ -606,15 +606,19 @@ class Wan25Node:
 
         except Exception as e:
             return ApiHandler.handle_video_generation_error("wan-25", str(e))
+        
+        
 class WanVACEVideoEditNode:
     @classmethod
     def INPUT_TYPES(cls):
         return {
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
-                "video": ("VIDEO",),
             },
             "optional": {
+                "video": ("VIDEO", {"default": None}),
+                "input_video_url": ("STRING", {"default": ""}),
+                
                 "images": ("IMAGE", {"default": None, "multiple": True}),
                 "video_type": (["auto", "general", "human"], {"default": "auto"}),
                 "resolution": (
@@ -637,7 +641,8 @@ class WanVACEVideoEditNode:
     def edit_video(
         self,
         prompt,
-        video,
+        video=None,
+        input_video_url="",
         images=None,
         video_type="auto",
         resolution="auto",
@@ -648,7 +653,14 @@ class WanVACEVideoEditNode:
         enable_safety_checker=True,
     ):
         try:
-            video_url = ImageUtils.upload_file(video.get_stream_source())
+            if video is None and input_video_url is "":
+                return ApiHandler.handle_video_generation_error(
+                    "wan-vace", "Video or Video Frames input is required."
+                )
+            if video is None and input_video_url is not "":
+                video_url = input_video_url
+            else:
+                video_url = ImageUtils.upload_file(video.get_stream_source())
             if not video_url:
                 return ApiHandler.handle_video_generation_error(
                     "wan-vace", "Failed to upload video"
@@ -700,6 +712,248 @@ class WanVACEVideoEditNode:
 
         except Exception as e:
             return ApiHandler.handle_video_generation_error("wan-vace", str(e))
+
+
+class Wan2214bAnimateReplaceNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "image": ("IMAGE", {"default": None}),
+                
+            },
+            "optional": {
+                "video": ("VIDEO", {"default": None}),
+                "input_video_url": ("STRING", {"default": ""}),
+                "resolution": (
+                    ["auto", "240p", "360p", "480p", "580p", "720p", "1080p"],
+                    {"default": "auto"}
+                ),
+                "num_inference_steps": ("INT", {"default": 20, "min": 1}),
+                "shift": ("INT", {"default": 5}),
+                "video_quality": (["low", "medium", "high"], {"default": "high"}),
+                "video_write_mode": (["balanced", "fast", "high_quality"], {"default": "balanced"}),
+                "seed": ("INT", {"default": 24}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                "enable_output_safety_checker": ("BOOLEAN", {"default": False}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("video_url",)
+    FUNCTION = "edit_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def edit_video(
+        self,
+        video=None,
+        input_video_url="",
+        image=None,
+        resolution="auto",
+        num_inference_steps=20,
+        shift=5,
+        video_quality="high",
+        video_write_mode="balanced",
+        seed=24,
+        enable_safety_checker=True,
+        enable_output_safety_checker=False,
+    ):
+        try:
+            if video is None and input_video_url is "":
+                return ApiHandler.handle_video_generation_error(
+                    "wan-22animatereplace", "Video or Video Frames input is required."
+                )
+            if video is None and input_video_url is not "":
+                video_url = input_video_url
+            else:
+                video_url = ImageUtils.upload_file(video.get_stream_source())
+            if not video_url:
+                return ApiHandler.handle_video_generation_error(
+                    "wan-22animatereplace", "Failed to upload video"
+                )
+
+          
+            image_url = ImageUtils.upload_image(image)
+            if not image_url:
+                return ApiHandler.handle_video_generation_error(
+                    "wan-22animatereplace", "Failed to upload image"
+                )
+
+            arguments={
+        "video_url": video_url,
+        "image_url": image_url,
+        "resolution": resolution,
+        "num_inference_steps": num_inference_steps,
+        "enable_safety_checker": enable_safety_checker,
+        "enable_output_safety_checker": enable_output_safety_checker,
+        "shift": shift,
+        "video_quality": video_quality,
+        "video_write_mode": video_write_mode,
+        "seed": seed
+    }
+
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/wan/v2.2-14b/animate/replace",
+                arguments,
+            )
+
+            return (result["video"]["url"],)
+
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error("wan-22animatereplace", str(e))
+
+
+
+
+class Wan2214bAnimateMoveNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "image": ("IMAGE", {"default": None}),
+                
+            },
+            "optional": {
+                "video": ("VIDEO", {"default": None}),
+                "input_video_url": ("STRING", {"default": ""}),
+                "resolution": (
+                    ["480p", "580p", "720p"],
+                    {"default": "480p"}
+                ),
+                "num_inference_steps": ("INT", {"default": 20, "min": 1}),
+                "shift": ("INT", {"default": 5}),
+                "video_quality": (["low", "medium", "high"], {"default": "high"}),
+                "video_write_mode": (["balanced", "fast", "high_quality"], {"default": "balanced"}),
+                "seed": ("INT", {"default": 24}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                "enable_output_safety_checker": ("BOOLEAN", {"default": False}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("video_url",)
+    FUNCTION = "edit_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def edit_video(
+        self,
+        video=None,
+        input_video_url="",
+        image=None,
+        resolution="auto",
+        num_inference_steps=20,
+        shift=5,
+        video_quality="high",
+        video_write_mode="balanced",
+        seed=24,
+        enable_safety_checker=True,
+        enable_output_safety_checker=False,
+    ):
+        try:
+            if video is None and input_video_url is "":
+                return ApiHandler.handle_video_generation_error(
+                    "wan-22animatemove", "Video or Video Frames input is required."
+                )
+            if video is None and input_video_url is not "":
+                video_url = input_video_url
+            else:
+                video_url = ImageUtils.upload_file(video.get_stream_source())
+            if not video_url:
+                return ApiHandler.handle_video_generation_error(
+                    "wan-22animatemove", "Failed to upload video"
+                )
+
+          
+            image_url = ImageUtils.upload_image(image)
+            if not image_url:
+                return ApiHandler.handle_video_generation_error(
+                    "wan-22animatemove", "Failed to upload image"
+                )
+
+            arguments={
+        "video_url": video_url,
+        "image_url": image_url,
+        "resolution": resolution,
+        "num_inference_steps": num_inference_steps,
+        "enable_safety_checker": enable_safety_checker,
+        "enable_output_safety_checker": enable_output_safety_checker,
+        "shift": shift,
+        "video_quality": video_quality,
+        "video_write_mode": video_write_mode,
+        "seed": seed
+    }
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/wan/v2.2-14b/animate/move",
+                arguments,
+            )
+
+            return (result["video"]["url"],)
+
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error("wan-22animatemove", str(e))
+
+
+
+
+class KreaWan14bVideoToVideoNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "enable_prompt_expansion": ("BOOLEAN", {"default": True}),
+                "strength": ("FLOAT", {"default": 0.85, "min": 0.0, "max": 3.0}),
+            },
+            "optional": {
+                "video": ("VIDEO", {"default": None}),
+                "input_video_url": ("STRING", {"default": ""}),
+                "seed": ("INT", {"default": 42}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("video_url",)
+    FUNCTION = "edit_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def edit_video(
+        self,
+        prompt="",
+        strength=0.85,
+        video=None,
+        input_video_url="",
+        seed=24,
+        enable_prompt_expansion=True,
+    ):
+        try:
+            if video is None and input_video_url is "":
+                return ApiHandler.handle_video_generation_error(
+                    "krea-wan-14b", "Video or Video URL input is required."
+                )
+            if video is None and input_video_url is not "":
+                video_url = input_video_url
+            else:
+                video_url = ImageUtils.upload_file(video.get_stream_source())
+            if not video_url:
+                return ApiHandler.handle_video_generation_error(
+                    "krea-wan-14b", "Failed to upload video"
+                )
+            arguments={
+                    "prompt": prompt,
+                    "strength": strength,
+                    "enable_prompt_expansion": enable_prompt_expansion,
+                    "video_url": video_url,
+                    "seed": seed
+                }
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/krea-wan-14b/video-to-video",
+                arguments,
+            )
+
+            return (result["video"]["url"],)
+
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error("krea-wan-14b", str(e))
 
 
 
@@ -1059,6 +1313,41 @@ class VideoUpscalerNode:
         except Exception as e:
             return ApiHandler.handle_video_generation_error("video-upscaler", str(e))
 
+class UploadVideoNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "video": ("VIDEO",),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("video_url",)
+    FUNCTION = "upload_video"
+    CATEGORY = "video"
+
+    def upload_video(self, video):
+        video_url = ImageUtils.upload_file(video.get_stream_source())
+        return (video_url,)
+    
+class UploadFileNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "path": ("STRING",),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("file_url",)
+    FUNCTION = "upload_file"
+    CATEGORY = "video"
+
+    def upload_file(self, path):
+        file_url = ImageUtils.upload_file(path)
+        return (file_url,)
 
 class LoadVideoURL:
     @classmethod
@@ -1361,9 +1650,12 @@ NODE_CLASS_MAPPINGS = {
     "KlingPro10_fal": KlingPro10Node,
     "KlingPro16_fal": KlingPro16Node,
     "KlingMaster_fal": KlingMasterNode,
+    "Krea_Wan14b_VideoToVideo_fal": KreaWan14bVideoToVideoNode,
     "RunwayGen3_fal": RunwayGen3Node,
     "LumaDreamMachine_fal": LumaDreamMachineNode,
     "LoadVideoURL": LoadVideoURL,
+    "UploadVideo_fal": UploadVideoNode,
+    "UploadFile_fal": UploadFileNode,
     "MiniMax_fal": MiniMaxNode,
     "MiniMaxTextToVideo_fal": MiniMaxTextToVideoNode,
     "MiniMaxSubjectReference_fal": MiniMaxSubjectReferenceNode,
@@ -1373,9 +1665,12 @@ NODE_CLASS_MAPPINGS = {
     "WanPro_fal": WanProNode,
     "Wan25_preview_fal": Wan25Node,
     "WanVACEVideoEdit_fal": WanVACEVideoEditNode,
+    "Wan2214b_animate_replace_character_fal": Wan2214bAnimateReplaceNode,
+    "Wan2214b_animate_move_character_fal": Wan2214bAnimateMoveNode,
     "SeedanceImageToVideo_fal": SeedanceImageToVideoNode,
     "SeedanceTextToVideo_fal": SeedanceTextToVideoNode,
     "Veo3_fal": Veo3Node
+    
 }
 
 # Update Node display name mappings
@@ -1384,9 +1679,12 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "KlingPro10_fal": "Kling Pro v1.0 Video Generation (fal)",
     "KlingPro16_fal": "Kling Pro v1.6 Video Generation (fal)",
     "KlingMaster_fal": "Kling Master v2.0 Video Generation (fal)",
+    "Krea_Wan14b_VideoToVideo_fal": "Krea Wan 14b Video-to-Video (fal)",
     "RunwayGen3_fal": "Runway Gen3 Image-to-Video (fal)",
     "LumaDreamMachine_fal": "Luma Dream Machine (fal)",
     "LoadVideoURL": "Load Video from URL",
+    "UploadVideo_fal": "Upload Video (fal)",
+    "UploadFile_fal": "Upload File (fal)",
     "MiniMax_fal": "MiniMax Video Generation (fal)",
     "MiniMaxTextToVideo_fal": "MiniMax Text-to-Video (fal)",
     "MiniMaxSubjectReference_fal": "MiniMax Subject Reference (fal)",
@@ -1398,5 +1696,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "SeedanceTextToVideo_fal": "Seedance Text-to-Video (fal)",
     "Veo3_fal": "Veo3 Video Generation (fal)",
     "Wan25_preview_fal": "Wan 2.5 Preview Image-to-Video (fal)",
-    "WanVACEVideoEdit_fal": "Wan VACE Video Edit (fal)"
+    "WanVACEVideoEdit_fal": "Wan VACE Video Edit (fal)",
+    "Wan2214b_animate_replace_character_fal": "Wan 2.2 14b Animate: Replace Character (fal)",
+    "Wan2214b_animate_move_character_fal": "Wan 2.2 14b Animate: Move Character (fal)"
 }

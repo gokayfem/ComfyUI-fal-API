@@ -61,6 +61,7 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **Flux Dev (fal)**: Use the development version of Flux for image generation
 - **Flux Schnell (fal)**: Fast image generation with Flux Schnell
 - **Flux Pro 1.1 (fal)**: Latest version of Flux Pro for image generation
+- **Flux Pro 1 Fill (fal)**: Image-to-image generation with mask-based fill capabilities
 - **Flux Ultra (fal)**: Ultra-high quality image generation with advanced controls
 - **Flux General (fal)**: ControlNets, Ipadapters, Loras for Flux Dev
 - **Flux LoRA (fal)**: Flux with dual LoRA support for custom styles
@@ -88,6 +89,7 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **Kling Pro v1.0 Video Generation (fal)**: Original version of Kling Pro for video generation
 - **Kling Pro v1.6 Video Generation (fal)**: Latest version of Kling Pro with improved quality
 - **Kling Master v2.0 Video Generation (fal)**: Advanced video generation with Kling Master
+- **Krea Wan 14b Video-to-Video (fal)**: Video-to-Video generation using Krea Wan 14b model
 - **Runway Gen3 Image-to-Video (fal)**: Convert images to videos using Runway Gen3
 - **Luma Dream Machine (fal)**: Create videos with Luma Dream Machine
 - **MiniMax Video Generation (fal)**: Generate videos using MiniMax model
@@ -97,12 +99,18 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **Wan Pro Image-to-Video (fal)**: High-quality video generation with Wan Pro model
 - **Wan 2.5 Preview Image-to-Video (fal)**: Image-to-video generation with the latest Wan 2.5 preview model
 - **Wan VACE Video Edit (fal)**: Video + Reference Images to video generation with Wan VACE.
+- **Wan 2.2 14b Animate: Replace Character (fal)**: Animate video content by replacing the foreground character with a new or augmented character using Wan 2.2 14b.
+- **Wan 2.2 14b Animate: Move Character (fal)**: Animate video content by moving the foreground character within the scene using Wan 2.2 14b.
 - **Video Upscaler (fal)**: Upscale video quality using AI
+- **Seedvr Upscale Video (fal)**: Upscale video quality using Seedvr
+- **Bria Video Increase Resolution (fal)**: Increase video resolution using Bria
+- **Topaz Upscale Video (fal)**: Upscale video quality using Topaz
 - **Combined Video Generation (fal)**: Generate videos using multiple services simultaneously
   - Supports Kling Pro v1.6, Kling Master v2.0, MiniMax, Luma, Veo2, and Wan Pro
   - Each service can be individually enabled/disabled
   - Wan Pro runs with safety checker enabled and automatic seed selection
 - **Load Video from URL**: Load and process videos from a given URL
+
 
 ### Language Models (LLMs)
 
