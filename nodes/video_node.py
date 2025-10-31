@@ -817,8 +817,8 @@ class Wan2214bAnimateMoveNode:
                 "video": ("VIDEO", {"default": None}),
                 "input_video_url": ("STRING", {"default": ""}),
                 "resolution": (
-                    ["auto", "240p", "360p", "480p", "580p", "720p", "1080p"],
-                    {"default": "auto"}
+                    ["480p", "580p", "720p"],
+                    {"default": "480p"}
                 ),
                 "num_inference_steps": ("INT", {"default": 20, "min": 1}),
                 "shift": ("INT", {"default": 5}),
