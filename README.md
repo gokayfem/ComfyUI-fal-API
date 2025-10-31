@@ -61,6 +61,7 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **Flux Dev (fal)**: Use the development version of Flux for image generation
 - **Flux Schnell (fal)**: Fast image generation with Flux Schnell
 - **Flux Pro 1.1 (fal)**: Latest version of Flux Pro for image generation
+- **Flux Pro 1 Fill (fal)**: Image-to-image generation with mask-based fill capabilities
 - **Flux Ultra (fal)**: Ultra-high quality image generation with advanced controls
 - **Flux General (fal)**: ControlNets, Ipadapters, Loras for Flux Dev
 - **Flux LoRA (fal)**: Flux with dual LoRA support for custom styles

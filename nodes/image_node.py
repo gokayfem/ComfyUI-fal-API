@@ -608,6 +608,74 @@ class FluxPro11:
             return ApiHandler.handle_image_generation_error("FluxPro 1.1", e)
 
 
+class FluxPro1Fill:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 10}),
+                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2"}),
+                "output_format": (["png", "jpeg"], {"default": "png"}),
+                
+            },
+            "optional": {
+                "image": ("IMAGE", {"default": None}),
+                "mask_image": ("IMAGE", {"default": None}),
+                "seed": ("INT", {"default": -1}),
+                "sync_mode": ("BOOLEAN", {"default": False}),
+                "enhance_prompt": ("BOOLEAN", {"default": True}),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        prompt,
+        image = None,
+        mask_image = None,
+        output_format = "png",
+        num_images = 1,
+        safety_tolerance = "2",
+        seed=0,
+        sync_mode=False,
+        enhance_prompt=True,
+    ):
+        if image is None or mask_image is None:
+            return ApiHandler.handle_image_generation_error(
+                "FluxPro 1/FILL", "Both image and mask_image inputs are required."
+            )
+        image_url = ImageUtils.upload_image(image)
+        mask_url = ImageUtils.upload_image(mask_image)
+        arguments = {
+            "prompt": prompt,
+            "num_images": num_images,
+            "safety_tolerance": safety_tolerance,
+            "sync_mode": sync_mode,
+        }
+        arguments={
+            "prompt": prompt,
+            "num_images": num_images,
+            "sync_mode": sync_mode,
+            "output_format": output_format,
+            "safety_tolerance": safety_tolerance,
+            "image_url": image_url,
+            "mask_url": mask_url,
+            "enhance_prompt": enhance_prompt
+        }
+        if seed != 0:
+            arguments["seed"] = seed
+
+        try:
+            result = ApiHandler.submit_and_get_result("fal-ai/flux-pro/v1/fill", arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("FluxPro 1/FILL", e)
+
+
 class FluxUltra:
     @classmethod
     def INPUT_TYPES(cls):
@@ -1839,6 +1907,7 @@ NODE_CLASS_MAPPINGS = {
     "FluxDev_fal": FluxDev,
     "FluxSchnell_fal": FluxSchnell,
     "FluxPro11_fal": FluxPro11,
+    "FluxPro1Fill_fal": FluxPro1Fill,
     "FluxUltra_fal": FluxUltra,
     "FluxGeneral_fal": FluxGeneral,
     "FluxLora_fal": FluxLora,
@@ -1866,6 +1935,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxDev_fal": "Flux Dev (fal)",
     "FluxSchnell_fal": "Flux Schnell (fal)",
     "FluxPro11_fal": "Flux Pro 1.1 (fal)",
+    "FluxPro1Fill_fal": "Flux Pro 1 Fill (fal)",
     "FluxUltra_fal": "Flux Ultra (fal)",
     "FluxGeneral_fal": "Flux General (fal)",
     "FluxLora_fal": "Flux LoRA (fal)",
