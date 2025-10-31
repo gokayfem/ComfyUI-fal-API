@@ -260,12 +260,70 @@ class BriaVideoIncreaseResolutionNode:
             )
 
 
+class TopazUpscaleVideoNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+              
+                "upscale_factor": (
+                    "FLOAT",
+                    {"default": 2.0, "min": 1.0, "max": 5.0, "step": 0.1},
+                ),
+            },
+            "optional": {
+                "video": ("VIDEO",),
+                "input_video_url": ("STRING", {"default": ""}),
+                "use_fps": ("BOOLEAN", {"default": False}),
+                "target_fps": ("INT", {"default": 0, "min": 0, "max": 60}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("video_url",)
+    FUNCTION = "generate_upscaled_video"
+    CATEGORY = "FAL/Image"
+
+    def generate_upscaled_video(
+        self,
+        video =None,
+        input_video_url=None,
+        upscale_factor=2.0,
+        use_fps=False,
+        target_fps= 0
+    ):
+        try:
+            video_url = input_video_url
+            if video is not None:
+                video_url = ImageUtils.upload_file(video.get_stream_source())
+            if not video_url or video_url=="":
+                return ApiHandler.handle_video_generation_error(
+                    "fal-ai/topaz/upscale/video", "Failed to upload video for upscaling. No video URL provided, or Video provided."
+                )
+            arguments={
+        "video_url": video_url,
+        "desired_increase": str(upscale_factor)
+    }
+            if target_fps != 0 and use_fps:
+                arguments["target_fps"] = target_fps
+     
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/topaz/upscale/video", arguments
+            )
+            return (result["video"]["url"],)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "fal-ai/topaz/upscale/video", str(e)
+            )
+
+
 # Node class mappings
 NODE_CLASS_MAPPINGS = {
     "Upscaler_fal": UpscalerNode,
     "Seedvr_Upscaler_fal": SeedvrUpscalerNode,
     "Seedvr_Upscale_Video_fal": SeedvrUpscaleVideoNode,
     "Bria_Video_Increase_Resolution_fal": BriaVideoIncreaseResolutionNode,
+    "Topaz_Upscale_Video_fal": TopazUpscaleVideoNode,
 }
 
 # Node display name mappings
@@ -274,4 +332,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "Seedvr_Upscaler_fal": "Seedvr Upscaler (fal)",
     "Seedvr_Upscale_Video_fal": "Seedvr Upscale Video (fal)",
     "Bria_Video_Increase_Resolution_fal": "Bria Video Increase Resolution (fal)",
+    "Topaz_Upscale_Video_fal": "Topaz Upscale Video (fal)",
 }
