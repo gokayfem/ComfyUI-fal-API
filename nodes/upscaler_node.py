@@ -137,15 +137,71 @@ class SeedvrUpscalerNode:
         except Exception as e:
             return ApiHandler.handle_image_generation_error("seedvr-upscaler", str(e))
 
+class BriaVideoIncreaseResolutionNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+              
+                "upscale_factor": (
+                    "INT",
+                    {"default": 2, "min": 2, "max": 4, "step": 2},
+                ),
+            },
+            "optional": {
+                "video": ("VIDEO",),
+                "input_video_url": ("STRING", {"default": ""}),
+                "output_container_and_codec": ("STRING", {"default": "mp4_h264", "options": ["mp4_h264", "mp4_h265","mov_h265","mov_proresks", "webm_vp9","mkv_h265","mkv_h265", "mkv_vp9", "gif"]}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("video_url",)
+    FUNCTION = "generate_upscaled_video"
+    CATEGORY = "FAL/Image"
+
+    def generate_upscaled_video(
+        self,
+        video =None,
+        input_video_url=None,
+        upscale_factor=2,
+        output_container_and_codec="mp4_h264"
+    ):
+        try:
+            
+            video_url = input_video_url
+            if video is not None:
+                video_url = ImageUtils.upload_file(video.get_stream_source())
+            if not video_url or video_url=="":
+                return ApiHandler.handle_video_generation_error(
+                    "bria-video-increase-resolution", "Failed to upload video for upscaling. No video URL provided, or Video provided."
+                )
+            arguments={
+        "video_url": video_url,
+        "desired_increase": str(upscale_factor),
+        "output_container_and_codec": output_container_and_codec
+    }
+            print(arguments)
+            result = ApiHandler.submit_and_get_result(
+                "bria/video/increase-resolution", arguments
+            )
+            return (result["video"]["url"],)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "bria/video/increase-resolution", str(e)
+            )
+
 
 # Node class mappings
 NODE_CLASS_MAPPINGS = {
     "Upscaler_fal": UpscalerNode,
     "Seedvr_Upscaler_fal": SeedvrUpscalerNode,
+    "Bria_Video_Increase_Resolution_fal": BriaVideoIncreaseResolutionNode,
 }
 
 # Node display name mappings
 NODE_DISPLAY_NAME_MAPPINGS = {
     "Upscaler_fal": "Clarity Upscaler (fal)",
     "Seedvr_Upscaler_fal": "Seedvr Upscaler (fal)",
+    "Bria_Video_Increase_Resolution_fal": "Bria Video Increase Resolution (fal)",
 }
