@@ -97,12 +97,17 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **Wan Pro Image-to-Video (fal)**: High-quality video generation with Wan Pro model
 - **Wan 2.5 Preview Image-to-Video (fal)**: Image-to-video generation with the latest Wan 2.5 preview model
 - **Wan VACE Video Edit (fal)**: Video + Reference Images to video generation with Wan VACE.
+- **Wan 2.2 14b Animate: Replace Character (fal)**: Animate video content by replacing the foreground character with a new or augmented character using Wan 2.2 14b.
 - **Video Upscaler (fal)**: Upscale video quality using AI
+- **Seedvr Upscale Video (fal)**: Upscale video quality using Seedvr
+- **Bria Video Increase Resolution (fal)**: Increase video resolution using Bria
+- **Topaz Upscale Video (fal)**: Upscale video quality using Topaz
 - **Combined Video Generation (fal)**: Generate videos using multiple services simultaneously
   - Supports Kling Pro v1.6, Kling Master v2.0, MiniMax, Luma, Veo2, and Wan Pro
   - Each service can be individually enabled/disabled
   - Wan Pro runs with safety checker enabled and automatic seed selection
 - **Load Video from URL**: Load and process videos from a given URL
+
 
 ### Language Models (LLMs)
 
