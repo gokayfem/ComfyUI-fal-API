@@ -195,11 +195,9 @@ class SeedvrUpscaleVideoNode:
 "output_quality": output_quality,
 "output_write_mode": output_write_mode
 }
-        print(arguments)
         result = ApiHandler.submit_and_get_result(
             "fal-ai/seedvr/upscale/video", arguments
         )
-        print(result)
         return (result["video"]["url"],)
         # except Exception as e:
         #     return ApiHandler.handle_video_generation_error(
