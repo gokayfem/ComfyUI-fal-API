@@ -150,7 +150,7 @@ class SeedvrUpscaleVideoNode:
             "optional": {
                 "video": ("VIDEO",),
                 "input_video_url": ("STRING", {"default": ""}),
-                "upscale_mode": (["factor", "target_resolution"], {"default": "factor"}),
+                "upscale_mode": (["factor", "target"], {"default": "factor"}),
                 "target_resolution": (["720p", "1080p", "1440p", "2160p"], {"default": "1080p"}),
                 "noise_scale": ("FLOAT", {"default": 0.1, "min": 0.0, "max": 1.0, "step": 0.05}),
                 "output_quality": (["low", "medium", "high", "maximum"], {"default": "high"}),
