@@ -1752,6 +1752,7 @@ class NanoBananaEdit:
                 "image_4": ("IMAGE",),
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
                 "output_format": (["jpeg", "png"], {"default": "jpeg"}),
+                "aspect_ratio": (["21:9", "1:1", "4:3", "3:2", "2:3", "5:4", "4:5", "3:4", "16:9", "9:16"], {"default": "1:1"}),
             },
         }
 
@@ -1768,6 +1769,7 @@ class NanoBananaEdit:
         image_4=None,
         num_images=1,
         output_format="jpeg",
+        aspect_ratio="1:1",
     ):
         # Upload all provided images
         image_urls = []
@@ -1781,12 +1783,12 @@ class NanoBananaEdit:
                     print(f"Error: Failed to upload image {i} for Nano Banana Edit")
                     return ResultProcessor.create_blank_image()
 
-
         arguments = {
             "prompt": prompt,
             "image_urls": image_urls,
             "num_images": num_images,
             "output_format": output_format,
+            "aspect_ratio": aspect_ratio,
         }
 
         try:
