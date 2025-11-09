@@ -142,6 +142,31 @@ class ImageUtils:
             .expand(-1, -1, -1, 3)
         )
         return result
+    
+    @staticmethod
+    def prepare_images(images):
+        """Preprocess images for use with FAL."""
+        image_urls = []
+        if images is not None:
+
+                if isinstance(images, torch.Tensor):
+                    if images.ndim == 4 and images.shape[0] > 1:
+                        for i in range(images.shape[0]):
+                            single_img = images[i:i+1]
+                            img_url = ImageUtils.upload_image(single_img)
+                            if img_url:
+                                image_urls.append(img_url)
+                    else:
+                        img_url = ImageUtils.upload_image(images)
+                        if img_url:
+                            image_urls.append(img_url)
+
+                elif isinstance(images, (list, tuple)):
+                    for img in images:
+                        img_url = ImageUtils.upload_image(img)
+                        if img_url:
+                            image_urls.append(img_url)
+        return image_urls
 
 
 class ResultProcessor:
