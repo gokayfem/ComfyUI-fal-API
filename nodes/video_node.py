@@ -3,6 +3,7 @@ import os
 import tempfile
 
 import cv2
+import numpy as np
 import requests
 import torch
 from fal_client import AsyncClient
@@ -1644,6 +1645,398 @@ class Veo3Node:
             return ApiHandler.handle_video_generation_error("veo3", str(e))
 
 
+class FalKling21ProImageToVideo:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image": ("IMAGE",),
+                "duration": (["5", "10"], {"default": "5"}),
+            },
+            "optional": {
+                "negative_prompt": ("STRING", {"default": "blur, distort, and low quality", "multiline": True}),
+                "cfg_scale": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.1}),
+                "tail_image": ("IMAGE",),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, prompt, image, duration, negative_prompt="blur, distort, and low quality", cfg_scale=0.5, tail_image=None):
+        try:
+            image_url = ImageUtils.upload_image(image)
+            if not image_url:
+                return ApiHandler.handle_video_generation_error(
+                    "kling-video/v2.1/pro", "Failed to upload image"
+                )
+
+            arguments = {
+                "prompt": prompt,
+                "image_url": image_url,
+                "duration": duration,
+                "negative_prompt": negative_prompt,
+                "cfg_scale": cfg_scale,
+            }
+
+            # Handle optional tail image
+            if tail_image is not None:
+                tail_image_url = ImageUtils.upload_image(tail_image)
+                if tail_image_url:
+                    arguments["tail_image_url"] = tail_image_url
+                else:
+                    return ApiHandler.handle_video_generation_error(
+                        "kling-video/v2.1/pro", "Failed to upload tail image"
+                    )
+
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/kling-video/v2.1/pro/image-to-video", arguments
+            )
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "kling-video/v2.1/pro", str(e)
+            )
+
+
+class FalKling25TurboProImageToVideo:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image": ("IMAGE",),
+                "duration": (["5", "10"], {"default": "5"}),
+            },
+            "optional": {
+                "negative_prompt": ("STRING", {"default": "blur, distort, and low quality", "multiline": True}),
+                "cfg_scale": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.1}),
+                "tail_image": ("IMAGE",),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, prompt, image, duration, negative_prompt="blur, distort, and low quality", cfg_scale=0.5, tail_image=None):
+        try:
+            image_url = ImageUtils.upload_image(image)
+            if not image_url:
+                return ApiHandler.handle_video_generation_error(
+                    "kling-video/v2.5-turbo/pro", "Failed to upload image"
+                )
+
+            arguments = {
+                "prompt": prompt,
+                "image_url": image_url,
+                "duration": duration,
+                "negative_prompt": negative_prompt,
+                "cfg_scale": cfg_scale,
+            }
+
+            # Handle optional tail image
+            if tail_image is not None:
+                tail_image_url = ImageUtils.upload_image(tail_image)
+                if tail_image_url:
+                    arguments["tail_image_url"] = tail_image_url
+                else:
+                    return ApiHandler.handle_video_generation_error(
+                        "kling-video/v2.5-turbo/pro", "Failed to upload tail image"
+                    )
+
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/kling-video/v2.5-turbo/pro/image-to-video", arguments
+            )
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "kling-video/v2.5-turbo/pro", str(e)
+            )
+
+
+class FalSora2ProImageToVideo:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image": ("IMAGE",),
+            },
+            "optional": {
+                "resolution": (["auto", "720p", "1080p"], {"default": "auto"}),
+                "aspect_ratio": (["auto", "9:16", "16:9"], {"default": "auto"}),
+                "duration": ([4, 8, 12], {"default": 4}),
+                "delete_video": ("BOOLEAN", {"default": True}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, prompt, image, resolution="auto", aspect_ratio="auto", duration=4, delete_video=True):
+        try:
+            image_url = ImageUtils.upload_image(image)
+            if not image_url:
+                return ApiHandler.handle_video_generation_error(
+                    "sora-2/pro", "Failed to upload image"
+                )
+
+            arguments = {
+                "prompt": prompt,
+                "image_url": image_url,
+                "resolution": resolution,
+                "aspect_ratio": aspect_ratio,
+                "duration": duration,
+                "delete_video": delete_video,
+            }
+
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/sora-2/image-to-video/pro", arguments
+            )
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "sora-2/pro", str(e)
+            )
+
+
+class FalVeo31FirstLastFrameToVideo:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "first_frame": ("IMAGE",),
+            },
+            "optional": {
+                "last_frame": ("IMAGE",),
+                "duration": (["4s", "6s", "8s"], {"default": "8s"}),
+                "aspect_ratio": (["auto", "9:16", "16:9", "1:1"], {"default": "auto"}),
+                "resolution": (["720p", "1080p"], {"default": "720p"}),
+                "generate_audio": ("BOOLEAN", {"default": True}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, prompt, first_frame, last_frame=None, duration="8s", aspect_ratio="auto", resolution="720p", generate_audio=True):
+        try:
+            first_frame_url = ImageUtils.upload_image(first_frame)
+            if not first_frame_url:
+                return ApiHandler.handle_video_generation_error(
+                    "veo3.1", "Failed to upload first frame"
+                )
+
+            arguments = {
+                "prompt": prompt,
+                "first_frame_url": first_frame_url,
+                "duration": duration,
+                "aspect_ratio": aspect_ratio,
+                "resolution": resolution,
+                "generate_audio": generate_audio,
+            }
+
+            # Handle optional last frame
+            if last_frame is not None:
+                last_frame_url = ImageUtils.upload_image(last_frame)
+                if last_frame_url:
+                    arguments["last_frame_url"] = last_frame_url
+                else:
+                    return ApiHandler.handle_video_generation_error(
+                        "veo3.1", "Failed to upload last frame"
+                    )
+
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/veo3.1/first-last-frame-to-video", arguments
+            )
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "veo3.1", str(e)
+            )
+
+
+class FalVeo31FastFirstLastFrameToVideo:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "first_frame": ("IMAGE",),
+            },
+            "optional": {
+                "last_frame": ("IMAGE",),
+                "duration": (["4s", "6s", "8s"], {"default": "8s"}),
+                "aspect_ratio": (["auto", "9:16", "16:9", "1:1"], {"default": "auto"}),
+                "resolution": (["720p", "1080p"], {"default": "720p"}),
+                "generate_audio": ("BOOLEAN", {"default": True}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, prompt, first_frame, last_frame=None, duration="8s", aspect_ratio="auto", resolution="720p", generate_audio=True):
+        try:
+            first_frame_url = ImageUtils.upload_image(first_frame)
+            if not first_frame_url:
+                return ApiHandler.handle_video_generation_error(
+                    "veo3.1/fast", "Failed to upload first frame"
+                )
+
+            arguments = {
+                "prompt": prompt,
+                "first_frame_url": first_frame_url,
+                "duration": duration,
+                "aspect_ratio": aspect_ratio,
+                "resolution": resolution,
+                "generate_audio": generate_audio,
+            }
+
+            # Handle optional last frame
+            if last_frame is not None:
+                last_frame_url = ImageUtils.upload_image(last_frame)
+                if last_frame_url:
+                    arguments["last_frame_url"] = last_frame_url
+                else:
+                    return ApiHandler.handle_video_generation_error(
+                        "veo3.1/fast", "Failed to upload last frame"
+                    )
+
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/veo3.1/fast/first-last-frame-to-video", arguments
+            )
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "veo3.1/fast", str(e)
+            )
+
+
+class FalVideoURLLoader:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "video_url": ("STRING", {"default": ""}),
+            },
+            "optional": {
+                "force_fps": ("INT", {"default": 0, "min": 0, "max": 120}),
+                "frame_load_cap": ("INT", {"default": 0, "min": 0, "max": 10000}),
+                "skip_first_frames": ("INT", {"default": 0, "min": 0, "max": 10000}),
+                "select_every_nth": ("INT", {"default": 1, "min": 1, "max": 100}),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE", "INT", "FLOAT")
+    RETURN_NAMES = ("frames", "frame_count", "fps")
+    FUNCTION = "load_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def load_video(self, video_url, force_fps=0, frame_load_cap=0, skip_first_frames=0, select_every_nth=1):
+        try:
+            if not video_url or video_url.strip() == "":
+                raise Exception("Video URL is required")
+
+            # Download video to temporary file
+            print(f"Downloading video from: {video_url}")
+            response = requests.get(video_url, stream=True, timeout=30)
+            response.raise_for_status()
+
+            # Create temporary file
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_file:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        temp_file.write(chunk)
+                temp_file_path = temp_file.name
+
+            print(f"Video downloaded to: {temp_file_path}")
+
+            # Load video with OpenCV
+            video_cap = cv2.VideoCapture(temp_file_path)
+
+            if not video_cap.isOpened():
+                os.unlink(temp_file_path)
+                raise Exception("Failed to open video file")
+
+            # Get video metadata
+            detected_fps = video_cap.get(cv2.CAP_PROP_FPS)
+            width = int(video_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            total_frames = int(video_cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+            # Use force_fps if specified, otherwise use detected fps
+            fps = force_fps if force_fps > 0 else detected_fps
+
+            print(f"Video info: {width}x{height}, {detected_fps} fps (detected), {total_frames} frames")
+            if force_fps > 0:
+                print(f"Overriding FPS to: {fps}")
+
+            # Read and process frames
+            frames = []
+            frame_idx = 0
+
+            while video_cap.isOpened():
+                ret, frame = video_cap.read()
+                if not ret:
+                    break
+
+                # Skip first frames
+                if frame_idx < skip_first_frames:
+                    frame_idx += 1
+                    continue
+
+                # Select every nth frame
+                if (frame_idx - skip_first_frames) % select_every_nth != 0:
+                    frame_idx += 1
+                    continue
+
+                # Convert BGR to RGB
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+                # Convert to float32 and normalize to [0, 1]
+                frame = frame.astype("float32") / 255.0
+
+                frames.append(frame)
+                frame_idx += 1
+
+                # Check frame load cap
+                if frame_load_cap > 0 and len(frames) >= frame_load_cap:
+                    break
+
+            video_cap.release()
+            os.unlink(temp_file_path)
+
+            if len(frames) == 0:
+                raise Exception("No frames loaded from video")
+
+            # Convert to torch tensor: (frames, height, width, 3)
+            images = torch.from_numpy(np.array(frames, dtype=np.float32))
+
+            print(f"Loaded {len(images)} frames with shape {images.shape} at {fps} fps")
+
+            return (images, len(images), float(fps))
+
+        except Exception as e:
+            error_msg = f"Error loading video from URL: {str(e)}"
+            print(error_msg)
+            # Return a blank frame as fallback
+            blank_frame = torch.zeros((1, 64, 64, 3), dtype=torch.float32)
+            return (blank_frame, 0, 0.0)
+
+
 # Update Node class mappings
 NODE_CLASS_MAPPINGS = {
     "Kling_fal": KlingNode,
@@ -1669,8 +2062,13 @@ NODE_CLASS_MAPPINGS = {
     "Wan2214b_animate_move_character_fal": Wan2214bAnimateMoveNode,
     "SeedanceImageToVideo_fal": SeedanceImageToVideoNode,
     "SeedanceTextToVideo_fal": SeedanceTextToVideoNode,
-    "Veo3_fal": Veo3Node
-    
+    "Veo3_fal": Veo3Node,
+    "Kling21Pro_fal": FalKling21ProImageToVideo,
+    "Kling25TurboPro_fal": FalKling25TurboProImageToVideo,
+    "Sora2Pro_fal": FalSora2ProImageToVideo,
+    "Veo31_fal": FalVeo31FirstLastFrameToVideo,
+    "Veo31Fast_fal": FalVeo31FastFirstLastFrameToVideo,
+    "FalVideoURLLoader_fal": FalVideoURLLoader
 }
 
 # Update Node display name mappings
@@ -1698,5 +2096,11 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "Wan25_preview_fal": "Wan 2.5 Preview Image-to-Video (fal)",
     "WanVACEVideoEdit_fal": "Wan VACE Video Edit (fal)",
     "Wan2214b_animate_replace_character_fal": "Wan 2.2 14b Animate: Replace Character (fal)",
-    "Wan2214b_animate_move_character_fal": "Wan 2.2 14b Animate: Move Character (fal)"
+    "Wan2214b_animate_move_character_fal": "Wan 2.2 14b Animate: Move Character (fal)",
+    "Kling21Pro_fal": "Kling v2.1 Pro Image-to-Video (fal)",
+    "Kling25TurboPro_fal": "Kling v2.5 Turbo Pro Image-to-Video (fal)",
+    "Sora2Pro_fal": "Sora 2 Pro Image-to-Video (fal)",
+    "Veo31_fal": "Veo 3.1 First-Last-Frame-to-Video (fal)",
+    "Veo31Fast_fal": "Veo 3.1 Fast First-Last-Frame-to-Video (fal)",
+    "FalVideoURLLoader_fal": "FAL Video URL Loader (fal)"
 }
