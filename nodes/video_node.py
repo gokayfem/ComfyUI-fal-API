@@ -1836,28 +1836,37 @@ class FalVeo31FirstLastFrameToVideo:
                     "veo3.1", "Failed to upload first frame"
                 )
 
-            arguments = {
-                "prompt": prompt,
-                "first_frame_url": first_frame_url,
-                "duration": duration,
-                "aspect_ratio": aspect_ratio,
-                "resolution": resolution,
-                "generate_audio": generate_audio,
-            }
-
-            # Handle optional last frame
-            if last_frame is not None:
+            # Conditional routing based on whether last_frame is provided
+            if last_frame is None:
+                # Use image-to-video endpoint (first frame only)
+                endpoint = "fal-ai/veo3.1/image-to-video"
+                arguments = {
+                    "prompt": prompt,
+                    "image_url": first_frame_url,
+                    "duration": duration,
+                    "aspect_ratio": aspect_ratio,
+                    "resolution": resolution,
+                    "generate_audio": generate_audio,
+                }
+            else:
+                # Use first-last-frame-to-video endpoint (both frames)
+                endpoint = "fal-ai/veo3.1/first-last-frame-to-video"
                 last_frame_url = ImageUtils.upload_image(last_frame)
-                if last_frame_url:
-                    arguments["last_frame_url"] = last_frame_url
-                else:
+                if not last_frame_url:
                     return ApiHandler.handle_video_generation_error(
                         "veo3.1", "Failed to upload last frame"
                     )
+                arguments = {
+                    "prompt": prompt,
+                    "first_frame_url": first_frame_url,
+                    "last_frame_url": last_frame_url,
+                    "duration": duration,
+                    "aspect_ratio": aspect_ratio,
+                    "resolution": resolution,
+                    "generate_audio": generate_audio,
+                }
 
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/veo3.1/first-last-frame-to-video", arguments
-            )
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
             video_url = result["video"]["url"]
             return (video_url,)
         except Exception as e:
@@ -1895,28 +1904,37 @@ class FalVeo31FastFirstLastFrameToVideo:
                     "veo3.1/fast", "Failed to upload first frame"
                 )
 
-            arguments = {
-                "prompt": prompt,
-                "first_frame_url": first_frame_url,
-                "duration": duration,
-                "aspect_ratio": aspect_ratio,
-                "resolution": resolution,
-                "generate_audio": generate_audio,
-            }
-
-            # Handle optional last frame
-            if last_frame is not None:
+            # Conditional routing based on whether last_frame is provided
+            if last_frame is None:
+                # Use image-to-video endpoint (first frame only)
+                endpoint = "fal-ai/veo3.1/fast/image-to-video"
+                arguments = {
+                    "prompt": prompt,
+                    "image_url": first_frame_url,
+                    "duration": duration,
+                    "aspect_ratio": aspect_ratio,
+                    "resolution": resolution,
+                    "generate_audio": generate_audio,
+                }
+            else:
+                # Use first-last-frame-to-video endpoint (both frames)
+                endpoint = "fal-ai/veo3.1/fast/first-last-frame-to-video"
                 last_frame_url = ImageUtils.upload_image(last_frame)
-                if last_frame_url:
-                    arguments["last_frame_url"] = last_frame_url
-                else:
+                if not last_frame_url:
                     return ApiHandler.handle_video_generation_error(
                         "veo3.1/fast", "Failed to upload last frame"
                     )
+                arguments = {
+                    "prompt": prompt,
+                    "first_frame_url": first_frame_url,
+                    "last_frame_url": last_frame_url,
+                    "duration": duration,
+                    "aspect_ratio": aspect_ratio,
+                    "resolution": resolution,
+                    "generate_audio": generate_audio,
+                }
 
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/veo3.1/fast/first-last-frame-to-video", arguments
-            )
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
             video_url = result["video"]["url"]
             return (video_url,)
         except Exception as e:
