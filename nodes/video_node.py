@@ -1925,118 +1925,6 @@ class FalVeo31FastFirstLastFrameToVideo:
             )
 
 
-class FalVideoURLLoader:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "video_url": ("STRING", {"default": ""}),
-            },
-            "optional": {
-                "force_fps": ("INT", {"default": 0, "min": 0, "max": 120}),
-                "frame_load_cap": ("INT", {"default": 0, "min": 0, "max": 10000}),
-                "skip_first_frames": ("INT", {"default": 0, "min": 0, "max": 10000}),
-                "select_every_nth": ("INT", {"default": 1, "min": 1, "max": 100}),
-            },
-        }
-
-    RETURN_TYPES = ("IMAGE", "INT", "FLOAT")
-    RETURN_NAMES = ("frames", "frame_count", "fps")
-    FUNCTION = "load_video"
-    CATEGORY = "FAL/VideoGeneration"
-
-    def load_video(self, video_url, force_fps=0, frame_load_cap=0, skip_first_frames=0, select_every_nth=1):
-        try:
-            if not video_url or video_url.strip() == "":
-                raise Exception("Video URL is required")
-
-            # Download video to temporary file
-            print(f"Downloading video from: {video_url}")
-            response = requests.get(video_url, stream=True, timeout=30)
-            response.raise_for_status()
-
-            # Create temporary file
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_file:
-                for chunk in response.iter_content(chunk_size=8192):
-                    if chunk:
-                        temp_file.write(chunk)
-                temp_file_path = temp_file.name
-
-            print(f"Video downloaded to: {temp_file_path}")
-
-            # Load video with OpenCV
-            video_cap = cv2.VideoCapture(temp_file_path)
-
-            if not video_cap.isOpened():
-                os.unlink(temp_file_path)
-                raise Exception("Failed to open video file")
-
-            # Get video metadata
-            detected_fps = video_cap.get(cv2.CAP_PROP_FPS)
-            width = int(video_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            height = int(video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            total_frames = int(video_cap.get(cv2.CAP_PROP_FRAME_COUNT))
-
-            # Use force_fps if specified, otherwise use detected fps
-            fps = force_fps if force_fps > 0 else detected_fps
-
-            print(f"Video info: {width}x{height}, {detected_fps} fps (detected), {total_frames} frames")
-            if force_fps > 0:
-                print(f"Overriding FPS to: {fps}")
-
-            # Read and process frames
-            frames = []
-            frame_idx = 0
-
-            while video_cap.isOpened():
-                ret, frame = video_cap.read()
-                if not ret:
-                    break
-
-                # Skip first frames
-                if frame_idx < skip_first_frames:
-                    frame_idx += 1
-                    continue
-
-                # Select every nth frame
-                if (frame_idx - skip_first_frames) % select_every_nth != 0:
-                    frame_idx += 1
-                    continue
-
-                # Convert BGR to RGB
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-                # Convert to float32 and normalize to [0, 1]
-                frame = frame.astype("float32") / 255.0
-
-                frames.append(frame)
-                frame_idx += 1
-
-                # Check frame load cap
-                if frame_load_cap > 0 and len(frames) >= frame_load_cap:
-                    break
-
-            video_cap.release()
-            os.unlink(temp_file_path)
-
-            if len(frames) == 0:
-                raise Exception("No frames loaded from video")
-
-            # Convert to torch tensor: (frames, height, width, 3)
-            images = torch.from_numpy(np.array(frames, dtype=np.float32))
-
-            print(f"Loaded {len(images)} frames with shape {images.shape} at {fps} fps")
-
-            return (images, len(images), float(fps))
-
-        except Exception as e:
-            error_msg = f"Error loading video from URL: {str(e)}"
-            print(error_msg)
-            # Return a blank frame as fallback
-            blank_frame = torch.zeros((1, 64, 64, 3), dtype=torch.float32)
-            return (blank_frame, 0, 0.0)
-
-
 # Update Node class mappings
 NODE_CLASS_MAPPINGS = {
     "Kling_fal": KlingNode,
@@ -2068,7 +1956,6 @@ NODE_CLASS_MAPPINGS = {
     "Sora2Pro_fal": FalSora2ProImageToVideo,
     "Veo31_fal": FalVeo31FirstLastFrameToVideo,
     "Veo31Fast_fal": FalVeo31FastFirstLastFrameToVideo,
-    "FalVideoURLLoader_fal": FalVideoURLLoader
 }
 
 # Update Node display name mappings
@@ -2102,5 +1989,4 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "Sora2Pro_fal": "Sora 2 Pro Image-to-Video (fal)",
     "Veo31_fal": "Veo 3.1 First-Last-Frame-to-Video (fal)",
     "Veo31Fast_fal": "Veo 3.1 Fast First-Last-Frame-to-Video (fal)",
-    "FalVideoURLLoader_fal": "FAL Video URL Loader (fal)"
 }
