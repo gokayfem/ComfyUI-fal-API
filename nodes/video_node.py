@@ -895,6 +895,81 @@ class Wan2214bAnimateMoveNode:
 
 
 
+class PixverseSwapNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "image": ("IMAGE", {"default": None}),
+                "mode": (["person", "object", "background"], {"default": "person"}),
+                "keyframe_id": ("INT", {"default": 1}),
+                "quality": (
+                    ["360p", "540p", "720p"],
+                    {"default": "720p"}
+                ),
+                "original_sound_switch": ("BOOLEAN", {"default": True}),
+            },
+            "optional": {
+                "video": ("VIDEO", {"default": None}),
+                "input_video_url": ("STRING", {"default": ""}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("video_url",)
+    FUNCTION = "edit_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def edit_video(
+        self,
+        video=None,
+        input_video_url="",
+        image=None,
+        keyframe_id=1,
+        quality="720p",
+        original_sound_switch=True,
+        mode="person"):
+        try:
+            if video is None and input_video_url is "":
+                return ApiHandler.handle_video_generation_error(
+                    "pixverse-swap", "Video or Video Frames input is required."
+                )
+            if video is None and input_video_url is not "":
+                video_url = input_video_url
+            else:
+                video_url = ImageUtils.upload_file(video.get_stream_source())
+            if not video_url:
+                return ApiHandler.handle_video_generation_error(
+                    "pixverse-swap", "Failed to upload video"
+                )
+
+          
+            image_url = ImageUtils.upload_image(image)
+            if not image_url:
+                return ApiHandler.handle_video_generation_error(
+                    "pixverse-swap", "Failed to upload image"
+                )
+
+            arguments={
+        "video_url": video_url,
+        "image_url": image_url,
+        "keyframe_id": keyframe_id,
+        "quality": quality,
+        "original_sound_switch": original_sound_switch,
+        "mode": mode
+    }
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/pixverse/swap",
+                arguments,
+            )
+
+            return (result["video"]["url"],)
+
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error("pixverse-swap", str(e))
+
+
+
 
 class KreaWan14bVideoToVideoNode:
     @classmethod
@@ -955,6 +1030,64 @@ class KreaWan14bVideoToVideoNode:
 
         except Exception as e:
             return ApiHandler.handle_video_generation_error("krea-wan-14b", str(e))
+
+
+
+
+class InfinityStarTextToVideoNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "negative_prompt": ("STRING", {"default": "low quality.", "multiline": True}),
+                "aspect_ratio": (
+                    ["16:9",  "9:6","1:1"],
+                    {"default": "16:9"}
+                ),
+                "guidance_scale": ("FLOAT", {"default": 7.5, "min": 0.0, "max": 10}),
+            },
+            "optional": {
+                "tau_video": ("FLOAT", {"default": 0.4, "min": 0.0, "max": 2}),
+                "enhance_prompt": ("BOOLEAN", {"default": True}),
+                "seed": ("INT", {"default": 42}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("video_url",)
+    FUNCTION = "edit_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def edit_video(
+        self,
+        prompt="",
+        negative_prompt="low quality.",
+        enhance_prompt=True,
+        seed=24,
+        aspect_ratio="16:9",
+        guidance_scale=7.5,
+        tau_video=0.4,
+    ):
+        try:
+            arguments={
+                    "prompt": prompt,
+                    "negative_prompt": negative_prompt,
+                    "aspect_ratio": aspect_ratio,
+                    "guidance_scale": guidance_scale,
+                    "enhance_prompt": enhance_prompt,
+                    "tau_video": tau_video,
+                    "seed": seed
+                }
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/infinity-star/text-to-video",
+                arguments,
+            )
+
+            return (result["video"]["url"],)
+
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error("infinity-star-text-to-video", str(e))
 
 
 
@@ -1945,6 +2078,7 @@ class FalVeo31FastFirstLastFrameToVideo:
 
 # Update Node class mappings
 NODE_CLASS_MAPPINGS = {
+    "InfinityStarTextToVideo_fal": InfinityStarTextToVideoNode,
     "Kling_fal": KlingNode,
     "KlingPro10_fal": KlingPro10Node,
     "KlingPro16_fal": KlingPro16Node,
@@ -1958,6 +2092,7 @@ NODE_CLASS_MAPPINGS = {
     "MiniMax_fal": MiniMaxNode,
     "MiniMaxTextToVideo_fal": MiniMaxTextToVideoNode,
     "MiniMaxSubjectReference_fal": MiniMaxSubjectReferenceNode,
+    "PixverseSwapNode_fal": PixverseSwapNode,
     "VideoUpscaler_fal": VideoUpscalerNode,
     "CombinedVideoGeneration_fal": CombinedVideoGenerationNode,
     "Veo2ImageToVideo_fal": Veo2ImageToVideoNode,
@@ -1978,6 +2113,7 @@ NODE_CLASS_MAPPINGS = {
 
 # Update Node display name mappings
 NODE_DISPLAY_NAME_MAPPINGS = {
+    "InfinityStarTextToVideo_fal": "Infinity Star Text-to-Video (fal)",
     "Kling_fal": "Kling Video Generation (fal)",
     "KlingPro10_fal": "Kling Pro v1.0 Video Generation (fal)",
     "KlingPro16_fal": "Kling Pro v1.6 Video Generation (fal)",
@@ -1991,6 +2127,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "MiniMax_fal": "MiniMax Video Generation (fal)",
     "MiniMaxTextToVideo_fal": "MiniMax Text-to-Video (fal)",
     "MiniMaxSubjectReference_fal": "MiniMax Subject Reference (fal)",
+    "PixverseSwapNode_fal": "Pixverse Swap (fal)",
     "VideoUpscaler_fal": "Video Upscaler (fal)",
     "CombinedVideoGeneration_fal": "Combined Video Generation (fal)",
     "Veo2ImageToVideo_fal": "Google Veo2 Image-to-Video (fal)",

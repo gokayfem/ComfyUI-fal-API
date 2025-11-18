@@ -1750,6 +1750,7 @@ class NanoBananaEdit:
                 "image_2": ("IMAGE",),
                 "image_3": ("IMAGE",),
                 "image_4": ("IMAGE",),
+                "images": ("IMAGE", {"default": None, "multiple": True}),
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
                 "output_format": (["jpeg", "png"], {"default": "jpeg"}),
             },
@@ -1766,21 +1767,15 @@ class NanoBananaEdit:
         image_2=None,
         image_3=None,
         image_4=None,
+        images=None,
         num_images=1,
         output_format="jpeg",
     ):
         # Upload all provided images
-        image_urls = []
-
-        for i, img in enumerate([image_1, image_2, image_3, image_4], 1):
-            if img is not None:
-                url = ImageUtils.upload_image(img)
-                if url:
-                    image_urls.append(url)
-                else:
-                    print(f"Error: Failed to upload image {i} for Nano Banana Edit")
-                    return ResultProcessor.create_blank_image()
-
+        singleImages = ImageUtils.prepare_images([image_1, image_2, image_3, image_4])
+        batchImages = ImageUtils.prepare_images(images)
+        image_urls = singleImages + batchImages
+        
 
         arguments = {
             "prompt": prompt,
