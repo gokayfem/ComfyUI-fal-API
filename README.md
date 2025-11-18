@@ -89,6 +89,8 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **Kling Pro v1.0 Video Generation (fal)**: Original version of Kling Pro for video generation
 - **Kling Pro v1.6 Video Generation (fal)**: Latest version of Kling Pro with improved quality
 - **Kling Master v2.0 Video Generation (fal)**: Advanced video generation with Kling Master
+- **Kling Pro 2.1 Video Generation (fal)**: Video Generation with Kling Pro with First Frame Last Frame support
+- **Kling v2.5 Turbo Pro Image-to-Video (fal)**: Video Generation with Kling Turbo with First Frame Last Frame support
 - **Krea Wan 14b Video-to-Video (fal)**: Video-to-Video generation using Krea Wan 14b model
 - **Runway Gen3 Image-to-Video (fal)**: Convert images to videos using Runway Gen3
 - **Luma Dream Machine (fal)**: Create videos with Luma Dream Machine
@@ -96,11 +98,14 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **MiniMax Text-to-Video (fal)**: Create videos from text prompts using MiniMax
 - **MiniMax Subject Reference (fal)**: Generate videos with subject reference using MiniMax
 - **Google Veo2 Image-to-Video (fal)**: Convert images to videos using Google's Veo2 model
+- **Veo 3.1 First-Last-Frame-to-Video (fal)**: First Frame - Last Frame (Optional) video generation using the full VEO 3.1 model
+- **Veo 3.1 Fast First-Last-Frame-to-Video (fal)**: First Frame - Last Frame (Optional) video generation using the fast VEO 3.1 model
 - **Wan Pro Image-to-Video (fal)**: High-quality video generation with Wan Pro model
 - **Wan 2.5 Preview Image-to-Video (fal)**: Image-to-video generation with the latest Wan 2.5 preview model
 - **Wan VACE Video Edit (fal)**: Video + Reference Images to video generation with Wan VACE.
 - **Wan 2.2 14b Animate: Replace Character (fal)**: Animate video content by replacing the foreground character with a new or augmented character using Wan 2.2 14b.
 - **Wan 2.2 14b Animate: Move Character (fal)**: Animate video content by moving the foreground character within the scene using Wan 2.2 14b.
+- **Sora 2 Pro Image-to-Video (fal)**: Generate Videos from an image input using OpenAI Sora 2 Pro
 - **Video Upscaler (fal)**: Upscale video quality using AI
 - **Seedvr Upscale Video (fal)**: Upscale video quality using Seedvr
 - **Bria Video Increase Resolution (fal)**: Increase video resolution using Bria
@@ -114,30 +119,25 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 
 ### Language Models (LLMs)
 
-- **LLM (fal)**: Large Language Model for text generation and processing
+- **LLM (fal)**: Large Language Model for text generation and processing VIA openrouter endpoint
   - Available models:
-    - google/gemini-flash-1.5-8b
-    - anthropic/claude-3.5-sonnet
-    - anthropic/claude-3-haiku
-    - google/gemini-pro-1.5
-    - google/gemini-flash-1.5
-    - meta-llama/llama-3.2-1b-instruct
-    - meta-llama/llama-3.2-3b-instruct
-    - meta-llama/llama-3.1-8b-instruct
-    - meta-llama/llama-3.1-70b-instruct
-    - openai/gpt-4o-mini
-    - openai/gpt-4o
-
+    - google/gemini-2.5-flash
+    - anthropic/claude-sonnet-4.5
+    - openai/gpt-4.1
+    - openai/gpt-oss-120b
+    - meta-llama/llama-4-maverick
+    - custom (Get model name from openrouter)'
+      
 ### Vision Language Models (VLMs)
 
-- **VLM (fal)**: Vision Language Model for image understanding and text generation
+- **VLM (fal)**: Vision Language Model for image understanding and text generation VIA openrouter endpoint
   - Available models:
-    - google/gemini-flash-1.5-8b
-    - anthropic/claude-3.5-sonnet
-    - anthropic/claude-3-haiku
-    - google/gemini-pro-1.5
-    - google/gemini-flash-1.5
+    - google/gemini-2.5-flash
+    - anthropic/claude-sonnet-4.5
     - openai/gpt-4o
+    - qwen/qwen3-vl-235b-a22b-instruct
+    - x-ai/grok-4-fast
+    - custom (Get model name from openrouter)
   - Supports various tasks such as image captioning, visual question answering, and more
 
 ## Troubleshooting
