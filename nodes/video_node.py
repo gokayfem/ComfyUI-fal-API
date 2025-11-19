@@ -1640,6 +1640,7 @@ class SeedanceImageToVideoNode:
                 "resolution": (["480p", "720p"], {"default": "720p"}),
                 "duration": (["5", "10"], {"default": "5"}),
                 "camera_fixed": ("BOOLEAN", {"default": False}),
+                "variant": (["lite", "pro"], {"default": "lite"}),
             },
             "optional": {
                 "seed": ("INT", {"default": -1, "min": -1, "max": 2147483647}),
@@ -1650,12 +1651,12 @@ class SeedanceImageToVideoNode:
     FUNCTION = "generate_video"
     CATEGORY = "FAL/VideoGeneration"
 
-    def generate_video(self, prompt, image, resolution, duration, camera_fixed, seed=-1):
+    def generate_video(self, prompt, image, resolution, duration, camera_fixed, seed=-1, variant="lite"):
         try:
             image_url = ImageUtils.upload_image(image)
             if not image_url:
                 return ApiHandler.handle_video_generation_error(
-                    "fal-ai/bytedance/seedance/v1/lite/image-to-video",
+                    f"fal-ai/bytedance/seedance/v1/{variant}/image-to-video",
                     "Failed to upload image",
                 )
 
@@ -1672,13 +1673,13 @@ class SeedanceImageToVideoNode:
                 arguments["seed"] = seed
 
             result = ApiHandler.submit_and_get_result(
-                "fal-ai/bytedance/seedance/v1/lite/image-to-video", arguments
+                f"fal-ai/bytedance/seedance/v1/{variant}/image-to-video", arguments
             )
             video_url = result["video"]["url"]
             return (video_url,)
         except Exception as e:
             return ApiHandler.handle_video_generation_error(
-                "fal-ai/bytedance/seedance/v1/lite/image-to-video", str(e)
+                f"fal-ai/bytedance/seedance/v1/{variant}/image-to-video", str(e)
             )
 
 
@@ -1692,6 +1693,7 @@ class SeedanceTextToVideoNode:
                 "resolution": (["480p", "720p"], {"default": "720p"}),
                 "duration": (["5", "10"], {"default": "5"}),
                 "camera_fixed": ("BOOLEAN", {"default": False}),
+                "variant": (["lite", "pro"], {"default": "lite"}),
             },
             "optional": {
                 "seed": ("INT", {"default": -1, "min": -1, "max": 2147483647}),
@@ -1702,7 +1704,7 @@ class SeedanceTextToVideoNode:
     FUNCTION = "generate_video"
     CATEGORY = "FAL/VideoGeneration"
 
-    def generate_video(self, prompt, aspect_ratio, resolution, duration, camera_fixed, seed=-1):
+    def generate_video(self, prompt, aspect_ratio, resolution, duration, camera_fixed, seed=-1, variant="lite"):
         try:
             arguments = {
                 "prompt": prompt,
@@ -1717,13 +1719,13 @@ class SeedanceTextToVideoNode:
                 arguments["seed"] = seed
 
             result = ApiHandler.submit_and_get_result(
-                "fal-ai/bytedance/seedance/v1/lite/text-to-video", arguments
+                f"fal-ai/bytedance/seedance/v1/{variant}/text-to-video", arguments
             )
             video_url = result["video"]["url"]
             return (video_url,)
         except Exception as e:
             return ApiHandler.handle_video_generation_error(
-                "fal-ai/bytedance/seedance/v1/lite/text-to-video", str(e)
+                f"fal-ai/bytedance/seedance/v1/{variant}/text-to-video", str(e)
             )
 
 
