@@ -1725,7 +1725,69 @@ class SeedanceTextToVideoNode:
             return ApiHandler.handle_video_generation_error(
                 "fal-ai/bytedance/seedance/v1/lite/text-to-video", str(e)
             )
+class SeedanceProImageToVideoNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image": ("IMAGE",),
+                "resolution": (["480p", "720p", "1080p"], {"default": "1080p"}),
+                "duration": (["2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12",], {"default": "5"}),
+                "camera_fixed": ("BOOLEAN", {"default": False}),
+            },
+            "optional": {
+                "seed": ("INT", {"default": -1, "min": -1, "max": 2147483647}),
+                "enable_safety_checker": ("BOOLEAN", {"default": False}),
+                "end_image": ("IMAGE",),
+            },
+        }
 
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, prompt, image, resolution, duration, camera_fixed, seed=-1, enable_safety_checker=False , end_image=None):
+        try:
+            image_url = ImageUtils.upload_image(image)
+            if not image_url:
+                return ApiHandler.handle_video_generation_error(
+                    "fal-ai/bytedance/seedance/v1/pro/image-to-video",
+                    "Failed to upload image",
+                )
+
+            arguments = {
+                "prompt": prompt,
+                "image_url": image_url,
+                "resolution": resolution,
+                "duration": duration,
+                "camera_fixed": camera_fixed,
+                "enable_safety_checker": enable_safety_checker,
+            }
+
+            # Handle optional End image
+            if end_image is not None:
+                end_image_url = ImageUtils.upload_image(end_image)
+                if end_image_url:
+                    arguments["end_image_url"] = end_image_url
+                else:
+                    return ApiHandler.handle_video_generation_error(
+                        "seedance/v1/pro/image-to-video", "Failed to upload end image"
+                    )
+                
+            # Only add seed if it's not -1 (random)
+            if seed != -1:
+                arguments["seed"] = seed
+
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/bytedance/seedance/v1/pro/image-to-video", arguments
+            )
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "fal-ai/bytedance/seedance/v1/pro/image-to-video", str(e)
+            )
 
 class Veo3Node:
     @classmethod
@@ -2102,6 +2164,7 @@ NODE_CLASS_MAPPINGS = {
     "Wan2214b_animate_replace_character_fal": Wan2214bAnimateReplaceNode,
     "Wan2214b_animate_move_character_fal": Wan2214bAnimateMoveNode,
     "SeedanceImageToVideo_fal": SeedanceImageToVideoNode,
+    "SeedanceProImageToVideo_fal": SeedanceProImageToVideoNode,
     "SeedanceTextToVideo_fal": SeedanceTextToVideoNode,
     "Veo3_fal": Veo3Node,
     "Kling21Pro_fal": FalKling21ProImageToVideo,
@@ -2133,6 +2196,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "Veo2ImageToVideo_fal": "Google Veo2 Image-to-Video (fal)",
     "WanPro_fal": "Wan Pro Image-to-Video (fal)",
     "SeedanceImageToVideo_fal": "Seedance Image-to-Video (fal)",
+    "SeedanceProImageToVideo_fal": "Seedance Pro Image-to-Video (fal)",
     "SeedanceTextToVideo_fal": "Seedance Text-to-Video (fal)",
     "Veo3_fal": "Veo3 Video Generation (fal)",
     "Wan25_preview_fal": "Wan 2.5 Preview Image-to-Video (fal)",
