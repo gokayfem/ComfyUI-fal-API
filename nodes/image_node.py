@@ -1799,10 +1799,7 @@ class NanoBananaPro:
                 "prompt": ("STRING", {"default": "", "multiline": True}),
             },
             "optional": {
-                "image_1": ("IMAGE",),
-                "image_2": ("IMAGE",),
-                "image_3": ("IMAGE",),
-                "image_4": ("IMAGE",),
+                "images": ("IMAGE",),
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
                 "aspect_ratio": (
                     ["auto", "21:9", "16:9", "3:2", "4:3", "5:4", "1:1", "4:5", "3:4", "2:3", "9:16"],
@@ -1821,18 +1818,18 @@ class NanoBananaPro:
     def generate_image(
         self,
         prompt,
-        image_1=None,
-        image_2=None,
-        image_3=None,
-        image_4=None,
+        images=None,
         num_images=1,
         aspect_ratio="1:1",
         output_format="png",
         resolution="1K",
         sync_mode=False,
     ):
-        # Prepare image URLs from optional inputs
-        image_urls = ImageUtils.prepare_images([image_1, image_2, image_3, image_4])
+        # Prepare image URLs from optional input, limit to 14 images max
+        if images is not None and hasattr(images, 'shape') and len(images.shape) == 4 and images.shape[0] > 14:
+            # If batch has more than 14 images, take only first 14
+            images = images[:14]
+        image_urls = ImageUtils.prepare_images(images)
 
         # Build base arguments
         arguments = {
