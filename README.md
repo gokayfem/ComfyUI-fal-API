@@ -85,6 +85,7 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 
 ### Video Generation
 
+- **Infinity Star Text-to-Video (fal)**: Generate videos using Infinity Star and text prompts
 - **Kling Video Generation (fal)**: Generate videos using the Kling model
 - **Kling Pro v1.0 Video Generation (fal)**: Original version of Kling Pro for video generation
 - **Kling Pro v1.6 Video Generation (fal)**: Latest version of Kling Pro with improved quality
@@ -97,6 +98,7 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **MiniMax Video Generation (fal)**: Generate videos using MiniMax model
 - **MiniMax Text-to-Video (fal)**: Create videos from text prompts using MiniMax
 - **MiniMax Subject Reference (fal)**: Generate videos with subject reference using MiniMax
+- **Pixverse Swap (fal)**: Swap a person, object, or background in a video using Pixverse Swap.
 - **Google Veo2 Image-to-Video (fal)**: Convert images to videos using Google's Veo2 model
 - **Veo 3.1 First-Last-Frame-to-Video (fal)**: First Frame - Last Frame (Optional) video generation using the full VEO 3.1 model
 - **Veo 3.1 Fast First-Last-Frame-to-Video (fal)**: First Frame - Last Frame (Optional) video generation using the fast VEO 3.1 model
