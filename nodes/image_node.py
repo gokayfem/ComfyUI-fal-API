@@ -1791,6 +1791,78 @@ class NanoBananaEdit:
             return ApiHandler.handle_image_generation_error("Nano Banana Edit", e)
 
 
+class NanoBananaPro:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+            },
+            "optional": {
+                "image_1": ("IMAGE",),
+                "image_2": ("IMAGE",),
+                "image_3": ("IMAGE",),
+                "image_4": ("IMAGE",),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "aspect_ratio": (
+                    ["auto", "21:9", "16:9", "3:2", "4:3", "5:4", "1:1", "4:5", "3:4", "2:3", "9:16"],
+                    {"default": "1:1"},
+                ),
+                "output_format": (["jpeg", "png", "webp"], {"default": "png"}),
+                "resolution": (["1K", "2K", "4K"], {"default": "1K"}),
+                "sync_mode": ("BOOLEAN", {"default": False}),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        prompt,
+        image_1=None,
+        image_2=None,
+        image_3=None,
+        image_4=None,
+        num_images=1,
+        aspect_ratio="1:1",
+        output_format="png",
+        resolution="1K",
+        sync_mode=False,
+    ):
+        # Prepare image URLs from optional inputs
+        image_urls = ImageUtils.prepare_images([image_1, image_2, image_3, image_4])
+
+        # Build base arguments
+        arguments = {
+            "prompt": prompt,
+            "num_images": num_images,
+            "aspect_ratio": aspect_ratio,
+            "output_format": output_format,
+            "resolution": resolution,
+            "sync_mode": sync_mode,
+        }
+
+        # Conditional endpoint routing based on whether ANY images provided
+        if len(image_urls) > 0:
+            # Use edit endpoint with image_urls array
+            endpoint = "fal-ai/nano-banana-pro/edit"
+            arguments["image_urls"] = image_urls
+        else:
+            # Use text-to-image endpoint (no image_urls parameter)
+            endpoint = "fal-ai/nano-banana-pro"
+            # Remove "auto" from aspect_ratio for text-to-image endpoint
+            if aspect_ratio == "auto":
+                arguments["aspect_ratio"] = "1:1"
+
+        try:
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("Nano Banana Pro", e)
+
+
 class ReveTextToImage:
     @classmethod
     def INPUT_TYPES(cls):
@@ -1917,6 +1989,7 @@ NODE_CLASS_MAPPINGS = {
     "SeedreamV4Edit_fal": SeedreamV4Edit,
     "NanoBananaTextToImage_fal": NanoBananaTextToImage,
     "NanoBananaEdit_fal": NanoBananaEdit,
+    "NanoBananaPro_fal": NanoBananaPro,
     "ReveTextToImage_fal": ReveTextToImage,
     "Dreamina31TextToImage_fal": Dreamina31TextToImage,
 }
@@ -1945,6 +2018,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "SeedreamV4Edit_fal": "Seedream 4.0 Edit (fal)",
     "NanoBananaTextToImage_fal": "Nano Banana Text-to-Image (fal)",
     "NanoBananaEdit_fal": "Nano Banana Edit (fal)",
+    "NanoBananaPro_fal": "Nano Banana Pro (fal)",
     "ReveTextToImage_fal": "Reve Text-to-Image (fal)",
     "Dreamina31TextToImage_fal": "Dreamina v3.1 Text-to-Image (fal)",
 }
