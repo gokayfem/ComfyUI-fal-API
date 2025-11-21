@@ -80,6 +80,7 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **Seedream 4.0 Edit (fal)**: Use Seedream 4.0 to edit images
 - **Nano Banana Text-to-Image (fal)**: Use Nano Banana to generate images
 - **Nano Banana Edit (fal)**: Use Nano Banana to edit images
+- **Nano Banana Pro (fal)**: Unified node for both text-to-image and image editing with Nano Banana Pro
 - **Reve Text-to-Image (fal)**: Use Reve's image model to generate images
 - **Dreamina v3.1 Text-to-Image (fal)**: Use Dreamina v3.1 to generate images
 
