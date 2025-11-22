@@ -1515,6 +1515,137 @@ class QwenImageEdit:
             return ApiHandler.handle_image_generation_error(model_name, e)
 
 
+class QwenImageEditPlusLoRA:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "images": ("IMAGE", {"default": None, "multiple": True})
+            },
+            "optional": {
+                "image_size": (
+                    [
+                        "custom",
+                        "square_hd",
+                        "square",
+                        "portrait_4_3",
+                        "portrait_16_9",
+                        "landscape_4_3",
+                        "landscape_16_9",
+                    ],
+                    {"default": "landscape_16_9"},
+                ),
+                "custom_width": ("INT", {"default": 1920, "min": 128, "max": 2048, "step": 8}),
+                "custom_height": ("INT", {"default": 1080, "min": 128, "max": 2048, "step": 8}),
+                "num_inference_steps": ("INT", {"default": 28, "min": 2, "max": 50}),
+                "guidance_scale": ("FLOAT", {"default": 4.0, "min": 0.0, "max": 20.0, "step": 0.1}),
+                "negative_prompt": ("STRING", {"default": "", "multiline": True}),
+                "seed": ("INT", {"default": -1}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                "output_format": (["png", "jpeg"], {"default": "png"}),
+                "lora_path_1": ("STRING", {"default": ""}),
+                "lora_scale_1": (
+                    "FLOAT",
+                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05},
+                ),
+                "lora_path_2": ("STRING", {"default": ""}),
+                "lora_scale_2": (
+                    "FLOAT",
+                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05},
+                ),
+                "lora_path_3": ("STRING", {"default": ""}),
+                "lora_scale_3": (
+                    "FLOAT",
+                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05},
+                ),
+                "lora_path_4": ("STRING", {"default": ""}),
+                "lora_scale_4": (
+                    "FLOAT",
+                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05},
+                ),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "edit_image"
+    CATEGORY = "FAL/Image"
+
+    def edit_image(
+        self,
+        prompt,
+        images=None,
+        image_size="square_hd",
+        custom_width=1024,
+        custom_height=1024,
+        num_inference_steps=28,
+        guidance_scale=4.0,
+        negative_prompt="",
+        seed=-1,
+        num_images=1,
+        enable_safety_checker=True,
+        output_format="png",
+        lora_path_1="",
+        lora_scale_1=1.0,
+        lora_path_2="",
+        lora_scale_2=1.0,
+        lora_path_3="",
+        lora_scale_3=1.0,
+        lora_path_4="",
+        lora_scale_4=1.0,
+    ):
+        model_name = "Qwen Image Edit Plus LoRA"
+
+        # Handle multiple images
+        image_urls = ImageUtils.prepare_images(images)
+        if not image_urls:
+            print(f"Error: No images provided for {model_name}")
+            return ResultProcessor.create_blank_image()
+
+        arguments = {
+            "prompt": prompt,
+            "image_urls": image_urls,
+            "num_inference_steps": num_inference_steps,
+            "guidance_scale": guidance_scale,
+            "num_images": num_images,
+            "enable_safety_checker": enable_safety_checker,
+            "output_format": output_format,
+        }
+
+        if image_size == "custom":
+            arguments["image_size"] = {"width": custom_width, "height": custom_height}
+        else:
+            arguments["image_size"] = image_size
+
+        if negative_prompt:
+            arguments["negative_prompt"] = negative_prompt
+
+        if seed != -1:
+            arguments["seed"] = seed
+
+        # Add LoRAs if provided (maximum 4)
+        loras = []
+        if lora_path_1:
+            loras.append({"path": lora_path_1, "scale": lora_scale_1})
+        if lora_path_2:
+            loras.append({"path": lora_path_2, "scale": lora_scale_2})
+        if lora_path_3:
+            loras.append({"path": lora_path_3, "scale": lora_scale_3})
+        if lora_path_4:
+            loras.append({"path": lora_path_4, "scale": lora_scale_4})
+        if loras:
+            arguments["loras"] = loras
+
+        try:
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/qwen-image-edit-plus-lora", arguments
+            )
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error(model_name, e)
+
+
 # https://fal.ai/api/openapi/queue/openapi.json?endpoint_id=fal-ai/bytedance/seededit/v3/edit-image
 class SeedEditV3:
     @classmethod
@@ -1913,6 +2044,7 @@ NODE_CLASS_MAPPINGS = {
     "FluxProKontextTextToImage_fal": FluxProKontextTextToImage,
     "Imagen4Preview_fal": Imagen4PreviewNode,
     "QwenImageEdit_fal": QwenImageEdit,
+    "QwenImageEditPlusLoRA_fal": QwenImageEditPlusLoRA,
     "SeedEditV3_fal": SeedEditV3,
     "SeedreamV4Edit_fal": SeedreamV4Edit,
     "NanoBananaTextToImage_fal": NanoBananaTextToImage,
@@ -1941,6 +2073,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxProKontextTextToImage_fal": "Flux Pro Kontext Text-to-Image (fal)",
     "Imagen4Preview_fal": "Imagen4 Preview (fal)",
     "QwenImageEdit_fal": "Qwen Image Edit (fal)",
+    "QwenImageEditPlusLoRA_fal": "Qwen Image Edit Plus LoRA (fal)",
     "SeedEditV3_fal": "SeedEdit 3.0 (fal)",
     "SeedreamV4Edit_fal": "Seedream 4.0 Edit (fal)",
     "NanoBananaTextToImage_fal": "Nano Banana Text-to-Image (fal)",
