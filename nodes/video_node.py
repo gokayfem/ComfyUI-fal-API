@@ -1207,6 +1207,10 @@ class DYWanFun22Node:
                 "shift": shift,
                 "preprocess_all_maps": preprocess_all_maps,
                 "return_frames_zip": return_frames_zip,
+                "pose_strength": pose_strength,
+                "depth_strength": depth_strength,
+                "normal_strength": normal_strength,
+                "canny_strength": canny_strength
             }
 
             # Set seed
@@ -1240,36 +1244,24 @@ class DYWanFun22Node:
                 pose_video_url = ImageUtils.upload_file(pose_video.get_stream_source())
                 if pose_video_url:
                     arguments["pose_video_url"] = pose_video_url
-                    arguments["pose_strength"] = pose_strength
-            elif pose_strength != 0.6:
-                arguments["pose_strength"] = pose_strength
 
             # Upload and add depth video/strength if provided
             if depth_video is not None:
                 depth_video_url = ImageUtils.upload_file(depth_video.get_stream_source())
                 if depth_video_url:
                     arguments["depth_video_url"] = depth_video_url
-                    arguments["depth_strength"] = depth_strength
-            elif depth_strength != 0.0:
-                arguments["depth_strength"] = depth_strength
 
             # Upload and add normal video/strength if provided
             if normal_video is not None:
                 normal_video_url = ImageUtils.upload_file(normal_video.get_stream_source())
                 if normal_video_url:
                     arguments["normal_video_url"] = normal_video_url
-                    arguments["normal_strength"] = normal_strength
-            elif normal_strength != 0.0:
-                arguments["normal_strength"] = normal_strength
 
             # Upload and add canny video/strength if provided
             if canny_video is not None:
                 canny_video_url = ImageUtils.upload_file(canny_video.get_stream_source())
                 if canny_video_url:
                     arguments["canny_video_url"] = canny_video_url
-                    arguments["canny_strength"] = canny_strength
-            elif canny_strength != 0.0:
-                arguments["canny_strength"] = canny_strength
 
             # Add advanced interpolation settings if non-default
             if num_interpolated_frames > 0:
@@ -1397,6 +1389,7 @@ class DYWanUpscalerNode:
 
         except Exception as e:
             return ApiHandler.handle_video_generation_error("dy-wan-upscaler", str(e))
+
 
 # =============================================================================
 # END HYPER CUSTOM DY ENDPOINTS
@@ -2673,6 +2666,7 @@ NODE_CLASS_MAPPINGS = {
     "Wan2214b_animate_move_character_fal": Wan2214bAnimateMoveNode,
     "Wan22VACEFun14b_fal": Wan22VACEFun14bNode,
     "DYWanFun22_fal": DYWanFun22Node,
+    "DYWanUpscaler_fal": DYWanUpscalerNode,
     "SeedanceImageToVideo_fal": SeedanceImageToVideoNode,
     "SeedanceProImageToVideo_fal": SeedanceProImageToVideoNode,
     "SeedanceTextToVideo_fal": SeedanceTextToVideoNode,
@@ -2715,6 +2709,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "Wan2214b_animate_move_character_fal": "Wan 2.2 14b Animate: Move Character (fal)",
     "Wan22VACEFun14b_fal": "Wan 2.2 VACE Fun 14b Video-to-Video (fal)",
     "DYWanFun22_fal": "DY Wan Fun 22 Video Generation (fal)",
+    "DYWanUpscaler_fal": "DY Wan Upscaler (fal)",
     "Kling21Pro_fal": "Kling v2.1 Pro Image-to-Video (fal)",
     "Kling25TurboPro_fal": "Kling v2.5 Turbo Pro Image-to-Video (fal)",
     "Sora2Pro_fal": "Sora 2 Pro Image-to-Video (fal)",
