@@ -76,6 +76,7 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **Seedvr Upscaler (fal)**: Use SeedVR2 to upscale your images
 - **Imagen4 Preview (fal)**: Use Imagen4 (Preview version) to generate images
 - **Qwen Image Edit (fal)**: Use Qwen to edit images
+- **Qwen Image Edit Plus with LoRAs (fal)**: Use Qwen Image Edit Plus with LoRA support to edit images
 - **SeedEdit 3.0 (fal)**: Use SeedEdit 3.0 to edit images
 - **Seedream 4.0 Edit (fal)**: Use Seedream 4.0 to edit images
 - **Nano Banana Text-to-Image (fal)**: Use Nano Banana to generate images
@@ -83,6 +84,8 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **Nano Banana Pro (fal)**: Unified node for both text-to-image and image editing with Nano Banana Pro
 - **Reve Text-to-Image (fal)**: Use Reve's image model to generate images
 - **Dreamina v3.1 Text-to-Image (fal)**: Use Dreamina v3.1 to generate images
+- **DY Wan Fun 2.2 (fal)**: Generate images using DY Wan Fun 2.2 model
+- **DY Wan Upscaler (fal)**: Upscale images using DY Wan Upscaler
 
 ### Video Generation
 
@@ -106,8 +109,10 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **Wan Pro Image-to-Video (fal)**: High-quality video generation with Wan Pro model
 - **Wan 2.5 Preview Image-to-Video (fal)**: Image-to-video generation with the latest Wan 2.5 preview model
 - **Wan VACE Video Edit (fal)**: Video + Reference Images to video generation with Wan VACE.
+- **Wan 2.2 VACE Fun 14b (fal)**: Video editing with Wan 2.2 VACE Fun 14b model for pose and depth control
 - **Wan 2.2 14b Animate: Replace Character (fal)**: Animate video content by replacing the foreground character with a new or augmented character using Wan 2.2 14b.
 - **Wan 2.2 14b Animate: Move Character (fal)**: Animate video content by moving the foreground character within the scene using Wan 2.2 14b.
+- **Seedance Pro Image-to-Video (fal)**: Convert images to videos using Seedance Pro model
 - **Sora 2 Pro Image-to-Video (fal)**: Generate Videos from an image input using OpenAI Sora 2 Pro
 - **Video Upscaler (fal)**: Upscale video quality using AI
 - **Seedvr Upscale Video (fal)**: Upscale video quality using Seedvr

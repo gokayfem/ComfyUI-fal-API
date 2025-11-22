@@ -895,6 +895,507 @@ class Wan2214bAnimateMoveNode:
 
 
 
+class Wan22VACEFun14bNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": ""}),
+                "video": ("VIDEO", {"default": None}),
+            },
+            "optional": {
+                "task": (["depth", "pose"], {"default": "depth"}),
+                "preprocess": ("BOOLEAN", {"default": True}),
+                "ref_images": ("IMAGE", {"default": None, "multiple": True}),
+                "first_frame": ("IMAGE", {"default": None}),
+                "last_frame": ("IMAGE", {"default": None}),
+                "negative_prompt": ("STRING", {"default": "", "multiline": True}),
+                "seed": ("INT", {"default": -1, "min": 0, "max": 2147483647}),
+                "resolution": (
+                    ["480p", "580p", "720p"],
+                    {"default": "480p"}
+                ),
+                "aspect_ratio": (["auto", "16:9", "9:16", "1:1"], {"default": "auto"}),
+                "num_inference_steps": ("INT", {"default": 30, "min": 1}),
+                "guidance_scale": ("FLOAT", {"default": 5, "min": 0.0, "max": 10}),
+                "sampler": (["unipc", "dpm++", "euler"], {"default": "unipc"}),
+                "match_input_num_frames": ("BOOLEAN", {"default": False}),
+                "num_frames": ("INT", {"default": 81, "min": 17, "max": 241}),
+                "match_input_frames_per_second": ("BOOLEAN", {"default": False}),
+                "frames_per_second": ("INT", {"default": 16, "min": 5, "max": 30}),
+                "shift": ("INT", {"default": 5}),
+                "acceleration": (["none", "low", "regular"], {"default": "regular"}),
+                "video_quality": (["low", "medium", "high"], {"default": "high"}),
+                "video_write_mode": (["balanced", "fast", "small"], {"default": "balanced"}),
+                "return_frames_zip": ("BOOLEAN", {"default": False}),
+                "num_interpolated_frames": ("INT", {"default": 0, "min": 0, "max": 5}),
+                "temporal_downsample_factor": ("INT", {"default": 0, "min": 0, "max": 5}),
+                "enable_auto_downsample": ("BOOLEAN", {"default": False}),
+                "auto_downsample_min_fps": ("INT", {"default": 15, "min": 1, "max": 60}),
+                "interpolator_model": (["rife", "film"], {"default": "film"}),
+                "enable_safety_checker": ("BOOLEAN", {"default": False}),
+                "enable_output_safety_checker": ("BOOLEAN", {"default": False}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING", "STRING",)
+    RETURN_NAMES = ("video_url", "frames_zip_url",)
+    FUNCTION = "edit_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def edit_video(
+        self,
+        prompt="",
+        video=None,
+        task="depth",
+        preprocess=True,
+        ref_images=None,
+        first_frame=None,
+        last_frame=None,
+        negative_prompt="",
+        seed=-1,
+        resolution="480p",
+        aspect_ratio="auto",
+        num_inference_steps=30,
+        guidance_scale=5,
+        sampler="unipc",
+        match_input_num_frames=False,
+        num_frames=81,
+        match_input_frames_per_second=False,
+        frames_per_second=16,
+        shift=5,
+        acceleration="regular",
+        video_quality="high",
+        video_write_mode="balanced",
+        return_frames_zip=False,
+        num_interpolated_frames=0,
+        temporal_downsample_factor=0,
+        enable_auto_downsample=False,
+        auto_downsample_min_fps=15,
+        interpolator_model="film",
+        enable_safety_checker=False,
+        enable_output_safety_checker=False,
+    ):
+        try:
+            if video is None:
+                return ApiHandler.handle_video_generation_error(
+                    "wan-22-vace-fun-a14b", "Video input is required."
+                )
+
+            video_url = ImageUtils.upload_file(video.get_stream_source())
+            if not video_url:
+                return ApiHandler.handle_video_generation_error(
+                    "wan-22-vace-fun-a14b", "Failed to upload video"
+                )
+
+            # Build arguments
+            arguments = {
+                "prompt": prompt,
+                "video_url": video_url,
+                "preprocess": preprocess,
+                "negative_prompt": negative_prompt,
+                "resolution": resolution,
+                "aspect_ratio": aspect_ratio,
+                "num_inference_steps": num_inference_steps,
+                "guidance_scale": guidance_scale,
+                "sampler": sampler,
+                "num_frames": num_frames,
+                "frames_per_second": frames_per_second,
+                "shift": shift,
+                "acceleration": acceleration,
+                "video_quality": video_quality,
+                "video_write_mode": video_write_mode,
+                "return_frames_zip": return_frames_zip,
+                "num_interpolated_frames": num_interpolated_frames,
+                "temporal_downsample_factor": temporal_downsample_factor,
+                "enable_auto_downsample": enable_auto_downsample,
+                "auto_downsample_min_fps": auto_downsample_min_fps,
+                "interpolator_model": interpolator_model,
+                "enable_safety_checker": enable_safety_checker,
+                "enable_output_safety_checker": enable_output_safety_checker,
+            }
+
+            # Set seed
+            if seed != -1:
+                arguments["seed"] = seed
+
+            # Handle optional match_input settings
+            if match_input_num_frames and video is not None:
+                try:
+                    arguments["num_frames"] = len(list(video.get_stream()))
+                except:
+                    pass
+            if match_input_frames_per_second and video is not None:
+                try:
+                    arguments["frames_per_second"] = video.get_fps()
+                except:
+                    pass
+
+            # Upload reference images if provided
+            if ref_images is not None:
+                ref_image_urls = ImageUtils.prepare_images(ref_images)
+                if ref_image_urls:
+                    arguments["ref_image_urls"] = ref_image_urls
+
+            # Upload first frame if provided
+            if first_frame is not None:
+                first_frame_url = ImageUtils.upload_image(first_frame)
+                if first_frame_url:
+                    arguments["first_frame_image_url"] = first_frame_url
+
+            # Upload last frame if provided
+            if last_frame is not None:
+                last_frame_url = ImageUtils.upload_image(last_frame)
+                if last_frame_url:
+                    arguments["last_frame_image_url"] = last_frame_url
+
+            # Submit to API with task-specific endpoint
+            result = ApiHandler.submit_and_get_result(
+                f"fal-ai/wan-22-vace-fun-a14b/{task}",
+                arguments,
+            )
+
+            video_url = result["video"]["url"]
+            frames_zip_url = result.get("frames_zip", {}).get("url", "") if return_frames_zip else ""
+
+            return (video_url, frames_zip_url)
+
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error("wan-22-vace-fun-a14b", str(e))
+
+
+# =============================================================================
+# HYPER CUSTOM DY ENDPOINTS
+# =============================================================================
+# These are specialized, highly customizable DY endpoints with extensive
+# parameter sets for advanced video generation and manipulation tasks.
+# =============================================================================
+
+class DYWanFun22Node:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "architecture": (["vace", "control"], {"default": "vace"}),
+                "control_video": ("VIDEO", {"default": None}),
+                "ref_image": ("IMAGE", {"default": None}),
+            },
+            "optional": {
+                "turbo_mode": ("BOOLEAN", {"default": True}),
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "negative_prompt": ("STRING", {"default": "", "multiline": True}),
+                "image_size": (["custom", "square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"], {"default": "custom"}),
+                "custom_width": ("INT", {"default": 1280, "min": 0, "max": 8192, "step": 8}),
+                "custom_height": ("INT", {"default": 720, "min": 0, "max": 8192, "step": 8}),
+                "num_frames": ("INT", {"default": 81, "min": 1, "max": 1000}),
+                "frames_per_second": ("INT", {"default": 16, "min": 5, "max": 30}),
+                "num_inference_steps": ("INT", {"default": 4, "min": 1, "max": 100}),
+                "guidance_scale": ("FLOAT", {"default": 1, "min": 0.0, "max": 10.0}),
+                "seed": ("INT", {"default": -1, "min": 0, "max": 2147483647}),
+                "sampler": (["uni_pc", "dpmpp_2m", "dpmpp_2m_sde", "euler", "euler_ancestral"], {"default": "uni_pc"}),
+                "shift": ("INT", {"default": 5, "min": 0, "max": 10}),
+                "vace_mask_video": ("VIDEO", {"default": None}),
+                # Control strengths
+                "preprocess_all_maps": ("BOOLEAN", {"default": True}),
+                "strength_vace": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0}),
+                "pose_strength": ("FLOAT", {"default": 0.6, "min": 0.0, "max": 1.0}),
+                "pose_video": ("VIDEO", {"default": None, "multiple": True}),
+                "depth_strength": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0}),
+                "depth_video": ("VIDEO", {"default": None, "multiple": True}),
+                "normal_strength": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0}),
+                "normal_video": ("VIDEO", {"default": None, "multiple": True}),
+                "canny_strength": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0}),
+                "canny_video": ("VIDEO", {"default": None, "multiple": True}),
+                # Advanced settings
+                "num_interpolated_frames": ("INT", {"default": 0, "min": 0, "max": 5}),
+                "temporal_downsample_factor": ("INT", {"default": 0, "min": 0, "max": 5}),
+                "enable_auto_downsample": ("BOOLEAN", {"default": False}),
+                "auto_downsample_min_fps": ("INT", {"default": 8, "min": 0, "max": 60}),
+                "return_frames_zip": ("BOOLEAN", {"default": False}),
+                "lora_path_1": ("STRING", {"default": ""}),
+                "lora_strength_1": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.1}),
+                "lora_transformer_1": (["high", "low", "both"], {"default": "high"}),
+                "lora_path_2": ("STRING", {"default": ""}),
+                "lora_strength_2": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.1}),
+                "lora_transformer_2": (["high", "low", "both"], {"default": "high"}),
+                "lora_path_3": ("STRING", {"default": ""}),
+                "lora_strength_3": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.1}),
+                "lora_transformer_3": (["high", "low", "both"], {"default": "high"}),
+                "lora_path_4": ("STRING", {"default": ""}),
+                "lora_strength_4": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.1}),
+                "lora_transformer_4": (["high", "low", "both"], {"default": "high"}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING", "STRING",)
+    RETURN_NAMES = ("video_url", "frames_zip_url",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration/DY"
+
+    def generate_video(
+        self,
+        architecture="vace",
+        control_video=None,
+        ref_image=None,
+        turbo_mode=True,
+        prompt="",
+        negative_prompt="",
+        image_size="custom",
+        custom_width=1280,
+        custom_height=720,
+        num_frames=81,
+        frames_per_second=16,
+        num_inference_steps=4,
+        guidance_scale=1.0,
+        seed=-1,
+        sampler="uni_pc",
+        vace_mask_video=None,
+        shift=5,
+        preprocess_all_maps=True,
+        strength_vace=1.0,
+        pose_strength=0.6,
+        pose_video=None,
+        depth_strength=0.0,
+        depth_video=None,
+        normal_strength=0.0,
+        normal_video=None,
+        canny_strength=0.0,
+        canny_video=None,
+        num_interpolated_frames=0,
+        temporal_downsample_factor=0,
+        enable_auto_downsample=False,
+        auto_downsample_min_fps=8,
+        return_frames_zip=False,
+        lora_path_1="",
+        lora_strength_1=1.0,
+        lora_transformer_1="high",
+        lora_path_2="",
+        lora_strength_2=1.0,
+        lora_transformer_2="high",
+        lora_path_3="",
+        lora_strength_3=1.0,
+        lora_transformer_3="high",
+        lora_path_4="",
+        lora_strength_4=1.0,
+        lora_transformer_4="high"
+    ):
+        try:
+            if ref_image is None:
+                return ApiHandler.handle_video_generation_error(
+                    "dy-wan-fun-22", "Reference image is required."
+                )
+
+            # Upload reference image
+            ref_image_url = ImageUtils.upload_image(ref_image)
+            if not ref_image_url:
+                return ApiHandler.handle_video_generation_error(
+                    "dy-wan-fun-22", "Failed to upload reference image"
+                )
+
+            # Build arguments
+            arguments = {
+                "ref_image_url": ref_image_url,
+                "architecture": architecture,
+                "turbo_mode": turbo_mode,
+                "prompt": prompt,
+                "negative_prompt": negative_prompt,
+                "num_frames": num_frames,
+                "frames_per_second": frames_per_second,
+                "num_inference_steps": num_inference_steps,
+                "guidance_scale": guidance_scale,
+                "sampler": sampler,
+                "shift": shift,
+                "preprocess_all_maps": preprocess_all_maps,
+                "return_frames_zip": return_frames_zip,
+                "pose_strength": pose_strength,
+                "depth_strength": depth_strength,
+                "normal_strength": normal_strength,
+                "canny_strength": canny_strength
+            }
+
+            # Set seed
+            if seed != -1:
+                arguments["seed"] = seed
+
+            # Handle image_size - use custom dimensions if provided, otherwise use aspect_ratio preset
+            if image_size == "custom":
+                arguments["image_size"] = {"width": custom_width, "height": custom_height}
+            else:
+                arguments["image_size"] = image_size
+
+            # Upload control video if provided
+            if control_video is not None:
+                control_video_url = ImageUtils.upload_file(control_video.get_stream_source())
+                if control_video_url:
+                    arguments["control_video_url"] = control_video_url
+
+            # Handle VACE strength
+            if architecture == "vace":
+                arguments["strength_vace"] = strength_vace
+
+            # Handle VACE mask video
+            if architecture == "vace":
+                vace_mask_video_url = ImageUtils.upload_file(vace_mask_video.get_stream_source())
+                if vace_mask_video_url:
+                    arguments["vace_mask_video_url"] = vace_mask_video_url
+
+            # Upload and add pose video/strength if provided
+            if pose_video is not None:
+                pose_video_url = ImageUtils.upload_file(pose_video.get_stream_source())
+                if pose_video_url:
+                    arguments["pose_video_url"] = pose_video_url
+
+            # Upload and add depth video/strength if provided
+            if depth_video is not None:
+                depth_video_url = ImageUtils.upload_file(depth_video.get_stream_source())
+                if depth_video_url:
+                    arguments["depth_video_url"] = depth_video_url
+
+            # Upload and add normal video/strength if provided
+            if normal_video is not None:
+                normal_video_url = ImageUtils.upload_file(normal_video.get_stream_source())
+                if normal_video_url:
+                    arguments["normal_video_url"] = normal_video_url
+
+            # Upload and add canny video/strength if provided
+            if canny_video is not None:
+                canny_video_url = ImageUtils.upload_file(canny_video.get_stream_source())
+                if canny_video_url:
+                    arguments["canny_video_url"] = canny_video_url
+
+            # Add advanced interpolation settings if non-default
+            if num_interpolated_frames > 0:
+                arguments["num_interpolated_frames"] = num_interpolated_frames
+            if temporal_downsample_factor > 0:
+                arguments["temporal_downsample_factor"] = temporal_downsample_factor
+            if enable_auto_downsample:
+                arguments["enable_auto_downsample"] = enable_auto_downsample
+                arguments["auto_downsample_min_fps"] = auto_downsample_min_fps
+
+            # Add LoRAs if provided
+            loras = []
+            if lora_path_1:
+                loras.append({"url": lora_path_1, "strength": lora_strength_1, "transformer": lora_transformer_1})
+            if lora_path_2:
+                loras.append({"url": lora_path_2, "strength": lora_strength_2, "transformer": lora_transformer_2})
+            if lora_path_3:
+                loras.append({"url": lora_path_3, "strength": lora_strength_3, "transformer": lora_transformer_3})
+            if lora_path_4:
+                loras.append({"url": lora_path_4, "strength": lora_strength_4, "transformer": lora_transformer_4})
+            if loras:
+                arguments["loras"] = loras
+
+            # Submit to API
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/dy-wan-fun-22",
+                arguments,
+            )
+
+            video_url = result["video"]["url"]
+            frames_zip_url = result.get("frames_zip", {}).get("url", "") if return_frames_zip else ""
+
+            return (video_url, frames_zip_url)
+
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error("dy-wan-fun-22", str(e))
+
+
+
+class DYWanUpscalerNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+            },
+            "optional": {
+                "video": ("VIDEO", {"default": None}),
+                "video_url": ("STRING", {"default": ""}),
+                "prompt": ("STRING", {"default": "cinematic composition, realistic high-quality photo, RAW photo, masterpiece, photorealistic, 8k", "multiline": True}),
+                "negative_prompt": ("STRING", {"default": "oversaturated, overexposed, static, blurry details", "multiline": True}),
+                "strength": ("FLOAT", {"default": 0.02, "min": 0.0, "max": 1.0, "step": 0.01}),
+                "guidance_scale": ("FLOAT", {"default": 3.5, "min": 1.0, "max": 20.0, "step": 0.1}),
+                "num_inference_steps": ("INT", {"default": 10, "min": 1, "max": 50}),
+                "seed": ("INT", {"default": -1, "min": 0, "max": 2147483647}),
+                "fps": ("INT", {"default": 24, "min": 1, "max": 120}),
+                "image_size": (["custom", "landscape_16_9", "landscape_4_3", "portrait_16_9", "portrait_4_3", "square", "square_hd"], {"default": "custom"}),
+                "custom_width": ("INT", {"default": 1920, "min": 0, "max": 8192, "step": 8}),
+                "custom_height": ("INT", {"default": 1080, "min": 0, "max": 8192, "step": 8}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("video_url",)
+    FUNCTION = "upscale_video"
+    CATEGORY = "FAL/VideoGeneration/DY"
+
+    def upscale_video(
+        self,
+        video=None,
+        video_url="",
+        prompt="cinematic composition, realistic high-quality photo, RAW photo, masterpiece, photorealistic, 8k",
+        negative_prompt="oversaturated, overexposed, static, blurry details",
+        strength=0.02,
+        guidance_scale=3.5,
+        num_inference_steps=10,
+        seed=-1,
+        fps=24,
+        image_size="custom",
+        custom_width=1920,
+        custom_height=1080
+    ):
+        try:
+            if video is None and video_url == "":
+                return ApiHandler.handle_video_generation_error(
+                    "dy-wan-upscaler", "Video input is required."
+                )
+
+            # Upload video
+            if video:
+                video_url = ImageUtils.upload_file(video.get_stream_source())
+                if not video_url:
+                    return ApiHandler.handle_video_generation_error(
+                        "dy-wan-upscaler", "Failed to upload video"
+                    )
+
+            # Build arguments
+            arguments = {
+                "video_url": video_url,
+                "prompt": prompt,
+                "negative_prompt": negative_prompt,
+                "strength": strength,
+                "guidance_scale": guidance_scale,
+                "num_inference_steps": num_inference_steps,
+                "fps": fps,
+            }
+
+            # Set seed
+            if seed != -1:
+                arguments["seed"] = seed
+
+            # Handle image_size - use custom dimensions if provided, otherwise use preset
+            if image_size == "custom":
+                arguments["image_size"] = {"width": custom_width, "height": custom_height}
+            else:
+                arguments["image_size"] = image_size
+
+            # Submit to API
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/dy-wan-upscaler",
+                arguments,
+            )
+
+            video_url = result["video"]["url"]
+            return (video_url,)
+
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error("dy-wan-upscaler", str(e))
+
+
+# =============================================================================
+# END HYPER CUSTOM DY ENDPOINTS
+# =============================================================================
+
+
 class PixverseSwapNode:
     @classmethod
     def INPUT_TYPES(cls):
@@ -1725,7 +2226,69 @@ class SeedanceTextToVideoNode:
             return ApiHandler.handle_video_generation_error(
                 "fal-ai/bytedance/seedance/v1/lite/text-to-video", str(e)
             )
+class SeedanceProImageToVideoNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image": ("IMAGE",),
+                "resolution": (["480p", "720p", "1080p"], {"default": "1080p"}),
+                "duration": (["2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12",], {"default": "5"}),
+                "camera_fixed": ("BOOLEAN", {"default": False}),
+            },
+            "optional": {
+                "seed": ("INT", {"default": -1, "min": -1, "max": 2147483647}),
+                "enable_safety_checker": ("BOOLEAN", {"default": False}),
+                "end_image": ("IMAGE",),
+            },
+        }
 
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, prompt, image, resolution, duration, camera_fixed, seed=-1, enable_safety_checker=False , end_image=None):
+        try:
+            image_url = ImageUtils.upload_image(image)
+            if not image_url:
+                return ApiHandler.handle_video_generation_error(
+                    "fal-ai/bytedance/seedance/v1/pro/image-to-video",
+                    "Failed to upload image",
+                )
+
+            arguments = {
+                "prompt": prompt,
+                "image_url": image_url,
+                "resolution": resolution,
+                "duration": duration,
+                "camera_fixed": camera_fixed,
+                "enable_safety_checker": enable_safety_checker,
+            }
+
+            # Handle optional End image
+            if end_image is not None:
+                end_image_url = ImageUtils.upload_image(end_image)
+                if end_image_url:
+                    arguments["end_image_url"] = end_image_url
+                else:
+                    return ApiHandler.handle_video_generation_error(
+                        "seedance/v1/pro/image-to-video", "Failed to upload end image"
+                    )
+                
+            # Only add seed if it's not -1 (random)
+            if seed != -1:
+                arguments["seed"] = seed
+
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/bytedance/seedance/v1/pro/image-to-video", arguments
+            )
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "fal-ai/bytedance/seedance/v1/pro/image-to-video", str(e)
+            )
 
 class Veo3Node:
     @classmethod
@@ -2101,7 +2664,11 @@ NODE_CLASS_MAPPINGS = {
     "WanVACEVideoEdit_fal": WanVACEVideoEditNode,
     "Wan2214b_animate_replace_character_fal": Wan2214bAnimateReplaceNode,
     "Wan2214b_animate_move_character_fal": Wan2214bAnimateMoveNode,
+    "Wan22VACEFun14b_fal": Wan22VACEFun14bNode,
+    "DYWanFun22_fal": DYWanFun22Node,
+    "DYWanUpscaler_fal": DYWanUpscalerNode,
     "SeedanceImageToVideo_fal": SeedanceImageToVideoNode,
+    "SeedanceProImageToVideo_fal": SeedanceProImageToVideoNode,
     "SeedanceTextToVideo_fal": SeedanceTextToVideoNode,
     "Veo3_fal": Veo3Node,
     "Kling21Pro_fal": FalKling21ProImageToVideo,
@@ -2133,12 +2700,16 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "Veo2ImageToVideo_fal": "Google Veo2 Image-to-Video (fal)",
     "WanPro_fal": "Wan Pro Image-to-Video (fal)",
     "SeedanceImageToVideo_fal": "Seedance Image-to-Video (fal)",
+    "SeedanceProImageToVideo_fal": "Seedance Pro Image-to-Video (fal)",
     "SeedanceTextToVideo_fal": "Seedance Text-to-Video (fal)",
     "Veo3_fal": "Veo3 Video Generation (fal)",
     "Wan25_preview_fal": "Wan 2.5 Preview Image-to-Video (fal)",
     "WanVACEVideoEdit_fal": "Wan VACE Video Edit (fal)",
     "Wan2214b_animate_replace_character_fal": "Wan 2.2 14b Animate: Replace Character (fal)",
     "Wan2214b_animate_move_character_fal": "Wan 2.2 14b Animate: Move Character (fal)",
+    "Wan22VACEFun14b_fal": "Wan 2.2 VACE Fun 14b Video-to-Video (fal)",
+    "DYWanFun22_fal": "DY Wan Fun 22 Video Generation (fal)",
+    "DYWanUpscaler_fal": "DY Wan Upscaler (fal)",
     "Kling21Pro_fal": "Kling v2.1 Pro Image-to-Video (fal)",
     "Kling25TurboPro_fal": "Kling v2.5 Turbo Pro Image-to-Video (fal)",
     "Sora2Pro_fal": "Sora 2 Pro Image-to-Video (fal)",
