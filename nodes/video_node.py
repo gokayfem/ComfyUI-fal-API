@@ -895,6 +895,173 @@ class Wan2214bAnimateMoveNode:
 
 
 
+class Wan22VACEFun14bNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": ""}),
+                "video": ("VIDEO", {"default": None}),
+            },
+            "optional": {
+                "task": (["depth", "pose"], {"default": "depth"}),
+                "preprocess": ("BOOLEAN", {"default": True}),
+                "ref_images": ("IMAGE", {"default": None, "multiple": True}),
+                "first_frame": ("IMAGE", {"default": None}),
+                "last_frame": ("IMAGE", {"default": None}),
+                "negative_prompt": ("STRING", {"default": "", "multiline": True}),
+                "seed": ("INT", {"default": 0, "min": 0, "max": 2147483647}),
+                "resolution": (
+                    ["480p", "580p", "720p"],
+                    {"default": "480p"}
+                ),
+                "aspect_ratio": (["auto", "16:9", "9:16", "1:1"], {"default": "auto"}),
+                "num_inference_steps": ("INT", {"default": 30, "min": 1}),
+                "guidance_scale": ("FLOAT", {"default": 5, "min": 0.0, "max": 10}),
+                "sampler": (["unipc", "dpm++", "euler"], {"default": "unipc"}),
+                "match_input_num_frames": ("BOOLEAN", {"default": False}),
+                "num_frames": ("INT", {"default": 81, "min": 17, "max": 241}),
+                "match_input_frames_per_second": ("BOOLEAN", {"default": False}),
+                "frames_per_second": ("INT", {"default": 16, "min": 5, "max": 30}),
+                "shift": ("INT", {"default": 5}),
+                "acceleration": (["none", "low", "regular"], {"default": "regular"}),
+                "video_quality": (["low", "medium", "high"], {"default": "high"}),
+                "video_write_mode": (["balanced", "fast", "small"], {"default": "balanced"}),
+                "return_frames_zip": ("BOOLEAN", {"default": False}),
+                "num_interpolated_frames": ("INT", {"default": 0, "min": 0, "max": 5}),
+                "temporal_downsample_factor": ("INT", {"default": 0, "min": 0, "max": 5}),
+                "enable_auto_downsample": ("BOOLEAN", {"default": False}),
+                "auto_downsample_min_fps": ("INT", {"default": 15, "min": 1, "max": 60}),
+                "interpolator_model": (["rife", "film"], {"default": "film"}),
+                "enable_safety_checker": ("BOOLEAN", {"default": False}),
+                "enable_output_safety_checker": ("BOOLEAN", {"default": False}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING", "STRING",)
+    RETURN_NAMES = ("video_url", "frames_zip_url",)
+    FUNCTION = "edit_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def edit_video(
+        self,
+        prompt="",
+        video=None,
+        task="depth",
+        preprocess=True,
+        ref_images=None,
+        first_frame=None,
+        last_frame=None,
+        negative_prompt="",
+        seed=24,
+        resolution="480p",
+        aspect_ratio="auto",
+        num_inference_steps=30,
+        guidance_scale=5,
+        sampler="unipc",
+        match_input_num_frames=False,
+        num_frames=81,
+        match_input_frames_per_second=False,
+        frames_per_second=16,
+        shift=5,
+        acceleration="regular",
+        video_quality="high",
+        video_write_mode="balanced",
+        return_frames_zip=False,
+        num_interpolated_frames=0,
+        temporal_downsample_factor=0,
+        enable_auto_downsample=False,
+        auto_downsample_min_fps=15,
+        interpolator_model="film",
+        enable_safety_checker=False,
+        enable_output_safety_checker=False,
+    ):
+        try:
+            if video is None:
+                return ApiHandler.handle_video_generation_error(
+                    "wan-22-vace-fun-a14b", "Video input is required."
+                )
+
+            video_url = ImageUtils.upload_file(video.get_stream_source())
+            if not video_url:
+                return ApiHandler.handle_video_generation_error(
+                    "wan-22-vace-fun-a14b", "Failed to upload video"
+                )
+
+            # Build arguments
+            arguments = {
+                "prompt": prompt,
+                "video_url": video_url,
+                "preprocess": preprocess,
+                "negative_prompt": negative_prompt,
+                "seed": seed,
+                "resolution": resolution,
+                "aspect_ratio": aspect_ratio,
+                "num_inference_steps": num_inference_steps,
+                "guidance_scale": guidance_scale,
+                "sampler": sampler,
+                "num_frames": num_frames,
+                "frames_per_second": frames_per_second,
+                "shift": shift,
+                "acceleration": acceleration,
+                "video_quality": video_quality,
+                "video_write_mode": video_write_mode,
+                "return_frames_zip": return_frames_zip,
+                "num_interpolated_frames": num_interpolated_frames,
+                "temporal_downsample_factor": temporal_downsample_factor,
+                "enable_auto_downsample": enable_auto_downsample,
+                "auto_downsample_min_fps": auto_downsample_min_fps,
+                "interpolator_model": interpolator_model,
+                "enable_safety_checker": enable_safety_checker,
+                "enable_output_safety_checker": enable_output_safety_checker,
+            }
+
+            # Handle optional match_input settings
+            if match_input_num_frames and video is not None:
+                try:
+                    arguments["num_frames"] = len(list(video.get_stream()))
+                except:
+                    pass
+            if match_input_frames_per_second and video is not None:
+                try:
+                    arguments["frames_per_second"] = video.get_fps()
+                except:
+                    pass
+
+            # Upload reference images if provided
+            if ref_images is not None:
+                ref_image_urls = ImageUtils.prepare_images(ref_images)
+                if ref_image_urls:
+                    arguments["ref_image_urls"] = ref_image_urls
+
+            # Upload first frame if provided
+            if first_frame is not None:
+                first_frame_url = ImageUtils.upload_image(first_frame)
+                if first_frame_url:
+                    arguments["first_frame_image_url"] = first_frame_url
+
+            # Upload last frame if provided
+            if last_frame is not None:
+                last_frame_url = ImageUtils.upload_image(last_frame)
+                if last_frame_url:
+                    arguments["last_frame_image_url"] = last_frame_url
+
+            # Submit to API with task-specific endpoint
+            result = ApiHandler.submit_and_get_result(
+                f"fal-ai/wan-22-vace-fun-a14b/{task}",
+                arguments,
+            )
+
+            video_url = result["video"]["url"]
+            frames_zip_url = result.get("frames_zip", {}).get("url", "") if return_frames_zip else ""
+
+            return (video_url, frames_zip_url)
+
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error("wan-22-vace-fun-a14b", str(e))
+
+
+
 class PixverseSwapNode:
     @classmethod
     def INPUT_TYPES(cls):
@@ -2163,6 +2330,7 @@ NODE_CLASS_MAPPINGS = {
     "WanVACEVideoEdit_fal": WanVACEVideoEditNode,
     "Wan2214b_animate_replace_character_fal": Wan2214bAnimateReplaceNode,
     "Wan2214b_animate_move_character_fal": Wan2214bAnimateMoveNode,
+    "Wan22VACEFun14b_fal": Wan22VACEFun14bNode,
     "SeedanceImageToVideo_fal": SeedanceImageToVideoNode,
     "SeedanceProImageToVideo_fal": SeedanceProImageToVideoNode,
     "SeedanceTextToVideo_fal": SeedanceTextToVideoNode,
@@ -2203,6 +2371,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "WanVACEVideoEdit_fal": "Wan VACE Video Edit (fal)",
     "Wan2214b_animate_replace_character_fal": "Wan 2.2 14b Animate: Replace Character (fal)",
     "Wan2214b_animate_move_character_fal": "Wan 2.2 14b Animate: Move Character (fal)",
+    "Wan22VACEFun14b_fal": "Wan 2.2 VACE Fun 14b Video-to-Video (fal)",
     "Kling21Pro_fal": "Kling v2.1 Pro Image-to-Video (fal)",
     "Kling25TurboPro_fal": "Kling v2.5 Turbo Pro Image-to-Video (fal)",
     "Sora2Pro_fal": "Sora 2 Pro Image-to-Video (fal)",
