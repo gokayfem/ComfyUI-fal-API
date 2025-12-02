@@ -1234,7 +1234,7 @@ class DYWanFun22Node:
                 arguments["strength_vace"] = strength_vace
 
             # Handle VACE mask video
-            if architecture == "vace":
+            if vace_mask_video is not None:
                 vace_mask_video_url = ImageUtils.upload_file(vace_mask_video.get_stream_source())
                 if vace_mask_video_url:
                     arguments["vace_mask_video_url"] = vace_mask_video_url
