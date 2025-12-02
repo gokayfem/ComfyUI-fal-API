@@ -344,7 +344,362 @@ class KlingMasterNode:
             return ApiHandler.handle_video_generation_error(
                 "kling-video/v2/master", str(e)
             )
+        
+class KlingOmniImageToVideoNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "start_image": ("IMAGE",),
+            },
+            "optional": {
+                "end_image": ("IMAGE",),
+                "duration": (["5", "10"], {"default": "5"}),
+            },
+        }
 
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, prompt, start_image, end_image=None, duration="5"):
+        try:
+            start_image_url = ImageUtils.upload_image(start_image)
+            if not start_image_url:
+                return ApiHandler.handle_video_generation_error(
+                    "kling-video/o1/image-to-video", "Failed to upload start image"
+                )
+
+            arguments = {
+                "prompt": prompt,
+                "start_image_url": start_image_url,
+                "duration": duration,
+            }
+
+            if end_image is not None:
+                end_image_url = ImageUtils.upload_image(end_image)
+                if end_image_url:
+                    arguments["end_image_url"] = end_image_url
+                else:
+                    return ApiHandler.handle_video_generation_error(
+                        "kling-video/o1/image-to-video", "Failed to upload end image"
+                    )
+
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/kling-video/o1/image-to-video", arguments
+            )
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "kling-video/o1/image-to-video", str(e)
+            )
+
+class KlingOmniReferenceToVideoNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+            },
+            "optional": {
+                "reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_1_frontal_image": ("IMAGE",),
+                "element_1_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_2_frontal_image": ("IMAGE",),
+                "element_2_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_3_frontal_image": ("IMAGE",),
+                "element_3_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_4_frontal_image": ("IMAGE",),
+                "element_4_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_5_frontal_image": ("IMAGE",),
+                "element_5_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_6_frontal_image": ("IMAGE",),
+                "element_6_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_7_frontal_image": ("IMAGE",),
+                "element_7_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "duration": (["5", "10"], {"default": "5"}),
+                "aspect_ratio": (["16:9", "9:16", "1:1"], {"default": "16:9"}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(
+        self,
+        prompt,
+        reference_images=None,
+        element_1_frontal_image=None,
+        element_1_reference_images=None,
+        element_2_frontal_image=None,
+        element_2_reference_images=None,
+        element_3_frontal_image=None,
+        element_3_reference_images=None,
+        element_4_frontal_image=None,
+        element_4_reference_images=None,
+        element_5_frontal_image=None,
+        element_5_reference_images=None,
+        element_6_frontal_image=None,
+        element_6_reference_images=None,
+        element_7_frontal_image=None,
+        element_7_reference_images=None,
+        duration="5",
+        aspect_ratio="16:9"
+    ):
+        try:
+            arguments = {
+                "prompt": prompt,
+                "duration": duration,
+                "aspect_ratio": aspect_ratio,
+            }
+
+            # Handle reference images
+            if reference_images is not None:
+                ref_image_urls = ImageUtils.prepare_images(reference_images)
+                if ref_image_urls:
+                    arguments["image_urls"] = ref_image_urls
+
+            # Build elements array
+            elements = []
+
+            # Process each element (up to 7)
+            for i in range(1, 8):
+                frontal_img = locals().get(f"element_{i}_frontal_image")
+                ref_imgs = locals().get(f"element_{i}_reference_images")
+
+                if frontal_img is not None:
+                    element = {}
+
+                    # Upload frontal image
+                    frontal_url = ImageUtils.upload_image(frontal_img)
+                    if frontal_url:
+                        element["frontal_image_url"] = frontal_url
+
+                    # Upload reference images if provided
+                    if ref_imgs is not None:
+                        ref_urls = ImageUtils.prepare_images(ref_imgs)
+                        if ref_urls:
+                            element["reference_image_urls"] = ref_urls
+
+                    elements.append(element)
+
+            if elements:
+                arguments["elements"] = elements
+
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/kling-video/o1/reference-to-video", arguments
+            )
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "kling-video/o1/reference-to-video", str(e)
+            )
+
+class KlingOmniVideoToVideoEditNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "video": ("VIDEO",),
+            },
+            "optional": {
+                "keep_audio": ("BOOLEAN", {"default": False}),
+                "reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_1_frontal_image": ("IMAGE",),
+                "element_1_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_2_frontal_image": ("IMAGE",),
+                "element_2_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_3_frontal_image": ("IMAGE",),
+                "element_3_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_4_frontal_image": ("IMAGE",),
+                "element_4_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("video_url",)
+    FUNCTION = "edit_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def edit_video(
+        self,
+        prompt,
+        video,
+        keep_audio=False,
+        reference_images=None,
+        element_1_frontal_image=None,
+        element_1_reference_images=None,
+        element_2_frontal_image=None,
+        element_2_reference_images=None,
+        element_3_frontal_image=None,
+        element_3_reference_images=None,
+        element_4_frontal_image=None,
+        element_4_reference_images=None,
+    ):
+        try:
+            video_url = ImageUtils.upload_file(video.get_stream_source())
+            if not video_url:
+                return ApiHandler.handle_video_generation_error(
+                    "kling-video/o1/video-to-video/edit", "Failed to upload video"
+                )
+
+            arguments = {
+                "prompt": prompt,
+                "video_url": video_url,
+                "keep_audio": keep_audio,
+            }
+
+            # Handle reference images
+            if reference_images is not None:
+                ref_image_urls = ImageUtils.prepare_images(reference_images)
+                if ref_image_urls:
+                    arguments["image_urls"] = ref_image_urls
+
+            # Build elements array
+            elements = []
+
+            # Process each element (up to 4 for video-to-video/edit)
+            for i in range(1, 5):
+                frontal_img = locals().get(f"element_{i}_frontal_image")
+                ref_imgs = locals().get(f"element_{i}_reference_images")
+
+                if frontal_img is not None:
+                    element = {}
+
+                    # Upload frontal image
+                    frontal_url = ImageUtils.upload_image(frontal_img)
+                    if frontal_url:
+                        element["frontal_image_url"] = frontal_url
+
+                    # Upload reference images if provided
+                    if ref_imgs is not None:
+                        ref_urls = ImageUtils.prepare_images(ref_imgs)
+                        if ref_urls:
+                            element["reference_image_urls"] = ref_urls
+
+                    elements.append(element)
+
+            if elements:
+                arguments["elements"] = elements
+
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/kling-video/o1/video-to-video/edit", arguments
+            )
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "kling-video/o1/video-to-video/edit", str(e)
+            )
+
+class KlingOmniVideoToVideoReferenceNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "video": ("VIDEO",),
+            },
+            "optional": {
+                "keep_audio": ("BOOLEAN", {"default": False}),
+                "reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_1_frontal_image": ("IMAGE",),
+                "element_1_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_2_frontal_image": ("IMAGE",),
+                "element_2_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_3_frontal_image": ("IMAGE",),
+                "element_3_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_4_frontal_image": ("IMAGE",),
+                "element_4_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "aspect_ratio": (["auto", "16:9", "9:16", "1:1"], {"default": "auto"}),
+                "duration": (["5", "10"], {"default": "5"}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("video_url",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(
+        self,
+        prompt,
+        video,
+        keep_audio=False,
+        reference_images=None,
+        element_1_frontal_image=None,
+        element_1_reference_images=None,
+        element_2_frontal_image=None,
+        element_2_reference_images=None,
+        element_3_frontal_image=None,
+        element_3_reference_images=None,
+        element_4_frontal_image=None,
+        element_4_reference_images=None,
+        aspect_ratio="auto",
+        duration="5"
+    ):
+        try:
+            video_url = ImageUtils.upload_file(video.get_stream_source())
+            if not video_url:
+                return ApiHandler.handle_video_generation_error(
+                    "kling-video/o1/video-to-video/reference", "Failed to upload video"
+                )
+
+            arguments = {
+                "prompt": prompt,
+                "video_url": video_url,
+                "keep_audio": keep_audio,
+                "aspect_ratio": aspect_ratio,
+                "duration": duration,
+            }
+
+            # Handle reference images
+            if reference_images is not None:
+                ref_image_urls = ImageUtils.prepare_images(reference_images)
+                if ref_image_urls:
+                    arguments["image_urls"] = ref_image_urls
+
+            # Build elements array
+            elements = []
+
+            # Process each element (up to 4 for video-to-video/reference)
+            for i in range(1, 5):
+                frontal_img = locals().get(f"element_{i}_frontal_image")
+                ref_imgs = locals().get(f"element_{i}_reference_images")
+
+                if frontal_img is not None:
+                    element = {}
+
+                    # Upload frontal image
+                    frontal_url = ImageUtils.upload_image(frontal_img)
+                    if frontal_url:
+                        element["frontal_image_url"] = frontal_url
+
+                    # Upload reference images if provided
+                    if ref_imgs is not None:
+                        ref_urls = ImageUtils.prepare_images(ref_imgs)
+                        if ref_urls:
+                            element["reference_image_urls"] = ref_urls
+
+                    elements.append(element)
+
+            if elements:
+                arguments["elements"] = elements
+
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/kling-video/o1/video-to-video/reference", arguments
+            )
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "kling-video/o1/video-to-video/reference", str(e)
+            )
 
 class RunwayGen3Node:
     @classmethod
@@ -2646,6 +3001,10 @@ NODE_CLASS_MAPPINGS = {
     "KlingPro10_fal": KlingPro10Node,
     "KlingPro16_fal": KlingPro16Node,
     "KlingMaster_fal": KlingMasterNode,
+    "KlingOmniImageToVideo_fal": KlingOmniImageToVideoNode,
+    "KlingOmniReferenceToVideo_fal": KlingOmniReferenceToVideoNode,
+    "KlingOmniVideoToVideoEdit_fal": KlingOmniVideoToVideoEditNode,
+    "KlingOmniVideoToVideoReference_fal": KlingOmniVideoToVideoReferenceNode,
     "Krea_Wan14b_VideoToVideo_fal": KreaWan14bVideoToVideoNode,
     "RunwayGen3_fal": RunwayGen3Node,
     "LumaDreamMachine_fal": LumaDreamMachineNode,
@@ -2685,6 +3044,10 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "KlingPro10_fal": "Kling Pro v1.0 Video Generation (fal)",
     "KlingPro16_fal": "Kling Pro v1.6 Video Generation (fal)",
     "KlingMaster_fal": "Kling Master v2.0 Video Generation (fal)",
+    "KlingOmniImageToVideo_fal": "Kling Omni Image-to-Video (fal)",
+    "KlingOmniReferenceToVideo_fal": "Kling Omni Reference-to-Video (fal)",
+    "KlingOmniVideoToVideoEdit_fal": "Kling Omni Video-to-Video Edit (fal)",
+    "KlingOmniVideoToVideoReference_fal": "Kling Omni Video-to-Video Reference (fal)",
     "Krea_Wan14b_VideoToVideo_fal": "Krea Wan 14b Video-to-Video (fal)",
     "RunwayGen3_fal": "Runway Gen3 Image-to-Video (fal)",
     "LumaDreamMachine_fal": "Luma Dream Machine (fal)",
