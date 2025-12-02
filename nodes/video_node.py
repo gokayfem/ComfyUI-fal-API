@@ -344,7 +344,369 @@ class KlingMasterNode:
             return ApiHandler.handle_video_generation_error(
                 "kling-video/v2/master", str(e)
             )
+        
+class KlingOmniImageToVideoNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "start_image": ("IMAGE",),
+            },
+            "optional": {
+                "end_image": ("IMAGE",),
+                "duration": (["5", "10"], {"default": "5"}),
+                "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
+            },
+        }
 
+    RETURN_TYPES = ("STRING",)
+    OUTPUT_IS_LIST = (True,)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, prompt, start_image, end_image=None, duration="5", variations=1):
+        try:
+            start_image_url = ImageUtils.upload_image(start_image)
+            if not start_image_url:
+                return ApiHandler.handle_video_generation_error(
+                    "kling-video/o1/image-to-video", "Failed to upload start image"
+                )
+
+            arguments = {
+                "prompt": prompt,
+                "start_image_url": start_image_url,
+                "duration": duration,
+            }
+
+            if end_image is not None:
+                end_image_url = ImageUtils.upload_image(end_image)
+                if end_image_url:
+                    arguments["end_image_url"] = end_image_url
+                else:
+                    return ApiHandler.handle_video_generation_error(
+                        "kling-video/o1/image-to-video", "Failed to upload end image"
+                    )
+
+            results = ApiHandler.submit_multiple_and_get_results(
+                "fal-ai/kling-video/o1/image-to-video", arguments, variations
+            )
+            return ([r["video"]["url"] for r in results],)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "kling-video/o1/image-to-video", str(e)
+            )
+
+class KlingOmniReferenceToVideoNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+            },
+            "optional": {
+                "reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_1_frontal_image": ("IMAGE",),
+                "element_1_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_2_frontal_image": ("IMAGE",),
+                "element_2_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_3_frontal_image": ("IMAGE",),
+                "element_3_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_4_frontal_image": ("IMAGE",),
+                "element_4_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_5_frontal_image": ("IMAGE",),
+                "element_5_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_6_frontal_image": ("IMAGE",),
+                "element_6_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_7_frontal_image": ("IMAGE",),
+                "element_7_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "duration": (["5", "10"], {"default": "5"}),
+                "aspect_ratio": (["16:9", "9:16", "1:1"], {"default": "16:9"}),
+                "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    OUTPUT_IS_LIST = (True,)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(
+        self,
+        prompt,
+        reference_images=None,
+        element_1_frontal_image=None,
+        element_1_reference_images=None,
+        element_2_frontal_image=None,
+        element_2_reference_images=None,
+        element_3_frontal_image=None,
+        element_3_reference_images=None,
+        element_4_frontal_image=None,
+        element_4_reference_images=None,
+        element_5_frontal_image=None,
+        element_5_reference_images=None,
+        element_6_frontal_image=None,
+        element_6_reference_images=None,
+        element_7_frontal_image=None,
+        element_7_reference_images=None,
+        duration="5",
+        aspect_ratio="16:9",
+        variations=1
+    ):
+        try:
+            arguments = {
+                "prompt": prompt,
+                "duration": duration,
+                "aspect_ratio": aspect_ratio,
+            }
+
+            # Handle reference images
+            if reference_images is not None:
+                ref_image_urls = ImageUtils.prepare_images(reference_images)
+                if ref_image_urls:
+                    arguments["image_urls"] = ref_image_urls
+
+            # Build elements array
+            elements = []
+
+            # Process each element (up to 7)
+            for i in range(1, 8):
+                frontal_img = locals().get(f"element_{i}_frontal_image")
+                ref_imgs = locals().get(f"element_{i}_reference_images")
+
+                if frontal_img is not None:
+                    element = {}
+
+                    # Upload frontal image
+                    frontal_url = ImageUtils.upload_image(frontal_img)
+                    if frontal_url:
+                        element["frontal_image_url"] = frontal_url
+
+                    # Upload reference images if provided
+                    if ref_imgs is not None:
+                        ref_urls = ImageUtils.prepare_images(ref_imgs)
+                        if ref_urls:
+                            element["reference_image_urls"] = ref_urls
+
+                    elements.append(element)
+
+            if elements:
+                arguments["elements"] = elements
+
+            results = ApiHandler.submit_multiple_and_get_results(
+                "fal-ai/kling-video/o1/reference-to-video", arguments, variations
+            )
+            return ([r["video"]["url"] for r in results],)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "kling-video/o1/reference-to-video", str(e)
+            )
+
+class KlingOmniVideoToVideoEditNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "video": ("VIDEO",),
+            },
+            "optional": {
+                "keep_audio": ("BOOLEAN", {"default": False}),
+                "reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_1_frontal_image": ("IMAGE",),
+                "element_1_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_2_frontal_image": ("IMAGE",),
+                "element_2_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_3_frontal_image": ("IMAGE",),
+                "element_3_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_4_frontal_image": ("IMAGE",),
+                "element_4_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("video_url",)
+    OUTPUT_IS_LIST = (True,)
+    FUNCTION = "edit_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def edit_video(
+        self,
+        prompt,
+        video,
+        keep_audio=False,
+        reference_images=None,
+        element_1_frontal_image=None,
+        element_1_reference_images=None,
+        element_2_frontal_image=None,
+        element_2_reference_images=None,
+        element_3_frontal_image=None,
+        element_3_reference_images=None,
+        element_4_frontal_image=None,
+        element_4_reference_images=None,
+        variations=1
+    ):
+        try:
+            video_url = ImageUtils.upload_file(video.get_stream_source())
+            if not video_url:
+                return ApiHandler.handle_video_generation_error(
+                    "kling-video/o1/video-to-video/edit", "Failed to upload video"
+                )
+
+            arguments = {
+                "prompt": prompt,
+                "video_url": video_url,
+                "keep_audio": keep_audio,
+            }
+
+            # Handle reference images
+            if reference_images is not None:
+                ref_image_urls = ImageUtils.prepare_images(reference_images)
+                if ref_image_urls:
+                    arguments["image_urls"] = ref_image_urls
+
+            # Build elements array
+            elements = []
+
+            # Process each element (up to 4 for video-to-video/edit)
+            for i in range(1, 5):
+                frontal_img = locals().get(f"element_{i}_frontal_image")
+                ref_imgs = locals().get(f"element_{i}_reference_images")
+
+                if frontal_img is not None:
+                    element = {}
+
+                    # Upload frontal image
+                    frontal_url = ImageUtils.upload_image(frontal_img)
+                    if frontal_url:
+                        element["frontal_image_url"] = frontal_url
+
+                    # Upload reference images if provided
+                    if ref_imgs is not None:
+                        ref_urls = ImageUtils.prepare_images(ref_imgs)
+                        if ref_urls:
+                            element["reference_image_urls"] = ref_urls
+
+                    elements.append(element)
+
+            if elements:
+                arguments["elements"] = elements
+
+            results = ApiHandler.submit_multiple_and_get_results(
+                "fal-ai/kling-video/o1/video-to-video/edit", arguments, variations
+            )
+            return ([r["video"]["url"] for r in results],)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "kling-video/o1/video-to-video/edit", str(e)
+            )
+
+class KlingOmniVideoToVideoReferenceNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "video": ("VIDEO",),
+            },
+            "optional": {
+                "keep_audio": ("BOOLEAN", {"default": False}),
+                "reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_1_frontal_image": ("IMAGE",),
+                "element_1_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_2_frontal_image": ("IMAGE",),
+                "element_2_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_3_frontal_image": ("IMAGE",),
+                "element_3_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "element_4_frontal_image": ("IMAGE",),
+                "element_4_reference_images": ("IMAGE", {"default": None, "multiple": True}),
+                "aspect_ratio": (["auto", "16:9", "9:16", "1:1"], {"default": "auto"}),
+                "duration": (["5", "10"], {"default": "5"}),
+                "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("video_url",)
+    OUTPUT_IS_LIST = (True,)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(
+        self,
+        prompt,
+        video,
+        keep_audio=False,
+        reference_images=None,
+        element_1_frontal_image=None,
+        element_1_reference_images=None,
+        element_2_frontal_image=None,
+        element_2_reference_images=None,
+        element_3_frontal_image=None,
+        element_3_reference_images=None,
+        element_4_frontal_image=None,
+        element_4_reference_images=None,
+        aspect_ratio="auto",
+        duration="5",
+        variations=1
+    ):
+        try:
+            video_url = ImageUtils.upload_file(video.get_stream_source())
+            if not video_url:
+                return ApiHandler.handle_video_generation_error(
+                    "kling-video/o1/video-to-video/reference", "Failed to upload video"
+                )
+
+            arguments = {
+                "prompt": prompt,
+                "video_url": video_url,
+                "keep_audio": keep_audio,
+                "aspect_ratio": aspect_ratio,
+                "duration": duration,
+            }
+
+            # Handle reference images
+            if reference_images is not None:
+                ref_image_urls = ImageUtils.prepare_images(reference_images)
+                if ref_image_urls:
+                    arguments["image_urls"] = ref_image_urls
+
+            # Build elements array
+            elements = []
+
+            # Process each element (up to 4 for video-to-video/reference)
+            for i in range(1, 5):
+                frontal_img = locals().get(f"element_{i}_frontal_image")
+                ref_imgs = locals().get(f"element_{i}_reference_images")
+
+                if frontal_img is not None:
+                    element = {}
+
+                    # Upload frontal image
+                    frontal_url = ImageUtils.upload_image(frontal_img)
+                    if frontal_url:
+                        element["frontal_image_url"] = frontal_url
+
+                    # Upload reference images if provided
+                    if ref_imgs is not None:
+                        ref_urls = ImageUtils.prepare_images(ref_imgs)
+                        if ref_urls:
+                            element["reference_image_urls"] = ref_urls
+
+                    elements.append(element)
+
+            if elements:
+                arguments["elements"] = elements
+
+            results = ApiHandler.submit_multiple_and_get_results(
+                "fal-ai/kling-video/o1/video-to-video/reference", arguments, variations
+            )
+            return ([r["video"]["url"] for r in results],)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "kling-video/o1/video-to-video/reference", str(e)
+            )
 
 class RunwayGen3Node:
     @classmethod
@@ -509,14 +871,16 @@ class WanProNode:
             "optional": {
                 "seed": ("INT", {"default": 0, "min": 0, "max": 2147483647}),
                 "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
+    OUTPUT_IS_LIST = (True,)
     FUNCTION = "generate_video"
     CATEGORY = "FAL/VideoGeneration"
 
-    def generate_video(self, prompt, image, seed=0, enable_safety_checker=True):
+    def generate_video(self, prompt, image, seed=0, enable_safety_checker=True, variations=1):
         try:
             image_url = ImageUtils.upload_image(image)
             if not image_url:
@@ -534,11 +898,11 @@ class WanProNode:
             if seed != 0:
                 arguments["seed"] = seed
 
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/wan-pro/image-to-video", arguments
+            results = ApiHandler.submit_multiple_and_get_results(
+                "fal-ai/wan-pro/image-to-video", arguments, variations
             )
-            video_url = result["video"]["url"]
-            return (video_url,)
+
+            return ([r["video"]["url"] for r in results],)
         except Exception as e:
             return ApiHandler.handle_video_generation_error("wan-pro", str(e))
 
@@ -560,10 +924,12 @@ class Wan25Node:
                     {"default": "5"}),
                 "negative_prompt": ("STRING", {"default": "low resolution, error, worst quality, low quality, defects", "multiline": True}),
                 "enable_prompt_expansion": ("BOOLEAN", {"default": True}),
+                "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
+    OUTPUT_IS_LIST = (True,)
     FUNCTION = "generate_video"
     CATEGORY = "FAL/VideoGeneration"
 
@@ -576,6 +942,7 @@ class Wan25Node:
         duration="5",
         negative_prompt="low resolution, error, worst quality, low quality, defects",
         enable_prompt_expansion=True,
+        variations=1,
     ):
         try:
             image_url = ImageUtils.upload_image(image)
@@ -598,12 +965,11 @@ class Wan25Node:
                 arguments["seed"] = seed
 
 
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/wan-25-preview/image-to-video", arguments
+            results = ApiHandler.submit_multiple_and_get_results(
+                "fal-ai/wan-25-preview/image-to-video", arguments, variations
             )
 
-            video_url = result["video"]["url"]
-            return (video_url,)
+            return ([r["video"]["url"] for r in results],)
 
         except Exception as e:
             return ApiHandler.handle_video_generation_error("wan-25", str(e))
@@ -631,11 +997,13 @@ class WanVACEVideoEditNode:
                 "aspect_ratio": (["auto", "16:9", "9:16", "1:1"], {"default": "auto"}),
                 "auto_downsample_min_fps": ("INT", {"default": 15, "min": 1, "max": 60}),
                 "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("video_url",)
+    OUTPUT_IS_LIST = (True,)
     FUNCTION = "edit_video"
     CATEGORY = "FAL/VideoGeneration"
 
@@ -652,6 +1020,7 @@ class WanVACEVideoEditNode:
         aspect_ratio="auto",
         auto_downsample_min_fps=15,
         enable_safety_checker=True,
+        variations=1,
     ):
         try:
             if video is None and input_video_url is "":
@@ -704,12 +1073,13 @@ class WanVACEVideoEditNode:
             if image_urls:
                 arguments["image_urls"] = image_urls
 
-            result = ApiHandler.submit_and_get_result(
+            results = ApiHandler.submit_multiple_and_get_results(
                 "fal-ai/wan-vace-apps/video-edit",
                 arguments,
+                variations
             )
 
-            return (result["video"]["url"],)
+            return ([r["video"]["url"] for r in results],)
 
         except Exception as e:
             return ApiHandler.handle_video_generation_error("wan-vace", str(e))
@@ -721,7 +1091,7 @@ class Wan2214bAnimateReplaceNode:
         return {
             "required": {
                 "image": ("IMAGE", {"default": None}),
-                
+
             },
             "optional": {
                 "video": ("VIDEO", {"default": None}),
@@ -737,11 +1107,13 @@ class Wan2214bAnimateReplaceNode:
                 "seed": ("INT", {"default": 24}),
                 "enable_safety_checker": ("BOOLEAN", {"default": True}),
                 "enable_output_safety_checker": ("BOOLEAN", {"default": False}),
+                "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("video_url",)
+    OUTPUT_IS_LIST = (True,)
     FUNCTION = "edit_video"
     CATEGORY = "FAL/VideoGeneration"
 
@@ -758,6 +1130,7 @@ class Wan2214bAnimateReplaceNode:
         seed=24,
         enable_safety_checker=True,
         enable_output_safety_checker=False,
+        variations=1,
     ):
         try:
             if video is None and input_video_url is "":
@@ -793,12 +1166,13 @@ class Wan2214bAnimateReplaceNode:
         "seed": seed
     }
 
-            result = ApiHandler.submit_and_get_result(
+            results = ApiHandler.submit_multiple_and_get_results(
                 "fal-ai/wan/v2.2-14b/animate/replace",
                 arguments,
+                variations
             )
 
-            return (result["video"]["url"],)
+            return ([r["video"]["url"] for r in results],)
 
         except Exception as e:
             return ApiHandler.handle_video_generation_error("wan-22animatereplace", str(e))
@@ -812,7 +1186,7 @@ class Wan2214bAnimateMoveNode:
         return {
             "required": {
                 "image": ("IMAGE", {"default": None}),
-                
+
             },
             "optional": {
                 "video": ("VIDEO", {"default": None}),
@@ -828,11 +1202,13 @@ class Wan2214bAnimateMoveNode:
                 "seed": ("INT", {"default": 24}),
                 "enable_safety_checker": ("BOOLEAN", {"default": True}),
                 "enable_output_safety_checker": ("BOOLEAN", {"default": False}),
+                "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("video_url",)
+    OUTPUT_IS_LIST = (True,)
     FUNCTION = "edit_video"
     CATEGORY = "FAL/VideoGeneration"
 
@@ -849,6 +1225,7 @@ class Wan2214bAnimateMoveNode:
         seed=24,
         enable_safety_checker=True,
         enable_output_safety_checker=False,
+        variations=1,
     ):
         try:
             if video is None and input_video_url is "":
@@ -883,12 +1260,13 @@ class Wan2214bAnimateMoveNode:
         "video_write_mode": video_write_mode,
         "seed": seed
     }
-            result = ApiHandler.submit_and_get_result(
+            results = ApiHandler.submit_multiple_and_get_results(
                 "fal-ai/wan/v2.2-14b/animate/move",
                 arguments,
+                variations
             )
 
-            return (result["video"]["url"],)
+            return ([r["video"]["url"] for r in results],)
 
         except Exception as e:
             return ApiHandler.handle_video_generation_error("wan-22animatemove", str(e))
@@ -935,11 +1313,13 @@ class Wan22VACEFun14bNode:
                 "interpolator_model": (["rife", "film"], {"default": "film"}),
                 "enable_safety_checker": ("BOOLEAN", {"default": False}),
                 "enable_output_safety_checker": ("BOOLEAN", {"default": False}),
+                "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
             },
         }
 
     RETURN_TYPES = ("STRING", "STRING",)
     RETURN_NAMES = ("video_url", "frames_zip_url",)
+    OUTPUT_IS_LIST = (True, True,)
     FUNCTION = "edit_video"
     CATEGORY = "FAL/VideoGeneration"
 
@@ -975,6 +1355,7 @@ class Wan22VACEFun14bNode:
         interpolator_model="film",
         enable_safety_checker=False,
         enable_output_safety_checker=False,
+        variations=1,
     ):
         try:
             if video is None:
@@ -1050,13 +1431,15 @@ class Wan22VACEFun14bNode:
                     arguments["last_frame_image_url"] = last_frame_url
 
             # Submit to API with task-specific endpoint
-            result = ApiHandler.submit_and_get_result(
+            results = ApiHandler.submit_multiple_and_get_results(
                 f"fal-ai/wan-22-vace-fun-a14b/{task}",
                 arguments,
+                variations
             )
 
-            video_url = result["video"]["url"]
-            frames_zip_url = result.get("frames_zip", {}).get("url", "") if return_frames_zip else ""
+            # Return list of outputs
+            video_url = [r["video"]["url"] for r in results]
+            frames_zip_url = [r.get("frames_zip", {}).get("url", "") for r in results] if return_frames_zip else [""] * len(results)
 
             return (video_url, frames_zip_url)
 
@@ -1094,8 +1477,9 @@ class DYWanFun22Node:
                 "seed": ("INT", {"default": -1, "min": 0, "max": 2147483647}),
                 "sampler": (["uni_pc", "dpmpp_2m", "dpmpp_2m_sde", "euler", "euler_ancestral"], {"default": "uni_pc"}),
                 "shift": ("INT", {"default": 5, "min": 0, "max": 10}),
-                "vace_mask_video": ("VIDEO", {"default": None}),
+                "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
                 # Control strengths
+                "vace_mask_video": ("VIDEO", {"default": None}),
                 "preprocess_all_maps": ("BOOLEAN", {"default": True}),
                 "strength_vace": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0}),
                 "pose_strength": ("FLOAT", {"default": 0.6, "min": 0.0, "max": 1.0}),
@@ -1129,6 +1513,7 @@ class DYWanFun22Node:
 
     RETURN_TYPES = ("STRING", "STRING",)
     RETURN_NAMES = ("video_url", "frames_zip_url",)
+    OUTPUT_IS_LIST = (True, True,)
     FUNCTION = "generate_video"
     CATEGORY = "FAL/VideoGeneration/DY"
 
@@ -1149,8 +1534,9 @@ class DYWanFun22Node:
         guidance_scale=1.0,
         seed=-1,
         sampler="uni_pc",
-        vace_mask_video=None,
         shift=5,
+        variations=1,
+        vace_mask_video=None,
         preprocess_all_maps=True,
         strength_vace=1.0,
         pose_strength=0.6,
@@ -1177,7 +1563,7 @@ class DYWanFun22Node:
         lora_transformer_3="high",
         lora_path_4="",
         lora_strength_4=1.0,
-        lora_transformer_4="high"
+        lora_transformer_4="high",
     ):
         try:
             if ref_image is None:
@@ -1234,7 +1620,7 @@ class DYWanFun22Node:
                 arguments["strength_vace"] = strength_vace
 
             # Handle VACE mask video
-            if architecture == "vace":
+            if vace_mask_video is not None:
                 vace_mask_video_url = ImageUtils.upload_file(vace_mask_video.get_stream_source())
                 if vace_mask_video_url:
                     arguments["vace_mask_video_url"] = vace_mask_video_url
@@ -1286,13 +1672,15 @@ class DYWanFun22Node:
                 arguments["loras"] = loras
 
             # Submit to API
-            result = ApiHandler.submit_and_get_result(
+            results = ApiHandler.submit_multiple_and_get_results(
                 "fal-ai/dy-wan-fun-22",
                 arguments,
+                variations
             )
 
-            video_url = result["video"]["url"]
-            frames_zip_url = result.get("frames_zip", {}).get("url", "") if return_frames_zip else ""
+            # Return list of outputs
+            video_url = [r["video"]["url"] for r in results]
+            frames_zip_url = [r.get("frames_zip", {}).get("url", "") for r in results] if return_frames_zip else [""] * len(results)
 
             return (video_url, frames_zip_url)
 
@@ -2226,6 +2614,8 @@ class SeedanceTextToVideoNode:
             return ApiHandler.handle_video_generation_error(
                 "fal-ai/bytedance/seedance/v1/lite/text-to-video", str(e)
             )
+
+
 class SeedanceProImageToVideoNode:
     @classmethod
     def INPUT_TYPES(cls):
@@ -2233,22 +2623,22 @@ class SeedanceProImageToVideoNode:
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
                 "image": ("IMAGE",),
-                "resolution": (["480p", "720p", "1080p"], {"default": "1080p"}),
                 "duration": (["2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12",], {"default": "5"}),
-                "camera_fixed": ("BOOLEAN", {"default": False}),
             },
             "optional": {
-                "seed": ("INT", {"default": -1, "min": -1, "max": 2147483647}),
-                "enable_safety_checker": ("BOOLEAN", {"default": False}),
                 "end_image": ("IMAGE",),
+                "negative_prompt": ("STRING", {"default": "", "multiline": True}),
+                "cfg_scale": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.1}),
+                "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1})
             },
         }
 
     RETURN_TYPES = ("STRING",)
+    OUTPUT_IS_LIST = (True,)
     FUNCTION = "generate_video"
     CATEGORY = "FAL/VideoGeneration"
 
-    def generate_video(self, prompt, image, resolution, duration, camera_fixed, seed=-1, enable_safety_checker=False , end_image=None):
+    def generate_video(self, prompt, image, duration, end_image=None, negative_prompt="", cfg_scale=0.5, variations=1):
         try:
             image_url = ImageUtils.upload_image(image)
             if not image_url:
@@ -2260,10 +2650,9 @@ class SeedanceProImageToVideoNode:
             arguments = {
                 "prompt": prompt,
                 "image_url": image_url,
-                "resolution": resolution,
                 "duration": duration,
-                "camera_fixed": camera_fixed,
-                "enable_safety_checker": enable_safety_checker,
+                "negative_prompt": negative_prompt,
+                "cfg_scale": cfg_scale
             }
 
             # Handle optional End image
@@ -2275,20 +2664,19 @@ class SeedanceProImageToVideoNode:
                     return ApiHandler.handle_video_generation_error(
                         "seedance/v1/pro/image-to-video", "Failed to upload end image"
                     )
-                
-            # Only add seed if it's not -1 (random)
-            if seed != -1:
-                arguments["seed"] = seed
 
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/bytedance/seedance/v1/pro/image-to-video", arguments
+            results = ApiHandler.submit_multiple_and_get_results(
+                "fal-ai/bytedance/seedance/v1/pro/image-to-video", arguments, variations
             )
-            video_url = result["video"]["url"]
-            return (video_url,)
+
+            # Return list of video URLs
+            return ([r["video"]["url"] for r in results],)
+        
         except Exception as e:
             return ApiHandler.handle_video_generation_error(
                 "fal-ai/bytedance/seedance/v1/pro/image-to-video", str(e)
             )
+
 
 class Veo3Node:
     @classmethod
@@ -2411,14 +2799,16 @@ class FalKling25TurboProImageToVideo:
                 "negative_prompt": ("STRING", {"default": "blur, distort, and low quality", "multiline": True}),
                 "cfg_scale": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.1}),
                 "tail_image": ("IMAGE",),
+                "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1})
             },
         }
 
     RETURN_TYPES = ("STRING",)
+    OUTPUT_IS_LIST = (True,)
     FUNCTION = "generate_video"
     CATEGORY = "FAL/VideoGeneration"
 
-    def generate_video(self, prompt, image, duration, negative_prompt="blur, distort, and low quality", cfg_scale=0.5, tail_image=None):
+    def generate_video(self, prompt, image, duration, negative_prompt="blur, distort, and low quality", cfg_scale=0.5, tail_image=None, variations=1):
         try:
             image_url = ImageUtils.upload_image(image)
             if not image_url:
@@ -2444,11 +2834,13 @@ class FalKling25TurboProImageToVideo:
                         "kling-video/v2.5-turbo/pro", "Failed to upload tail image"
                     )
 
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/kling-video/v2.5-turbo/pro/image-to-video", arguments
+            results = ApiHandler.submit_multiple_and_get_results(
+                "fal-ai/kling-video/v2.5-turbo/pro/image-to-video", arguments, variations
             )
-            video_url = result["video"]["url"]
-            return (video_url,)
+
+            # Return list of video URLs
+            return ([r["video"]["url"] for r in results],)
+            
         except Exception as e:
             return ApiHandler.handle_video_generation_error(
                 "kling-video/v2.5-turbo/pro", str(e)
@@ -2646,6 +3038,10 @@ NODE_CLASS_MAPPINGS = {
     "KlingPro10_fal": KlingPro10Node,
     "KlingPro16_fal": KlingPro16Node,
     "KlingMaster_fal": KlingMasterNode,
+    "KlingOmniImageToVideo_fal": KlingOmniImageToVideoNode,
+    "KlingOmniReferenceToVideo_fal": KlingOmniReferenceToVideoNode,
+    "KlingOmniVideoToVideoEdit_fal": KlingOmniVideoToVideoEditNode,
+    "KlingOmniVideoToVideoReference_fal": KlingOmniVideoToVideoReferenceNode,
     "Krea_Wan14b_VideoToVideo_fal": KreaWan14bVideoToVideoNode,
     "RunwayGen3_fal": RunwayGen3Node,
     "LumaDreamMachine_fal": LumaDreamMachineNode,
@@ -2685,6 +3081,10 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "KlingPro10_fal": "Kling Pro v1.0 Video Generation (fal)",
     "KlingPro16_fal": "Kling Pro v1.6 Video Generation (fal)",
     "KlingMaster_fal": "Kling Master v2.0 Video Generation (fal)",
+    "KlingOmniImageToVideo_fal": "Kling Omni Image-to-Video (fal)",
+    "KlingOmniReferenceToVideo_fal": "Kling Omni Reference-to-Video (fal)",
+    "KlingOmniVideoToVideoEdit_fal": "Kling Omni Video-to-Video Edit (fal)",
+    "KlingOmniVideoToVideoReference_fal": "Kling Omni Video-to-Video Reference (fal)",
     "Krea_Wan14b_VideoToVideo_fal": "Krea Wan 14b Video-to-Video (fal)",
     "RunwayGen3_fal": "Runway Gen3 Image-to-Video (fal)",
     "LumaDreamMachine_fal": "Luma Dream Machine (fal)",
