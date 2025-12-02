@@ -2,11 +2,14 @@ import configparser
 import io
 import os
 import tempfile
+import asyncio
+import concurrent.futures
 
 import numpy as np
 import requests
 import torch
 from fal_client.client import SyncClient
+from fal_client import AsyncClient
 from PIL import Image
 
 
@@ -236,6 +239,39 @@ class ApiHandler:
         except Exception as e:
             print(f"Error submitting to {endpoint}: {str(e)}")
             raise e
+
+    @staticmethod
+    def submit_multiple_and_get_results(endpoint, arguments, variations):
+        """Submit multiple jobs concurrently to FAL API and get results."""
+        try:
+            # Run the async code in a thread to avoid event loop conflicts
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(
+                    asyncio.run,
+                    ApiHandler._submit_multiple_async(endpoint, arguments, variations)
+                )
+                return future.result()
+        except Exception as e:
+            print(f"Error in submit_multiple_and_get_results: {str(e)}")
+            raise e
+
+    @staticmethod
+    async def _submit_multiple_async(endpoint, arguments, variations):
+        """Submit multiple jobs concurrently and gather results."""
+        client = AsyncClient(key=FalConfig().get_key())
+
+        # Submit all jobs concurrently
+        handlers = await asyncio.gather(*[
+            client.submit(endpoint, arguments={**arguments, "seed": arguments.get("seed", 0) + i} if "seed" in arguments else arguments)
+            for i in range(variations)
+        ])
+
+        # Get all results concurrently
+        results = await asyncio.gather(*[
+            handler.get() for handler in handlers
+        ], return_exceptions=True)
+
+        return results
 
     @staticmethod
     def handle_video_generation_error(model_name, error):
