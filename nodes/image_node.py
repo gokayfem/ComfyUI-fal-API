@@ -1384,6 +1384,86 @@ class FluxProKontextTextToImage:
             return ApiHandler.handle_image_generation_error(model_name, e)
 
 
+class Flux2LoraGalleryVirtualTryOn:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image": ("IMAGE",),
+                "images": ("IMAGE", {"default": None, "multiple": True}),
+                
+            },
+            "optional": {
+                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                "acceleration": ("STRING", {"default": "regular"}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "steps": ("INT", {"default": 40, "min": 1, "max": 60}),
+                "lora_scale": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "seed": ("INT", {"default": 42, "min": 1, "max": 40000}),
+                "guidance_scale": ("FLOAT", {"default": 2.5, "min": 0, "max": 10, "step": 0.01}),
+                "output_format": (["jpeg", "png"], {"default": "jpeg"}),
+                "image_size": (
+                    [
+                        "square_hd",
+                        "square",
+                        "portrait_4_3",
+                        "portrait_16_9",
+                        "landscape_4_3",
+                        "landscape_16_9",
+                        "custom",
+                    ],
+                    {"default": "square_hd"},
+                )
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        prompt,
+        image,
+        images=None,
+        num_images=1,
+        output_format="jpeg",
+        guidance_scale=2.5,
+        acceleration="regular",
+        image_size="square_hd",
+        enable_safety_checker=True,
+        steps =40,
+        lora_scale=1,
+        seed=42,
+        
+    ):
+        # Upload all provided images
+        singleImages = ImageUtils.prepare_images([image])
+        batchImages = ImageUtils.prepare_images(images)
+        image_urls = singleImages + batchImages
+        
+
+        arguments = {
+  "image_urls": image_urls,
+  "prompt": prompt,
+  "guidance_scale": guidance_scale,
+  "num_inference_steps": steps,
+  "acceleration": acceleration,
+  "enable_safety_checker": enable_safety_checker,
+  "output_format": output_format,
+  "num_images": num_images,
+  "lora_scale": lora_scale,
+  "image_size": image_size,
+  "seed": seed
+}
+        try:
+            result = ApiHandler.submit_and_get_result("fal-ai/flux-2-lora-gallery/virtual-tryon", arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("Flux 2 Lora Gallery Virtual TryOn", e)
+
+
 class Imagen4PreviewNode:
     @classmethod
     def INPUT_TYPES(cls):
@@ -2094,10 +2174,289 @@ class Dreamina31TextToImage:
             return ApiHandler.handle_image_generation_error("Dreamina v3.1 Text-to-Image", e)
 
 
+class ImageAppsV2VirtualTryOn:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "person_image": ("IMAGE",),
+                "clothing_image": ("IMAGE",),
+                "preserve_pose": ("BOOLEAN", {"default": True}),
+                
+            },
+            "optional": {
+                "aspect_ratio": (
+                    [
+                        None,
+                        "1:1",
+                        "16:9",
+                        "9:16",
+                        "3:4",
+                        "4:3",
+                    ],
+                    {"default": None},
+                )
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        person_image,
+        clothing_image,
+        aspect_ratio=None,
+        preserve_pose=True
+    ):
+        # Upload all provided images
+        
+        if person_image is None or clothing_image is None:
+            print("Error: Both person_image and clothing_image are required for Virtual Try-On")
+            return ResultProcessor.create_blank_image()
+        
+        person_image_url = ImageUtils.upload_image(person_image)
+        if not person_image_url:
+            print("Error: Failed to upload person_image for Virtual Try-On")
+            return ResultProcessor.create_blank_image()
+        clothing_image_url = ImageUtils.upload_image(clothing_image)
+        if not clothing_image_url:
+            print("Error: Failed to upload clothing_image for Virtual Try-On")
+            return ResultProcessor.create_blank_image()
+        aRatio = aspect_ratio if aspect_ratio is not None else {}
+        
+        arguments = {
+                    "person_image_url": person_image_url,
+                    "clothing_image_url": clothing_image_url,
+                    "preserve_pose": preserve_pose,
+                    "aspect_ratio": aRatio
+                    }
+        endpoint = "fal-ai/image-apps-v2/virtual-try-on"
+        try:
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("Image Apps V2 Virtual Try-On", e)
+
+
+
+class EaselAIFashionTryOn:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "person_image": ("IMAGE",),
+                "clothing_image": ("IMAGE",),
+                "gender": (
+                    [
+                        "female",
+                        "male",
+                    ],
+                    {"default": "female"},
+                )
+                
+            }
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        full_body_image,
+        clothing_image,
+        gender="female"
+    ):
+        # Upload all provided images
+        
+        if full_body_image is None or clothing_image is None:
+            print("Error: Both person_image and clothing_image are required for Virtual Try-On")
+            return ResultProcessor.create_blank_image()
+        
+        full_body_image_url = ImageUtils.upload_image(full_body_image)
+        if not full_body_image_url:
+            print("Error: Failed to upload person_image for Virtual Try-On")
+            return ResultProcessor.create_blank_image()
+        clothing_image_url = ImageUtils.upload_image(clothing_image)
+        if not clothing_image_url:
+            print("Error: Failed to upload clothing_image for Virtual Try-On")
+            return ResultProcessor.create_blank_image()
+        arguments = {
+  "full_body_image": full_body_image_url,
+  "clothing_image": clothing_image_url,
+  "gender": gender
+}
+        endpoint = "easel-ai/fashion-tryon"
+        try:
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("Easel AI Fashion Try-On", e)
+
+
+
+class KlingV15KolorsVirtualTryOn:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "human_image": ("IMAGE",),
+                "garment_image": ("IMAGE",),
+                "gender": (
+                    [
+                        "female",
+                        "male",
+                    ],
+                    {"default": "female"},
+                )
+                
+            }
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        human_image,
+        garment_image
+    ):
+        # Upload all provided images
+        
+        if human_image is None or garment_image is None:
+            print("Error: Both human_image and garment_image are required for Virtual Try-On")
+            return ResultProcessor.create_blank_image()
+        
+        human_image = ImageUtils.upload_image(human_image)
+        if not human_image:
+            print("Error: Failed to upload human_image for Virtual Try-On")
+            return ResultProcessor.create_blank_image()
+        garment_image = ImageUtils.upload_image(garment_image)
+        if not garment_image:
+            print("Error: Failed to upload garment_image for Virtual Try-On")
+            return ResultProcessor.create_blank_image()
+        arguments = {
+  "human_image_url": human_image,
+  "garment_image_url": garment_image
+}
+        endpoint = "fal-ai/kling/v1-5/kolors-virtual-try-on"
+        try:
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("Kling V1.5 Kolors Virtual Try-On", e)
+
+
+
+class FashnTryOnV16:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "model_image": ("IMAGE",),
+                "garment_image": ("IMAGE",),
+                "category": (
+                    [
+                        "auto",
+                        "tops",
+                        "bottoms",
+                        "one-pieces",
+                    ],
+                    {"default": "auto"},
+                ),
+                "mode": (
+                    [
+                        "balanced",
+                        "performance",
+                        "quality"
+                    ],
+                    {"default": "balanced"},
+                ),
+                "garment_photo_type": (
+                    [
+                        "auto",
+                        "model",
+                        "flat-lay"
+                    ],
+                    {"default": "auto"},
+                ),
+                "moderation": (
+                    [
+                        "none",
+                        "permissive",
+                        "conservative"
+                    ],
+                    {"default": "permissive"},
+                ),
+                "num_samples": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "segmentation_free": ("BOOLEAN", {"default": True}),
+                "output_format": (["png", "jpeg"], {"default": "png"}),
+                
+            }
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        model_image,
+        garment_image,
+        category,
+        mode,
+        garment_photo_type,
+        moderation,
+        num_samples,
+        segmentation_free,
+        output_format
+    ):
+        # Upload all provided images
+        
+        if model_image is None or garment_image is None:
+            print("Error: Both human_image and garment_image are required for Virtual Try-On")
+            return ResultProcessor.create_blank_image()
+        
+        model_image = ImageUtils.upload_image(model_image)
+        if not model_image:
+            print("Error: Failed to upload human_image for Virtual Try-On")
+            return ResultProcessor.create_blank_image()
+        garment_image = ImageUtils.upload_image(garment_image)
+        if not garment_image:
+            print("Error: Failed to upload garment_image for Virtual Try-On")
+            return ResultProcessor.create_blank_image()
+        arguments = {
+  "model_image": model_image,
+  "garment_image": garment_image,
+  "category": category,
+  "mode": mode,
+  "garment_photo_type": garment_photo_type,
+  "moderation_level": moderation,
+  "num_samples": num_samples,
+  "segmentation_free": segmentation_free,
+  "output_format": output_format
+}
+        endpoint = "fal-ai/fashn/tryon/v1.6"
+        try:
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("Fashn Try-On V1.6", e)
+
+
+
+
+
 # Node class mappings
 NODE_CLASS_MAPPINGS = {
     "Ideogramv3_fal": Ideogramv3,
+    "ImageAppsV2VirtualTryOn_fal": ImageAppsV2VirtualTryOn,
+    "EaselAIFashionTryOn_fal": EaselAIFashionTryOn,
     "Hidreamfull_fal": HidreamFull,
+    "FashnTryOnV16_fal": FashnTryOnV16,
     "FluxPro_fal": FluxPro,
     "FluxDev_fal": FluxDev,
     "FluxSchnell_fal": FluxSchnell,
@@ -2111,6 +2470,7 @@ NODE_CLASS_MAPPINGS = {
     "FluxProKontext_fal": FluxProKontext,
     "FluxProKontextMulti_fal": FluxProKontextMulti,
     "FluxProKontextTextToImage_fal": FluxProKontextTextToImage,
+    "Flux2LoraGalleryVirtualTryOn_fal": Flux2LoraGalleryVirtualTryOn,
     "Imagen4Preview_fal": Imagen4PreviewNode,
     "QwenImageEdit_fal": QwenImageEdit,
     "QwenImageEditPlusLoRA_fal": QwenImageEditPlusLoRA,

@@ -56,7 +56,8 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 ## Available Nodes
 
 ### Image Generation
-
+- **Easel AI Fashion Try-On (fal)**: Virtual try-on for clothing using Easel AI
+- **Fashn Try-On V1.6 (fal)**: Virtual try-on for clothing using Fashn Try-On V1.6
 - **Flux Pro (fal)**: Generate high-quality images using the Flux Pro model
 - **Flux Dev (fal)**: Use the development version of Flux for image generation
 - **Flux Schnell (fal)**: Fast image generation with Flux Schnell
@@ -68,10 +69,12 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **Flux Pro Kontext (fal)**: Context-aware single image-to-image generation with max_quality toggle
 - **Flux Pro Kontext Multi (fal)**: Multi-image composition (2-4 images) with context awareness and max_quality toggle
 - **Flux Pro Kontext Text-to-Image (fal)**: Text-to-image with aspect ratio controls and max_quality toggle
+- **Flux 2 Lora Gallery Virtual Try-On (fal)**: Virtual try-on for clothing using Flux 2 Lora Gallery
 - **Recraft V3 (fal)**: Professional design generation with multiple style options
 - **Sana (fal)**: High-quality image synthesis with ultra-high resolution support
 - **HiDream Full (fal)**: Advanced image generation with comprehensive parameter control
 - **Ideogram v3 (fal)**: Advanced text-to-image generation with typography support
+- **Image Apps V2 Virtual Try-On (fal)**: Virtual try-on for clothing using Image Apps V2
 - **Clarity Upscaler (fal)**: Clarity upscaler for upscaling images with high very fidelity
 - **Seedvr Upscaler (fal)**: Use SeedVR2 to upscale your images
 - **Imagen4 Preview (fal)**: Use Imagen4 (Preview version) to generate images
