@@ -2612,6 +2612,49 @@ class EaselAIFashionTryOn:
 
 
 
+class HunyuanWorld:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "image": ("IMAGE",),
+                "prompt": ("STRING", {"default": "", "multiline": True})
+            }
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        image,
+        prompt
+    ):
+        # Upload all provided images
+        
+        if image is None:
+            print("Error: Image is required for Hunyuan World")
+            return ResultProcessor.create_blank_image()
+        
+        image = ImageUtils.upload_image(image)
+        if not image:
+            print("Error: Failed to upload image for Hunyuan World")
+            return ResultProcessor.create_blank_image()
+        arguments = {
+  "image_url": image,
+  "prompt": prompt
+}
+        endpoint = "fal-ai/hunyuan_world"
+        try:
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            return ResultProcessor.process_single_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("Hunyuan World", e)
+
+
+
+
 class KlingV15KolorsVirtualTryOn:
     @classmethod
     def INPUT_TYPES(cls):
@@ -2904,6 +2947,7 @@ NODE_CLASS_MAPPINGS = {
     "Ideogramv3_fal": Ideogramv3,
     "ImageAppsV2VirtualTryOn_fal": ImageAppsV2VirtualTryOn,
     "EaselAIFashionTryOn_fal": EaselAIFashionTryOn,
+    "HunyuanWorld_fal": HunyuanWorld,
     "Hidreamfull_fal": HidreamFull,
     "FashnTryOnV16_fal": FashnTryOnV16,
     "FluxPro_fal": FluxPro,
@@ -2937,6 +2981,9 @@ NODE_CLASS_MAPPINGS = {
 NODE_DISPLAY_NAME_MAPPINGS = {
     "ByteDanceSeedreamV45Edit_fal": "ByteDance Seedream V4.5 Edit (fal)",
     "Ideogramv3_fal": "Ideogramv3 (fal)",
+    "ImageAppsV2VirtualTryOn_fal": "Image Apps V2 Virtual Try-On (fal)",
+    "EaselAIFashionTryOn_fal": "Easel AI Fashion Try-On (fal)",
+    "HunyuanWorld_fal": "Hunyuan World (fal)",
     "Hidreamfull_fal": "HidreamFull (fal)",
     "FluxPro_fal": "Flux Pro (fal)",
     "FluxDev_fal": "Flux Dev (fal)",

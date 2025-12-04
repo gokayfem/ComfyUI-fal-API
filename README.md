@@ -80,6 +80,7 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **Recraft V3 (fal)**: Professional design generation with multiple style options
 - **Sana (fal)**: High-quality image synthesis with ultra-high resolution support
 - **HiDream Full (fal)**: Advanced image generation with comprehensive parameter control
+- **Hunyuan World (fal)**: Generate Panoramic (360-degree) images using Hunyuan World model
 - **Ideogram v3 (fal)**: Advanced text-to-image generation with typography support
 - **Image Apps V2 Virtual Try-On (fal)**: Virtual try-on for clothing using Image Apps V2
 - **Clarity Upscaler (fal)**: Clarity upscaler for upscaling images with high very fidelity
