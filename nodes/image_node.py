@@ -1391,10 +1391,11 @@ class Flux2LoraGalleryVirtualTryOn:
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
                 "image": ("IMAGE",),
-                "images": ("IMAGE", {"default": None, "multiple": True}),
                 
             },
             "optional": {
+                
+                "images": ("IMAGE", {"default": None, "multiple": True}),
                 "enable_safety_checker": ("BOOLEAN", {"default": True}),
                 "acceleration": ("STRING", {"default": "regular"}),
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
@@ -1463,6 +1464,320 @@ class Flux2LoraGalleryVirtualTryOn:
         except Exception as e:
             return ApiHandler.handle_image_generation_error("Flux 2 Lora Gallery Virtual TryOn", e)
 
+
+
+
+class Flux2LoraGalleryAddBackground:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image": ("IMAGE",),
+                
+            },
+            "optional": {
+                "images": ("IMAGE", {"default": None, "multiple": True}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                "acceleration": ([
+                        "regular",
+                        "none"
+                    ], {"default": "regular"}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "steps": ("INT", {"default": 40, "min": 1, "max": 60}),
+                "seed": ("INT", {"default": 42, "min": 1, "max": 40000}),
+                "guidance_scale": ("FLOAT", {"default": 2.5, "min": 0, "max": 10, "step": 0.01}),
+                "output_format": (["jpeg", "png"], {"default": "jpeg"}),
+                "image_size": (
+                    [
+                        "square_hd",
+                        "square",
+                        "portrait_4_3",
+                        "portrait_16_9",
+                        "landscape_4_3",
+                        "landscape_16_9",
+                        "custom",
+                    ],
+                    {"default": "square_hd"},
+                )
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        prompt,
+        image,
+        images=None,
+        num_images=1,
+        output_format="jpeg",
+        guidance_scale=2.5,
+        acceleration="regular",
+        image_size="square_hd",
+        enable_safety_checker=True,
+        steps =40,
+        seed=42,
+        
+    ):
+        # Upload all provided images
+        singleImages = ImageUtils.prepare_images([image])
+        batchImages = ImageUtils.prepare_images(images)
+        image_urls = singleImages + batchImages
+        
+
+        arguments = {
+  "image_urls": image_urls,
+  "prompt": prompt,
+  "guidance_scale": guidance_scale,
+  "num_inference_steps": steps,
+  "acceleration": acceleration,
+  "enable_safety_checker": enable_safety_checker,
+  "output_format": output_format,
+  "num_images": num_images,
+  "image_size": image_size,
+  "seed": seed
+}
+        try:
+            result = ApiHandler.submit_and_get_result("fal-ai/flux-2-lora-gallery/add-background", arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("Flux 2 Lora Gallery Add Background", e)
+
+
+
+class Flux2Edit:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image": ("IMAGE",),
+                
+            },
+            "optional": {
+                "images": ("IMAGE", {"default": None, "multiple": True}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                "acceleration": ("STRING", {"default": "regular"}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "steps": ("INT", {"default": 40, "min": 1, "max": 60}),
+                "seed": ("INT", {"default": 42, "min": 1, "max": 40000}),
+                "guidance_scale": ("FLOAT", {"default": 2.5, "min": 0, "max": 10, "step": 0.01}),
+                "output_format": (["jpeg", "png"], {"default": "jpeg"}),
+                "image_size": (
+                    [
+                        "square_hd",
+                        "square",
+                        "portrait_4_3",
+                        "portrait_16_9",
+                        "landscape_4_3",
+                        "landscape_16_9",
+                        "custom",
+                    ],
+                    {"default": "square_hd"},
+                )
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        prompt,
+        image,
+        images=None,
+        num_images=1,
+        output_format="jpeg",
+        guidance_scale=2.5,
+        acceleration="regular",
+        image_size="square_hd",
+        enable_safety_checker=True,
+        steps =40,
+        seed=42,
+        
+    ):
+        # Upload all provided images
+        singleImages = ImageUtils.prepare_images([image])
+        image_urls = singleImages
+        if images is None:
+            images = []
+            batchImages = ImageUtils.prepare_images(images)
+            image_urls = singleImages + batchImages
+        
+
+        arguments = {
+  "image_urls": image_urls,
+  "prompt": prompt,
+  "guidance_scale": guidance_scale,
+  "num_inference_steps": steps,
+  "acceleration": acceleration,
+  "enable_safety_checker": enable_safety_checker,
+  "output_format": output_format,
+  "num_images": num_images,
+  "image_size": image_size,
+  "seed": seed
+}
+        try:
+            result = ApiHandler.submit_and_get_result("fal-ai/flux-2/edit", arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("Flux 2 Edit", e)
+
+class Flux2FlexEdit:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image": ("IMAGE",),
+                
+            },
+            "optional": {
+                "images": ("IMAGE", {"default": None, "multiple": True}),
+                "enable_prompt_expansion": ("BOOLEAN", {"default": True}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "steps": ("INT", {"default": 40, "min": 1, "max": 60}),
+                "seed": ("INT", {"default": 42, "min": 1, "max": 40000}),
+                "guidance_scale": ("FLOAT", {"default": 2.5, "min": 0, "max": 10, "step": 0.01}),
+                "output_format": (["jpeg", "png"], {"default": "jpeg"}),
+                "image_size": (
+                    [
+                        "square_hd",
+                        "square",
+                        "portrait_4_3",
+                        "portrait_16_9",
+                        "landscape_4_3",
+                        "landscape_16_9",
+                        "custom",
+                    ],
+                    {"default": "square_hd"},
+                )
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        prompt,
+        image,
+        images=None,
+        num_images=1,
+        output_format="jpeg",
+        guidance_scale=2.5,
+        image_size="square_hd",
+        enable_safety_checker=True,
+        enable_prompt_expansion=True,
+        steps =40,
+        seed=42,
+        
+    ):
+        # Upload all provided images
+        singleImages = ImageUtils.prepare_images([image])
+        image_urls = singleImages
+        if images is None:
+            images = []
+            batchImages = ImageUtils.prepare_images(images)
+            image_urls = singleImages + batchImages
+        
+
+        arguments = {
+  "image_urls": image_urls,
+  "prompt": prompt,
+  "guidance_scale": guidance_scale,
+  "num_inference_steps": steps,
+  "enable_safety_checker": enable_safety_checker,
+  "output_format": output_format,
+  "num_images": num_images,
+    "enable_prompt_expansion": enable_prompt_expansion,
+  "image_size": image_size,
+  "seed": seed
+}
+        try:
+            result = ApiHandler.submit_and_get_result("fal-ai/flux-2-flex/edit", arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("Flux 2 Flex Edit", e)
+
+
+class Flux2ProEdit:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image": ("IMAGE",)
+                
+            },
+            "optional": {
+                "images": ("IMAGE", {"default": None, "multiple": True}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                "seed": ("INT", {"default": 42, "min": 1, "max": 40000}),
+                "safety_tolerance": ("INT", {"default": 2, "min": 0, "max": 10}),
+                "output_format": (["jpeg", "png"], {"default": "jpeg"}),
+                "image_size": (
+                    [
+                        "square_hd",
+                        "square",
+                        "portrait_4_3",
+                        "portrait_16_9",
+                        "landscape_4_3",
+                        "landscape_16_9",
+                        "custom",
+                    ],
+                    {"default": "square_hd"},
+                )
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        prompt,
+        image,
+        images=None,
+        safety_tolerance=2,
+        output_format="jpeg",
+        image_size="square_hd",
+        enable_safety_checker=True,
+        seed=42,
+        
+    ):
+        # Upload all provided images
+        singleImages = ImageUtils.prepare_images([image])
+        image_urls = singleImages
+        if images is None:
+            images = []
+            batchImages = ImageUtils.prepare_images(images)
+            image_urls = singleImages + batchImages
+        
+
+        arguments = {
+  "image_urls": image_urls,
+  "prompt": prompt,
+  "enable_safety_checker": enable_safety_checker,
+  "output_format": output_format,
+  "safety_tolerance": safety_tolerance,
+  "image_size": image_size,
+  "seed": seed
+}
+        try:
+            result = ApiHandler.submit_and_get_result("fal-ai/flux-2-pro/edit", arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("Flux 2 Pro Edit", e)
+        
+        
 
 class Imagen4PreviewNode:
     @classmethod
@@ -2265,18 +2580,18 @@ class EaselAIFashionTryOn:
 
     def generate_image(
         self,
-        full_body_image,
+        person_image,
         clothing_image,
         gender="female"
     ):
         # Upload all provided images
         
-        if full_body_image is None or clothing_image is None:
+        if person_image is None or clothing_image is None:
             print("Error: Both person_image and clothing_image are required for Virtual Try-On")
             return ResultProcessor.create_blank_image()
         
-        full_body_image_url = ImageUtils.upload_image(full_body_image)
-        if not full_body_image_url:
+        person_image_url = ImageUtils.upload_image(person_image)
+        if not person_image_url:
             print("Error: Failed to upload person_image for Virtual Try-On")
             return ResultProcessor.create_blank_image()
         clothing_image_url = ImageUtils.upload_image(clothing_image)
@@ -2284,7 +2599,7 @@ class EaselAIFashionTryOn:
             print("Error: Failed to upload clothing_image for Virtual Try-On")
             return ResultProcessor.create_blank_image()
         arguments = {
-  "full_body_image": full_body_image_url,
+  "full_body_image": person_image_url,
   "clothing_image": clothing_image_url,
   "gender": gender
 }
@@ -2322,7 +2637,8 @@ class KlingV15KolorsVirtualTryOn:
     def generate_image(
         self,
         human_image,
-        garment_image
+        garment_image,
+        gender="female"
     ):
         # Upload all provided images
         
@@ -2340,7 +2656,8 @@ class KlingV15KolorsVirtualTryOn:
             return ResultProcessor.create_blank_image()
         arguments = {
   "human_image_url": human_image,
-  "garment_image_url": garment_image
+  "garment_image_url": garment_image,
+    "gender": gender
 }
         endpoint = "fal-ai/kling/v1-5/kolors-virtual-try-on"
         try:
@@ -2348,6 +2665,131 @@ class KlingV15KolorsVirtualTryOn:
             return ResultProcessor.process_image_result(result)
         except Exception as e:
             return ApiHandler.handle_image_generation_error("Kling V1.5 Kolors Virtual Try-On", e)
+
+
+
+
+class KlingImageO1:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "images": ("IMAGE", {"default": None, "multiple": True}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "output_format": (["jpeg", "png"], {"default": "png"}), 
+                "aspect_ratio": (
+                    ["auto","16:9", "4:3", "3:2", "1:1", "2:3", "3:4", "9:16", "21:9"],
+                    {"default": "auto"},
+                ),
+                "resolution": (
+                    [
+                        "1K",
+                        "2K",
+                    ],
+                    {"default": "1K"},
+                )
+                
+            }
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        prompt,
+        images = None,
+        num_images = 1,
+        output_format = "png",
+        aspect_ratio = "auto",
+        resolution = "1K"
+        
+        
+    ):
+        # Upload all provided images
+        if images is None:
+            print("Error: Images are required for Kling Image o1")
+            return ResultProcessor.create_blank_image()
+        image_urls = ImageUtils.prepare_images(images)
+        
+        arguments = {
+  "prompt": prompt,
+  "image_urls": image_urls,
+  "resolution": resolution,
+  "num_images": num_images,
+  "aspect_ratio": aspect_ratio,
+  "output_format": output_format
+}
+        endpoint = "fal-ai/kling-image/o1"
+        try:
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("Kling Image o1", e)
+
+
+class ByteDanceSeedreamV45Edit:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "images": ("IMAGE", {"default": None, "multiple": True}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "image_size": (
+                    [
+                        "square_hd",
+                        "square",
+                        "portrait_4_3",
+                        "portrait_16_9",
+                        "landscape_4_3",
+                        "landscape_16_9",
+                        "custom",
+                    ],
+                    {"default": "square_hd"},
+                ),
+                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                
+                
+            }
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        prompt,
+        images = None,
+        num_images = 1,
+        image_size = "square_hd",
+        enable_safety_checker = True
+        
+        
+    ):
+        # Upload all provided images
+        if images is None:
+            print("Error: Images are required for ByteDance Seedream V4.5 Edit")
+            return ResultProcessor.create_blank_image()
+        image_urls = ImageUtils.prepare_images(images)
+        
+        arguments = {
+  "prompt": prompt,
+  "image_urls": image_urls,
+  "image_size": image_size,
+  "num_images": num_images,
+  "max_images": num_images,
+  "enable_safety_checker": enable_safety_checker
+}
+        endpoint = "fal-ai/bytedance/seedream/v4.5/edit"
+        try:
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("ByteDance Seedream V4.5 Edit", e)
 
 
 
@@ -2452,6 +2894,13 @@ class FashnTryOnV16:
 
 # Node class mappings
 NODE_CLASS_MAPPINGS = {
+    "Flux2LoraGalleryAddBackground_fal": Flux2LoraGalleryAddBackground,
+    "Flux2Edit_fal": Flux2Edit,
+    "Flux2FlexEdit_fal": Flux2FlexEdit,
+    "Flux2ProEdit_fal": Flux2ProEdit,
+    "KlingImageO1_fal": KlingImageO1,
+    "ByteDanceSeedreamV45Edit_fal": ByteDanceSeedreamV45Edit,
+    "KlingV15KolorsVirtualTryOn_fal": KlingV15KolorsVirtualTryOn,
     "Ideogramv3_fal": Ideogramv3,
     "ImageAppsV2VirtualTryOn_fal": ImageAppsV2VirtualTryOn,
     "EaselAIFashionTryOn_fal": EaselAIFashionTryOn,
@@ -2486,6 +2935,7 @@ NODE_CLASS_MAPPINGS = {
 
 # Display name mappings
 NODE_DISPLAY_NAME_MAPPINGS = {
+    "ByteDanceSeedreamV45Edit_fal": "ByteDance Seedream V4.5 Edit (fal)",
     "Ideogramv3_fal": "Ideogramv3 (fal)",
     "Hidreamfull_fal": "HidreamFull (fal)",
     "FluxPro_fal": "Flux Pro (fal)",
@@ -2496,6 +2946,13 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxUltra_fal": "Flux Ultra (fal)",
     "FluxGeneral_fal": "Flux General (fal)",
     "FluxLora_fal": "Flux LoRA (fal)",
+    "Flux2LoraGalleryAddBackground_fal": "Flux2LoraGallery Add Background (fal)",
+    "Flux2Edit_fal": "Flux2 Edit (fal)",
+    "Flux2FlexEdit_fal": "Flux2 Flex Edit (fal)",
+    "Flux2ProEdit_fal": "Flux2 Pro Edit (fal)",
+    "Flux2LoraGalleryVirtualTryOn_fal": "Flux2LoraGallery Virtual Try-On (fal)",
+    "KlingImageO1_fal": "Kling Image o1 (fal)",
+    "KlingV15KolorsVirtualTryOn_fal": "Kling V1.5 Kolors Virtual Try-On (fal)", 
     "Recraft_fal": "Recraft V3 (fal)",
     "Sana_fal": "Sana (fal)",
     "FluxProKontext_fal": "Flux Pro Kontext (fal)",
