@@ -76,6 +76,7 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **Seedvr Upscaler (fal)**: Use SeedVR2 to upscale your images
 - **Imagen4 Preview (fal)**: Use Imagen4 (Preview version) to generate images
 - **Qwen Image Edit (fal)**: Use Qwen to edit images
+- **Qwen Image Edit Plus with LoRAs (fal)**: Use Qwen Image Edit Plus with LoRA support to edit images
 - **SeedEdit 3.0 (fal)**: Use SeedEdit 3.0 to edit images
 - **Seedream 4.0 Edit (fal)**: Use Seedream 4.0 to edit images
 - **Nano Banana Text-to-Image (fal)**: Use Nano Banana to generate images
@@ -83,6 +84,8 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **Nano Banana Pro (fal)**: Unified node for both text-to-image and image editing with Nano Banana Pro
 - **Reve Text-to-Image (fal)**: Use Reve's image model to generate images
 - **Dreamina v3.1 Text-to-Image (fal)**: Use Dreamina v3.1 to generate images
+- **DY Wan Fun 2.2 (fal)**: Generate images using DY Wan Fun 2.2 model
+- **DY Wan Upscaler (fal)**: Upscale images using DY Wan Upscaler
 
 ### Video Generation
 
@@ -93,21 +96,30 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **Kling Master v2.0 Video Generation (fal)**: Advanced video generation with Kling Master
 - **Kling Pro 2.1 Video Generation (fal)**: Video Generation with Kling Pro with First Frame Last Frame support
 - **Kling v2.5 Turbo Pro Image-to-Video (fal)**: Video Generation with Kling Turbo with First Frame Last Frame support
+- **Kling Omni Image-to-Video (fal)**: Kling Omni image-to-video generation with start/end image support
+- **Kling Omni Reference-to-Video (fal)**: Generate videos with reference images and elements
+- **Kling Omni Video-to-Video Edit (fal)**: Edit videos with prompts and reference images
+- **Kling Omni Video-to-Video Reference (fal)**: Video-to-video with reference image control
 - **Krea Wan 14b Video-to-Video (fal)**: Video-to-Video generation using Krea Wan 14b model
 - **Runway Gen3 Image-to-Video (fal)**: Convert images to videos using Runway Gen3
 - **Luma Dream Machine (fal)**: Create videos with Luma Dream Machine
 - **MiniMax Video Generation (fal)**: Generate videos using MiniMax model
 - **MiniMax Text-to-Video (fal)**: Create videos from text prompts using MiniMax
 - **MiniMax Subject Reference (fal)**: Generate videos with subject reference using MiniMax
-- **Pixverse Swap (fal)**: Swap a person, object, or background in a video using Pixverse Swap.
+- **Pixverse Swap (fal)**: Swap a person, object, or background in a video using Pixverse Swap
 - **Google Veo2 Image-to-Video (fal)**: Convert images to videos using Google's Veo2 model
+- **Veo3 Video Generation (fal)**: Text-to-video generation with Google Veo3 model
 - **Veo 3.1 First-Last-Frame-to-Video (fal)**: First Frame - Last Frame (Optional) video generation using the full VEO 3.1 model
 - **Veo 3.1 Fast First-Last-Frame-to-Video (fal)**: First Frame - Last Frame (Optional) video generation using the fast VEO 3.1 model
 - **Wan Pro Image-to-Video (fal)**: High-quality video generation with Wan Pro model
 - **Wan 2.5 Preview Image-to-Video (fal)**: Image-to-video generation with the latest Wan 2.5 preview model
-- **Wan VACE Video Edit (fal)**: Video + Reference Images to video generation with Wan VACE.
-- **Wan 2.2 14b Animate: Replace Character (fal)**: Animate video content by replacing the foreground character with a new or augmented character using Wan 2.2 14b.
-- **Wan 2.2 14b Animate: Move Character (fal)**: Animate video content by moving the foreground character within the scene using Wan 2.2 14b.
+- **Wan VACE Video Edit (fal)**: Video + Reference Images to video generation with Wan VACE
+- **Wan 2.2 VACE Fun 14b (fal)**: Video editing with Wan 2.2 VACE Fun 14b model for pose and depth control
+- **Wan 2.2 14b Animate: Replace Character (fal)**: Animate video content by replacing the foreground character with a new or augmented character using Wan 2.2 14b
+- **Wan 2.2 14b Animate: Move Character (fal)**: Animate video content by moving the foreground character within the scene using Wan 2.2 14b
+- **Seedance Image-to-Video (fal)**: Convert images to videos using Seedance Lite model
+- **Seedance Text-to-Video (fal)**: Generate videos from text prompts using Seedance Lite model
+- **Seedance Pro Image-to-Video (fal)**: Convert images to videos using Seedance Pro model with advanced controls
 - **Sora 2 Pro Image-to-Video (fal)**: Generate Videos from an image input using OpenAI Sora 2 Pro
 - **Video Upscaler (fal)**: Upscale video quality using AI
 - **Seedvr Upscale Video (fal)**: Upscale video quality using Seedvr
