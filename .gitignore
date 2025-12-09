@@ -171,3 +171,4 @@ memory-bank/
 .DS_Store
 .claude/
 Node-Docs/
+.vscode/settings.json
