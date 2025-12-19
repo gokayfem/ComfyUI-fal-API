@@ -1091,45 +1091,50 @@ class Wan2214bAnimateReplaceNode:
         return {
             "required": {
                 "image": ("IMAGE", {"default": None}),
-
             },
             "optional": {
                 "video": ("VIDEO", {"default": None}),
                 "input_video_url": ("STRING", {"default": ""}),
+                "turbo": ("BOOLEAN", {"default": True}),
                 "resolution": (
-                    ["auto", "240p", "360p", "480p", "580p", "720p", "1080p"],
-                    {"default": "auto"}
+                    ["480p", "580p", "720p"],
+                    {"default": "480p"}
                 ),
-                "num_inference_steps": ("INT", {"default": 20, "min": 1}),
-                "shift": ("INT", {"default": 5}),
-                "video_quality": (["low", "medium", "high"], {"default": "high"}),
-                "video_write_mode": (["balanced", "fast", "high_quality"], {"default": "balanced"}),
-                "seed": ("INT", {"default": 24}),
+                "seed": ("INT", {"default": 24, "min": 0, "max": 2147483647}),
+                "num_inference_steps": ("INT", {"default": 20, "min": 1, "max": 40, "step": 1}),
+                "guidance_scale": ("FLOAT", {"default": 1.0, "min": 1.0, "max": 10.0, "step": 0.1}),
+                "shift": ("INT", {"default": 8, "min": 1, "max": 10, "step": 1}),
+                "video_quality": (["low", "medium", "high", "maximum"], {"default": "high"}),
+                "video_write_mode": (["balanced", "fast", "small"], {"default": "balanced"}),
                 "enable_safety_checker": ("BOOLEAN", {"default": True}),
                 "enable_output_safety_checker": ("BOOLEAN", {"default": False}),
+                "return_frames_zip": ("BOOLEAN", {"default": False}),
                 "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
             },
         }
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("video_url",)
-    OUTPUT_IS_LIST = (True,)
+    RETURN_TYPES = ("STRING","STRING")
+    RETURN_NAMES = ("video_url","frames_zip_url",)
+    OUTPUT_IS_LIST = (True,True)
     FUNCTION = "edit_video"
     CATEGORY = "FAL/VideoGeneration"
 
     def edit_video(
         self,
+        image=None,
         video=None,
         input_video_url="",
-        image=None,
-        resolution="auto",
+        turbo=True,
+        resolution="480p",
+        seed=24,
         num_inference_steps=20,
-        shift=5,
+        guidance_scale=1.0,
+        shift=8,
         video_quality="high",
         video_write_mode="balanced",
-        seed=24,
         enable_safety_checker=True,
         enable_output_safety_checker=False,
+        return_frames_zip=False,
         variations=1,
     ):
         try:
@@ -1154,17 +1159,20 @@ class Wan2214bAnimateReplaceNode:
                 )
 
             arguments={
-        "video_url": video_url,
-        "image_url": image_url,
-        "resolution": resolution,
-        "num_inference_steps": num_inference_steps,
-        "enable_safety_checker": enable_safety_checker,
-        "enable_output_safety_checker": enable_output_safety_checker,
-        "shift": shift,
-        "video_quality": video_quality,
-        "video_write_mode": video_write_mode,
-        "seed": seed
-    }
+                "video_url": video_url,
+                "image_url": image_url,
+                "turbo": turbo,
+                "resolution": resolution,
+                "seed": seed,
+                "num_inference_steps": num_inference_steps,
+                "guidance_scale": guidance_scale,
+                "shift": shift,
+                "video_quality": video_quality,
+                "video_write_mode": video_write_mode,
+                "enable_safety_checker": enable_safety_checker,
+                "enable_output_safety_checker": enable_output_safety_checker,
+                "return_frames_zip": return_frames_zip,
+            }
 
             results = ApiHandler.submit_multiple_and_get_results(
                 "fal-ai/wan/v2.2-14b/animate/replace",
@@ -1172,7 +1180,10 @@ class Wan2214bAnimateReplaceNode:
                 variations
             )
 
-            return ([r["video"]["url"] for r in results],)
+            video_url = [r["video"]["url"] for r in results]
+            frames_zip_url = [r.get("frames_zip", {}).get("url", "") for r in results] if return_frames_zip else [""] * len(results)
+
+            return (video_url, frames_zip_url)
 
         except Exception as e:
             return ApiHandler.handle_video_generation_error("wan-22animatereplace", str(e))
@@ -1186,51 +1197,56 @@ class Wan2214bAnimateMoveNode:
         return {
             "required": {
                 "image": ("IMAGE", {"default": None}),
-
             },
             "optional": {
                 "video": ("VIDEO", {"default": None}),
                 "input_video_url": ("STRING", {"default": ""}),
+                "turbo": ("BOOLEAN", {"default": True}),
                 "resolution": (
                     ["480p", "580p", "720p"],
                     {"default": "480p"}
                 ),
-                "num_inference_steps": ("INT", {"default": 20, "min": 1}),
-                "shift": ("INT", {"default": 5}),
-                "video_quality": (["low", "medium", "high"], {"default": "high"}),
-                "video_write_mode": (["balanced", "fast", "high_quality"], {"default": "balanced"}),
-                "seed": ("INT", {"default": 24}),
+                "seed": ("INT", {"default": 24, "min": 0, "max": 2147483647}),
+                "num_inference_steps": ("INT", {"default": 20, "min": 1, "max": 40, "step": 1}),
+                "guidance_scale": ("FLOAT", {"default": 1.0, "min": 1.0, "max": 10.0, "step": 0.1}),
+                "shift": ("INT", {"default": 8, "min": 1, "max": 10, "step": 1}),
+                "video_quality": (["low", "medium", "high", "maximum"], {"default": "high"}),
+                "video_write_mode": (["balanced", "fast", "small"], {"default": "balanced"}),
                 "enable_safety_checker": ("BOOLEAN", {"default": True}),
                 "enable_output_safety_checker": ("BOOLEAN", {"default": False}),
+                "return_frames_zip": ("BOOLEAN", {"default": False}),
                 "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
             },
         }
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("video_url",)
-    OUTPUT_IS_LIST = (True,)
+    RETURN_TYPES = ("STRING", "STRING")
+    RETURN_NAMES = ("video_url","frames_zip_url",)
+    OUTPUT_IS_LIST = (True,True)
     FUNCTION = "edit_video"
     CATEGORY = "FAL/VideoGeneration"
 
     def edit_video(
         self,
+        image=None,
         video=None,
         input_video_url="",
-        image=None,
-        resolution="auto",
+        turbo=True,
+        resolution="480p",
+        seed=24,
         num_inference_steps=20,
-        shift=5,
+        guidance_scale=1.0,
+        shift=8,
         video_quality="high",
         video_write_mode="balanced",
-        seed=24,
         enable_safety_checker=True,
         enable_output_safety_checker=False,
+        return_frames_zip=False,
         variations=1,
     ):
         try:
             if video is None and input_video_url is "":
                 return ApiHandler.handle_video_generation_error(
-                    "wan-22animatemove", "Video or Video Frames input is required."
+                    "wan-22animatereplace", "Video or Video Frames input is required."
                 )
             if video is None and input_video_url is not "":
                 video_url = input_video_url
@@ -1238,9 +1254,8 @@ class Wan2214bAnimateMoveNode:
                 video_url = ImageUtils.upload_file(video.get_stream_source())
             if not video_url:
                 return ApiHandler.handle_video_generation_error(
-                    "wan-22animatemove", "Failed to upload video"
+                    "wan-22animatereplace", "Failed to upload video"
                 )
-
           
             image_url = ImageUtils.upload_image(image)
             if not image_url:
@@ -1249,24 +1264,30 @@ class Wan2214bAnimateMoveNode:
                 )
 
             arguments={
-        "video_url": video_url,
-        "image_url": image_url,
-        "resolution": resolution,
-        "num_inference_steps": num_inference_steps,
-        "enable_safety_checker": enable_safety_checker,
-        "enable_output_safety_checker": enable_output_safety_checker,
-        "shift": shift,
-        "video_quality": video_quality,
-        "video_write_mode": video_write_mode,
-        "seed": seed
-    }
+                "video_url": video_url,
+                "image_url": image_url,
+                "turbo": turbo,
+                "resolution": resolution,
+                "seed": seed,
+                "num_inference_steps": num_inference_steps,
+                "guidance_scale": guidance_scale,
+                "shift": shift,
+                "video_quality": video_quality,
+                "video_write_mode": video_write_mode,
+                "enable_safety_checker": enable_safety_checker,
+                "enable_output_safety_checker": enable_output_safety_checker,
+                "return_frames_zip": return_frames_zip,
+            }
             results = ApiHandler.submit_multiple_and_get_results(
                 "fal-ai/wan/v2.2-14b/animate/move",
                 arguments,
                 variations
             )
 
-            return ([r["video"]["url"] for r in results],)
+            video_url = [r["video"]["url"] for r in results]
+            frames_zip_url = [r.get("frames_zip", {}).get("url", "") for r in results] if return_frames_zip else [""] * len(results)
+
+            return (video_url, frames_zip_url)
 
         except Exception as e:
             return ApiHandler.handle_video_generation_error("wan-22animatemove", str(e))
@@ -1288,7 +1309,7 @@ class Wan22VACEFun14bNode:
                 "first_frame": ("IMAGE", {"default": None}),
                 "last_frame": ("IMAGE", {"default": None}),
                 "negative_prompt": ("STRING", {"default": "", "multiline": True}),
-                "seed": ("INT", {"default": -1, "min": 0, "max": 2147483647}),
+                "seed": ("INT", {"default": 24, "min": 0, "max": 2147483647}),
                 "resolution": (
                     ["480p", "580p", "720p"],
                     {"default": "480p"}
