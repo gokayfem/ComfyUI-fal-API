@@ -2094,6 +2094,128 @@ class Dreamina31TextToImage:
             return ApiHandler.handle_image_generation_error("Dreamina v3.1 Text-to-Image", e)
 
 
+class GPTImage15Edit:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "images": ("IMAGE",),
+            },
+            "optional": {
+                "mask_image": ("IMAGE",),
+                "image_size": (["auto", "1024x1024", "1536x1024", "1024x1536"], {"default": "auto"}),
+                "background": (["auto", "transparent", "opaque"], {"default": "auto"}),
+                "quality": (["low", "medium", "high"], {"default": "high"}),
+                "input_fidelity": (["low", "high"], {"default": "high"}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "output_format": (["jpeg", "png", "webp"], {"default": "png"}),
+                "sync_mode": ("BOOLEAN", {"default": False}),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "edit_image"
+    CATEGORY = "FAL/Image"
+
+    def edit_image(
+        self,
+        prompt,
+        images,
+        mask_image=None,
+        image_size="auto",
+        background="auto",
+        quality="high",
+        input_fidelity="high",
+        num_images=1,
+        output_format="png",
+        sync_mode=False,
+    ):
+        model_name = "GPT-Image 1.5"
+
+        # Prepare image URLs from input, limit to 16 images max
+        if images is not None and hasattr(images, 'shape') and len(images.shape) == 4 and images.shape[0] > 16:
+            # If batch has more than 16 images, take only first 16
+            images = images[:16]
+        image_urls = ImageUtils.prepare_images(images)
+
+        if len(image_urls) == 0:
+            print(f"Error: No valid images provided for {model_name}")
+            return ResultProcessor.create_blank_image()
+
+        arguments = {
+            "prompt": prompt,
+            "image_urls": image_urls,
+            "image_size": image_size,
+            "background": background,
+            "quality": quality,
+            "input_fidelity": input_fidelity,
+            "num_images": num_images,
+            "output_format": output_format,
+            "sync_mode": sync_mode,
+        }
+
+        # Add optional mask image
+        if mask_image is not None:
+            mask_url = ImageUtils.upload_image(mask_image)
+            if mask_url:
+                arguments["mask_image_url"] = mask_url
+
+        try:
+            result = ApiHandler.submit_and_get_result("fal-ai/gpt-image-1.5/edit", arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error(model_name, e)
+
+
+class GPTImage15:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+            },
+            "optional": {
+                "image_size": (["1024x1024", "1536x1024", "1024x1536"], {"default": "1024x1024"}),
+                "background": (["auto", "transparent", "opaque"], {"default": "auto"}),
+                "quality": (["low", "medium", "high"], {"default": "high"}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "output_format": (["jpeg", "png", "webp"], {"default": "png"}),
+                "sync_mode": ("BOOLEAN", {"default": False}),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        prompt,
+        image_size="1024x1024",
+        background="auto",
+        quality="high",
+        num_images=1,
+        output_format="png",
+        sync_mode=False,
+    ):
+        arguments = {
+            "prompt": prompt,
+            "image_size": image_size,
+            "background": background,
+            "quality": quality,
+            "num_images": num_images,
+            "output_format": output_format,
+            "sync_mode": sync_mode,
+        }
+
+        try:
+            result = ApiHandler.submit_and_get_result("fal-ai/gpt-image-1.5", arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("GPT-Image 1.5", e)
+
+
 # Node class mappings
 NODE_CLASS_MAPPINGS = {
     "Ideogramv3_fal": Ideogramv3,
@@ -2121,6 +2243,8 @@ NODE_CLASS_MAPPINGS = {
     "NanoBananaPro_fal": NanoBananaPro,
     "ReveTextToImage_fal": ReveTextToImage,
     "Dreamina31TextToImage_fal": Dreamina31TextToImage,
+    "GPTImage15Edit_fal": GPTImage15Edit,
+    "GPTImage15_fal": GPTImage15,
 }
 
 
@@ -2151,4 +2275,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "NanoBananaPro_fal": "Nano Banana Pro (fal)",
     "ReveTextToImage_fal": "Reve Text-to-Image (fal)",
     "Dreamina31TextToImage_fal": "Dreamina v3.1 Text-to-Image (fal)",
+    "GPTImage15Edit_fal": "GPT-Image 1.5 Edit (fal)",
+    "GPTImage15_fal": "GPT-Image 1.5 (fal)",
 }
