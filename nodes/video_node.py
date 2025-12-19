@@ -2868,6 +2868,210 @@ class FalKling25TurboProImageToVideo:
             )
 
 
+class FalKling26ProVideo:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "duration": (["5", "10"], {"default": "5"}),
+            },
+            "optional": {
+                "image": ("IMAGE",),
+                "aspect_ratio": (["16:9", "9:16", "1:1"], {"default": "16:9"}),
+                "negative_prompt": ("STRING", {"default": "blur, distort, and low quality", "multiline": True}),
+                "cfg_scale": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.1}),
+                "generate_audio": ("BOOLEAN", {"default": True}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, prompt, duration, image=None, aspect_ratio="16:9", negative_prompt="blur, distort, and low quality", cfg_scale=0.5, generate_audio=True):
+        try:
+            # Conditional routing based on whether image is provided
+            if image is None:
+                # T2V mode: Use text-to-video endpoint
+                endpoint = "fal-ai/kling-video/v2.6/pro/text-to-video"
+                arguments = {
+                    "prompt": prompt,
+                    "duration": duration,
+                    "aspect_ratio": aspect_ratio,
+                    "negative_prompt": negative_prompt,
+                    "cfg_scale": cfg_scale,
+                    "generate_audio": generate_audio,
+                }
+            else:
+                # I2V mode: Use image-to-video endpoint
+                image_url = ImageUtils.upload_image(image)
+                if not image_url:
+                    return ApiHandler.handle_video_generation_error(
+                        "kling-video/v2.6/pro", "Failed to upload image"
+                    )
+                endpoint = "fal-ai/kling-video/v2.6/pro/image-to-video"
+                arguments = {
+                    "prompt": prompt,
+                    "image_url": image_url,
+                    "duration": duration,
+                    "negative_prompt": negative_prompt,
+                    "generate_audio": generate_audio,
+                }
+
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "kling-video/v2.6/pro", str(e)
+            )
+
+
+class FalWan26Video:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "duration": (["5", "10", "15"], {"default": "5"}),
+            },
+            "optional": {
+                "image": ("IMAGE",),
+                "audio_url": ("STRING", {"default": ""}),
+                "aspect_ratio": (["16:9", "9:16", "1:1", "4:3", "3:4"], {"default": "16:9"}),
+                "resolution": (["720p", "1080p"], {"default": "1080p"}),
+                "negative_prompt": ("STRING", {"default": "low resolution, error, worst quality, low quality, defects", "multiline": True}),
+                "enable_prompt_expansion": ("BOOLEAN", {"default": True}),
+                "multi_shots": ("BOOLEAN", {"default": True}),
+                "seed": ("INT", {"default": -1, "min": -1, "max": 2147483647}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, prompt, duration, image=None, audio_url="", aspect_ratio="16:9", resolution="1080p", negative_prompt="low resolution, error, worst quality, low quality, defects", enable_prompt_expansion=True, multi_shots=True, seed=-1, enable_safety_checker=True):
+        try:
+            # Conditional routing based on whether image is provided
+            if image is None:
+                # T2V mode: Use text-to-video endpoint
+                endpoint = "wan/v2.6/text-to-video"
+                arguments = {
+                    "prompt": prompt,
+                    "duration": duration,
+                    "aspect_ratio": aspect_ratio,
+                    "resolution": resolution,
+                    "negative_prompt": negative_prompt,
+                    "enable_prompt_expansion": enable_prompt_expansion,
+                    "multi_shots": multi_shots,
+                    "enable_safety_checker": enable_safety_checker,
+                }
+            else:
+                # I2V mode: Use image-to-video endpoint
+                image_url = ImageUtils.upload_image(image)
+                if not image_url:
+                    return ApiHandler.handle_video_generation_error(
+                        "wan/v2.6", "Failed to upload image"
+                    )
+                endpoint = "wan/v2.6/image-to-video"
+                arguments = {
+                    "prompt": prompt,
+                    "image_url": image_url,
+                    "duration": duration,
+                    "resolution": resolution,
+                    "negative_prompt": negative_prompt,
+                    "enable_prompt_expansion": enable_prompt_expansion,
+                    "multi_shots": multi_shots,
+                    "enable_safety_checker": enable_safety_checker,
+                }
+
+            # Add optional audio URL if provided
+            if audio_url and audio_url.strip():
+                arguments["audio_url"] = audio_url.strip()
+
+            # Add seed if specified (not -1)
+            if seed != -1:
+                arguments["seed"] = seed
+
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "wan/v2.6", str(e)
+            )
+
+
+class FalWan26ReferenceToVideo:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "Dance battle between @Video1 and @Video2.", "multiline": True}),
+                "video1_url": ("STRING", {"default": ""}),
+            },
+            "optional": {
+                "video2_url": ("STRING", {"default": ""}),
+                "video3_url": ("STRING", {"default": ""}),
+                "aspect_ratio": (["16:9", "9:16", "1:1", "4:3", "3:4"], {"default": "16:9"}),
+                "resolution": (["720p", "1080p"], {"default": "1080p"}),
+                "duration": (["5", "10"], {"default": "5"}),
+                "negative_prompt": ("STRING", {"default": "low resolution, error, worst quality, low quality, defects", "multiline": True}),
+                "enable_prompt_expansion": ("BOOLEAN", {"default": True}),
+                "multi_shots": ("BOOLEAN", {"default": True}),
+                "seed": ("INT", {"default": -1, "min": -1, "max": 2147483647}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, prompt, video1_url, video2_url="", video3_url="", aspect_ratio="16:9", resolution="1080p", duration="5", negative_prompt="low resolution, error, worst quality, low quality, defects", enable_prompt_expansion=True, multi_shots=True, seed=-1, enable_safety_checker=True):
+        try:
+            # Build video_urls list from provided URLs
+            video_urls = []
+            if video1_url and video1_url.strip():
+                video_urls.append(video1_url.strip())
+            if video2_url and video2_url.strip():
+                video_urls.append(video2_url.strip())
+            if video3_url and video3_url.strip():
+                video_urls.append(video3_url.strip())
+
+            if not video_urls:
+                return ApiHandler.handle_video_generation_error(
+                    "wan/v2.6/reference-to-video", "At least one video URL is required"
+                )
+
+            arguments = {
+                "prompt": prompt,
+                "video_urls": video_urls,
+                "aspect_ratio": aspect_ratio,
+                "resolution": resolution,
+                "duration": duration,
+                "negative_prompt": negative_prompt,
+                "enable_prompt_expansion": enable_prompt_expansion,
+                "multi_shots": multi_shots,
+                "enable_safety_checker": enable_safety_checker,
+            }
+
+            # Add seed if specified (not -1)
+            if seed != -1:
+                arguments["seed"] = seed
+
+            result = ApiHandler.submit_and_get_result("wan/v2.6/reference-to-video", arguments)
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "wan/v2.6/reference-to-video", str(e)
+            )
+
+
 class FalSora2ProImageToVideo:
     @classmethod
     def INPUT_TYPES(cls):
@@ -3090,6 +3294,9 @@ NODE_CLASS_MAPPINGS = {
     "Veo3_fal": Veo3Node,
     "Kling21Pro_fal": FalKling21ProImageToVideo,
     "Kling25TurboPro_fal": FalKling25TurboProImageToVideo,
+    "Kling26Pro_fal": FalKling26ProVideo,
+    "Wan26_fal": FalWan26Video,
+    "Wan26ReferenceToVideo_fal": FalWan26ReferenceToVideo,
     "Sora2Pro_fal": FalSora2ProImageToVideo,
     "Veo31_fal": FalVeo31FirstLastFrameToVideo,
     "Veo31Fast_fal": FalVeo31FastFirstLastFrameToVideo,
@@ -3133,6 +3340,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DYWanUpscaler_fal": "DY Wan Upscaler (fal)",
     "Kling21Pro_fal": "Kling v2.1 Pro Image-to-Video (fal)",
     "Kling25TurboPro_fal": "Kling v2.5 Turbo Pro Image-to-Video (fal)",
+    "Kling26Pro_fal": "Kling v2.6 Pro Video Generation (fal)",
+    "Wan26_fal": "Wan 2.6 Video Generation (fal)",
+    "Wan26ReferenceToVideo_fal": "Wan 2.6 Reference-to-Video (fal)",
     "Sora2Pro_fal": "Sora 2 Pro Image-to-Video (fal)",
     "Veo31_fal": "Veo 3.1 First-Last-Frame-to-Video (fal)",
     "Veo31Fast_fal": "Veo 3.1 Fast First-Last-Frame-to-Video (fal)",

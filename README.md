@@ -84,6 +84,8 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **Nano Banana Pro (fal)**: Unified node for both text-to-image and image editing with Nano Banana Pro
 - **Reve Text-to-Image (fal)**: Use Reve's image model to generate images
 - **Dreamina v3.1 Text-to-Image (fal)**: Use Dreamina v3.1 to generate images
+- **GPT-Image 1.5 (fal)**: High-fidelity text-to-image generation with strong prompt adherence
+- **GPT-Image 1.5 Edit (fal)**: High-fidelity image editing with strong prompt adherence (supports up to 16 batched images and optional mask)
 - **DY Wan Fun 2.2 (fal)**: Generate images using DY Wan Fun 2.2 model
 - **DY Wan Upscaler (fal)**: Upscale images using DY Wan Upscaler
 
@@ -117,6 +119,8 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **Wan 2.2 VACE Fun 14b (fal)**: Video editing with Wan 2.2 VACE Fun 14b model for pose and depth control
 - **Wan 2.2 14b Animate: Replace Character (fal)**: Animate video content by replacing the foreground character with a new or augmented character using Wan 2.2 14b
 - **Wan 2.2 14b Animate: Move Character (fal)**: Animate video content by moving the foreground character within the scene using Wan 2.2 14b
+- **Wan 2.6 Video Generation (fal)**: Unified T2V/I2V node - generates video from text, or from image if provided
+- **Wan 2.6 Reference-to-Video (fal)**: Generate videos with subject consistency using up to 3 reference videos (@Video1, @Video2, @Video3 in prompt)
 - **Seedance Image-to-Video (fal)**: Convert images to videos using Seedance Lite model
 - **Seedance Text-to-Video (fal)**: Generate videos from text prompts using Seedance Lite model
 - **Seedance Pro Image-to-Video (fal)**: Convert images to videos using Seedance Pro model with advanced controls
