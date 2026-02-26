@@ -82,11 +82,13 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **Nano Banana Text-to-Image (fal)**: Use Nano Banana to generate images
 - **Nano Banana Edit (fal)**: Use Nano Banana to edit images
 - **Nano Banana Pro (fal)**: Unified node for both text-to-image and image editing with Nano Banana Pro
+- **Nano Banana 2 (fal)**: Nano Banana 2 (Gemini Flash 3.1) with text-to-image and edit modes
 - **Reve Text-to-Image (fal)**: Use Reve's image model to generate images
 - **Dreamina v3.1 Text-to-Image (fal)**: Use Dreamina v3.1 to generate images
 - **GPT-Image 1.5 (fal)**: High-fidelity text-to-image generation with strong prompt adherence
 - **GPT-Image 1.5 Edit (fal)**: High-fidelity image editing with strong prompt adherence (supports up to 16 batched images and optional mask)
 - **DY Wan Fun 2.2 (fal)**: Generate images using DY Wan Fun 2.2 model
+- **Flux 2 Klein 9B LoRA (fal)**: Text-to-image and image editing with Flux 2 Klein 9B, supporting up to 3 LoRA paths
 - **DY Wan Upscaler (fal)**: Upscale images using DY Wan Upscaler
 
 ### Video Generation

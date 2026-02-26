@@ -1991,6 +1991,83 @@ class NanoBananaPro:
             return ApiHandler.handle_image_generation_error("Nano Banana Pro", e)
 
 
+class NanoBanana2:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+            },
+            "optional": {
+                "images": ("IMAGE",),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "aspect_ratio": (
+                    ["auto", "21:9", "16:9", "3:2", "4:3", "5:4", "1:1", "4:5", "3:4", "2:3", "9:16"],
+                    {"default": "1:1"},
+                ),
+                "output_format": (["jpeg", "png", "webp"], {"default": "png"}),
+                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "4"}),
+                "resolution": (["1K", "2K", "4K"], {"default": "1K"}),
+                "limit_generations": ("BOOLEAN", {"default": True}),
+                "enable_web_search": ("BOOLEAN", {"default": False}),
+                "enable_google_search": ("BOOLEAN", {"default": False}),
+                "sync_mode": ("BOOLEAN", {"default": False}),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        prompt,
+        images=None,
+        num_images=1,
+        aspect_ratio="1:1",
+        output_format="png",
+        safety_tolerance="4",
+        resolution="1K",
+        limit_generations=True,
+        enable_web_search=False,
+        enable_google_search=False,
+        sync_mode=False,
+    ):
+        # Prepare image URLs from optional input, limit to 14 images max
+        if images is not None and hasattr(images, 'shape') and len(images.shape) == 4 and images.shape[0] > 14:
+            images = images[:14]
+        image_urls = ImageUtils.prepare_images(images)
+
+        # Build base arguments
+        arguments = {
+            "prompt": prompt,
+            "num_images": num_images,
+            "aspect_ratio": aspect_ratio,
+            "output_format": output_format,
+            "safety_tolerance": safety_tolerance,
+            "resolution": resolution,
+            "limit_generations": limit_generations,
+            "enable_web_search": enable_web_search,
+            "enable_google_search": enable_google_search,
+            "sync_mode": sync_mode,
+        }
+
+        # Conditional endpoint routing based on whether ANY images provided
+        if len(image_urls) > 0:
+            endpoint = "fal-ai/nano-banana-2/edit"
+            arguments["image_urls"] = image_urls
+        else:
+            endpoint = "fal-ai/nano-banana-2"
+            if aspect_ratio == "auto":
+                arguments["aspect_ratio"] = "1:1"
+
+        try:
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("Nano Banana 2", e)
+
+
 class ReveTextToImage:
     @classmethod
     def INPUT_TYPES(cls):
@@ -2216,6 +2293,146 @@ class GPTImage15:
             return ApiHandler.handle_image_generation_error("GPT-Image 1.5", e)
 
 
+class Flux2KleinEditLora:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+            },
+            "optional": {
+                "images": ("IMAGE",),
+                "negative_prompt": ("STRING", {"default": "", "multiline": True}),
+                "guidance_scale": (
+                    "FLOAT",
+                    {"default": 5.0, "min": 0.0, "max": 20.0, "step": 0.1},
+                ),
+                "seed": ("INT", {"default": -1}),
+                "num_inference_steps": ("INT", {"default": 28, "min": 4, "max": 50}),
+                "image_size": (
+                    [
+                        "landscape_4_3",
+                        "square_hd",
+                        "square",
+                        "portrait_4_3",
+                        "portrait_16_9",
+                        "landscape_16_9",
+                        "custom",
+                    ],
+                    {"default": "landscape_4_3"},
+                ),
+                "width": (
+                    "INT",
+                    {"default": 1024, "min": 256, "max": 2048, "step": 16},
+                ),
+                "height": (
+                    "INT",
+                    {"default": 1024, "min": 256, "max": 2048, "step": 16},
+                ),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "acceleration": (
+                    ["regular", "none", "high"],
+                    {"default": "regular"},
+                ),
+                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                "output_format": (["jpeg", "png", "webp"], {"default": "png"}),
+                "lora_path_1": ("STRING", {"default": ""}),
+                "lora_scale_1": (
+                    "FLOAT",
+                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05},
+                ),
+                "lora_path_2": ("STRING", {"default": ""}),
+                "lora_scale_2": (
+                    "FLOAT",
+                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05},
+                ),
+                "lora_path_3": ("STRING", {"default": ""}),
+                "lora_scale_3": (
+                    "FLOAT",
+                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05},
+                ),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        prompt,
+        images=None,
+        negative_prompt="",
+        guidance_scale=5.0,
+        seed=-1,
+        num_inference_steps=28,
+        image_size="landscape_4_3",
+        width=1024,
+        height=1024,
+        num_images=1,
+        acceleration="regular",
+        enable_safety_checker=True,
+        output_format="png",
+        lora_path_1="",
+        lora_scale_1=1.0,
+        lora_path_2="",
+        lora_scale_2=1.0,
+        lora_path_3="",
+        lora_scale_3=1.0,
+    ):
+        # Prepare image URLs from optional batch input, limit to 4 images max
+        if images is not None and hasattr(images, 'shape') and len(images.shape) == 4 and images.shape[0] > 4:
+            images = images[:4]
+        image_urls = ImageUtils.prepare_images(images)
+
+        arguments = {
+            "prompt": prompt,
+            "num_inference_steps": num_inference_steps,
+            "guidance_scale": guidance_scale,
+            "num_images": num_images,
+            "acceleration": acceleration,
+            "enable_safety_checker": enable_safety_checker,
+            "output_format": output_format,
+        }
+
+        if negative_prompt:
+            arguments["negative_prompt"] = negative_prompt
+
+        if seed != -1:
+            arguments["seed"] = seed
+
+        if image_size == "custom":
+            arguments["image_size"] = {"width": width, "height": height}
+        else:
+            arguments["image_size"] = image_size
+
+        # Add LoRAs (max 3)
+        loras = []
+        if lora_path_1:
+            loras.append({"path": lora_path_1, "scale": lora_scale_1})
+        if lora_path_2:
+            loras.append({"path": lora_path_2, "scale": lora_scale_2})
+        if lora_path_3:
+            loras.append({"path": lora_path_3, "scale": lora_scale_3})
+        if loras:
+            arguments["loras"] = loras
+
+        # Conditional endpoint routing based on whether images are provided
+        if len(image_urls) > 0:
+            endpoint = "fal-ai/flux-2/klein/9b/base/edit/lora"
+            arguments["image_urls"] = image_urls
+        else:
+            endpoint = "fal-ai/flux-2/klein/9b/base/lora"
+
+        try:
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error(
+                "Flux 2 Klein 9B LoRA", e
+            )
+
+
 # Node class mappings
 NODE_CLASS_MAPPINGS = {
     "Ideogramv3_fal": Ideogramv3,
@@ -2241,10 +2458,12 @@ NODE_CLASS_MAPPINGS = {
     "NanoBananaTextToImage_fal": NanoBananaTextToImage,
     "NanoBananaEdit_fal": NanoBananaEdit,
     "NanoBananaPro_fal": NanoBananaPro,
+    "NanoBanana2_fal": NanoBanana2,
     "ReveTextToImage_fal": ReveTextToImage,
     "Dreamina31TextToImage_fal": Dreamina31TextToImage,
     "GPTImage15Edit_fal": GPTImage15Edit,
     "GPTImage15_fal": GPTImage15,
+    "Flux2KleinEditLora_fal": Flux2KleinEditLora,
 }
 
 
@@ -2273,8 +2492,10 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "NanoBananaTextToImage_fal": "Nano Banana Text-to-Image (fal)",
     "NanoBananaEdit_fal": "Nano Banana Edit (fal)",
     "NanoBananaPro_fal": "Nano Banana Pro (fal)",
+    "NanoBanana2_fal": "Nano Banana 2 (fal)",
     "ReveTextToImage_fal": "Reve Text-to-Image (fal)",
     "Dreamina31TextToImage_fal": "Dreamina v3.1 Text-to-Image (fal)",
     "GPTImage15Edit_fal": "GPT-Image 1.5 Edit (fal)",
     "GPTImage15_fal": "GPT-Image 1.5 (fal)",
+    "Flux2KleinEditLora_fal": "Flux 2 Klein 9B LoRA (fal)",
 }
