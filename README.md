@@ -82,6 +82,7 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **Nano Banana Text-to-Image (fal)**: Use Nano Banana to generate images
 - **Nano Banana Edit (fal)**: Use Nano Banana to edit images
 - **Nano Banana Pro (fal)**: Unified node for both text-to-image and image editing with Nano Banana Pro
+- **Nano Banana 2 (fal)**: Unified node for text-to-image and image editing with Nano Banana 2 (Gemini 3.1 Flash Image) with multi-resolution (0.5K-4K) and optional web search grounding
 - **Reve Text-to-Image (fal)**: Use Reve's image model to generate images
 - **Dreamina v3.1 Text-to-Image (fal)**: Use Dreamina v3.1 to generate images
 - **GPT-Image 1.5 (fal)**: High-fidelity text-to-image generation with strong prompt adherence
@@ -102,6 +103,13 @@ After installation and configuration, restart ComfyUI. The new nodes will be ava
 - **Kling Omni Reference-to-Video (fal)**: Generate videos with reference images and elements
 - **Kling Omni Video-to-Video Edit (fal)**: Edit videos with prompts and reference images
 - **Kling Omni Video-to-Video Reference (fal)**: Video-to-video with reference image control
+- **Kling v2.6 Pro Video Generation (fal)**: Unified T2V/I2V with native audio generation
+- **Kling V3 Standard Video Generation (fal)**: Kling 3.0 Standard unified T2V/I2V with 1080p, 3-15s duration, native audio, and end frame control
+- **Kling V3 Pro Video Generation (fal)**: Kling 3.0 Pro unified T2V/I2V with higher quality cinematic output (3-15s)
+- **Kling V3 Standard Motion Control (fal)**: Character animation via motion transfer from reference video
+- **Kling V3 Pro Motion Control (fal)**: Pro-quality character animation via motion transfer from reference video
+- **Kling O3 Standard Video Generation (fal)**: Kling O3 Standard unified T2V/I2V with 3-15s duration and native audio
+- **Kling O3 Pro Video Generation (fal)**: Kling O3 Pro unified T2V/I2V with highest quality output (3-15s)
 - **Krea Wan 14b Video-to-Video (fal)**: Video-to-Video generation using Krea Wan 14b model
 - **Runway Gen3 Image-to-Video (fal)**: Convert images to videos using Runway Gen3
 - **Luma Dream Machine (fal)**: Create videos with Luma Dream Machine

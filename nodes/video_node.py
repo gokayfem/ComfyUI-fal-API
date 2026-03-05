@@ -2928,6 +2928,361 @@ class FalKling26ProVideo:
             )
 
 
+class FalKlingV3StandardVideo:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "duration": (["3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"], {"default": "5"}),
+            },
+            "optional": {
+                "image": ("IMAGE",),
+                "end_image": ("IMAGE",),
+                "aspect_ratio": (["16:9", "9:16", "1:1"], {"default": "16:9"}),
+                "negative_prompt": ("STRING", {"default": "blur, distort, and low quality", "multiline": True}),
+                "cfg_scale": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.1}),
+                "generate_audio": ("BOOLEAN", {"default": True}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, prompt, duration, image=None, end_image=None, aspect_ratio="16:9", negative_prompt="blur, distort, and low quality", cfg_scale=0.5, generate_audio=True):
+        try:
+            if image is None:
+                endpoint = "fal-ai/kling-video/v3/standard/text-to-video"
+                arguments = {
+                    "prompt": prompt,
+                    "duration": duration,
+                    "aspect_ratio": aspect_ratio,
+                    "negative_prompt": negative_prompt,
+                    "cfg_scale": cfg_scale,
+                    "generate_audio": generate_audio,
+                }
+            else:
+                image_url = ImageUtils.upload_image(image)
+                if not image_url:
+                    return ApiHandler.handle_video_generation_error(
+                        "kling-video/v3/standard", "Failed to upload image"
+                    )
+                endpoint = "fal-ai/kling-video/v3/standard/image-to-video"
+                arguments = {
+                    "prompt": prompt,
+                    "start_image_url": image_url,
+                    "duration": duration,
+                    "aspect_ratio": aspect_ratio,
+                    "negative_prompt": negative_prompt,
+                    "cfg_scale": cfg_scale,
+                    "generate_audio": generate_audio,
+                }
+                if end_image is not None:
+                    end_image_url = ImageUtils.upload_image(end_image)
+                    if end_image_url:
+                        arguments["end_image_url"] = end_image_url
+
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "kling-video/v3/standard", str(e)
+            )
+
+
+class FalKlingV3ProVideo:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "duration": (["3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"], {"default": "5"}),
+            },
+            "optional": {
+                "image": ("IMAGE",),
+                "end_image": ("IMAGE",),
+                "aspect_ratio": (["16:9", "9:16", "1:1"], {"default": "16:9"}),
+                "negative_prompt": ("STRING", {"default": "blur, distort, and low quality", "multiline": True}),
+                "cfg_scale": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.1}),
+                "generate_audio": ("BOOLEAN", {"default": True}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, prompt, duration, image=None, end_image=None, aspect_ratio="16:9", negative_prompt="blur, distort, and low quality", cfg_scale=0.5, generate_audio=True):
+        try:
+            if image is None:
+                endpoint = "fal-ai/kling-video/v3/pro/text-to-video"
+                arguments = {
+                    "prompt": prompt,
+                    "duration": duration,
+                    "aspect_ratio": aspect_ratio,
+                    "negative_prompt": negative_prompt,
+                    "cfg_scale": cfg_scale,
+                    "generate_audio": generate_audio,
+                }
+            else:
+                image_url = ImageUtils.upload_image(image)
+                if not image_url:
+                    return ApiHandler.handle_video_generation_error(
+                        "kling-video/v3/pro", "Failed to upload image"
+                    )
+                endpoint = "fal-ai/kling-video/v3/pro/image-to-video"
+                arguments = {
+                    "prompt": prompt,
+                    "start_image_url": image_url,
+                    "duration": duration,
+                    "aspect_ratio": aspect_ratio,
+                    "negative_prompt": negative_prompt,
+                    "cfg_scale": cfg_scale,
+                    "generate_audio": generate_audio,
+                }
+                if end_image is not None:
+                    end_image_url = ImageUtils.upload_image(end_image)
+                    if end_image_url:
+                        arguments["end_image_url"] = end_image_url
+
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "kling-video/v3/pro", str(e)
+            )
+
+
+class FalKlingV3StandardMotionControl:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "image": ("IMAGE",),
+                "video": ("VIDEO",),
+                "character_orientation": (["image", "video"], {"default": "image"}),
+            },
+            "optional": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "keep_original_sound": ("BOOLEAN", {"default": True}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, image, video, character_orientation, prompt="", keep_original_sound=True):
+        try:
+            image_url = ImageUtils.upload_image(image)
+            if not image_url:
+                return ApiHandler.handle_video_generation_error(
+                    "kling-video/v3/standard/motion-control", "Failed to upload image"
+                )
+
+            video_url = ImageUtils.upload_file(video.get_stream_source())
+            if not video_url:
+                return ApiHandler.handle_video_generation_error(
+                    "kling-video/v3/standard/motion-control", "Failed to upload video"
+                )
+
+            arguments = {
+                "image_url": image_url,
+                "video_url": video_url,
+                "character_orientation": character_orientation,
+                "keep_original_sound": keep_original_sound,
+            }
+
+            if prompt and prompt.strip():
+                arguments["prompt"] = prompt
+
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/kling-video/v3/standard/motion-control", arguments
+            )
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "kling-video/v3/standard/motion-control", str(e)
+            )
+
+
+class FalKlingV3ProMotionControl:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "image": ("IMAGE",),
+                "video": ("VIDEO",),
+                "character_orientation": (["image", "video"], {"default": "image"}),
+            },
+            "optional": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "keep_original_sound": ("BOOLEAN", {"default": True}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, image, video, character_orientation, prompt="", keep_original_sound=True):
+        try:
+            image_url = ImageUtils.upload_image(image)
+            if not image_url:
+                return ApiHandler.handle_video_generation_error(
+                    "kling-video/v3/pro/motion-control", "Failed to upload image"
+                )
+
+            video_url = ImageUtils.upload_file(video.get_stream_source())
+            if not video_url:
+                return ApiHandler.handle_video_generation_error(
+                    "kling-video/v3/pro/motion-control", "Failed to upload video"
+                )
+
+            arguments = {
+                "image_url": image_url,
+                "video_url": video_url,
+                "character_orientation": character_orientation,
+                "keep_original_sound": keep_original_sound,
+            }
+
+            if prompt and prompt.strip():
+                arguments["prompt"] = prompt
+
+            result = ApiHandler.submit_and_get_result(
+                "fal-ai/kling-video/v3/pro/motion-control", arguments
+            )
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "kling-video/v3/pro/motion-control", str(e)
+            )
+
+
+class FalKlingO3StandardVideo:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "duration": (["3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"], {"default": "5"}),
+            },
+            "optional": {
+                "image": ("IMAGE",),
+                "end_image": ("IMAGE",),
+                "aspect_ratio": (["16:9", "9:16", "1:1"], {"default": "16:9"}),
+                "negative_prompt": ("STRING", {"default": "blur, distort, and low quality", "multiline": True}),
+                "cfg_scale": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.1}),
+                "generate_audio": ("BOOLEAN", {"default": True}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, prompt, duration, image=None, end_image=None, aspect_ratio="16:9", negative_prompt="blur, distort, and low quality", cfg_scale=0.5, generate_audio=True):
+        try:
+            if image is None:
+                endpoint = "fal-ai/kling-video/o3/standard/text-to-video"
+                arguments = {
+                    "prompt": prompt,
+                    "duration": duration,
+                    "aspect_ratio": aspect_ratio,
+                    "generate_audio": generate_audio,
+                }
+            else:
+                image_url = ImageUtils.upload_image(image)
+                if not image_url:
+                    return ApiHandler.handle_video_generation_error(
+                        "kling-video/o3/standard", "Failed to upload image"
+                    )
+                endpoint = "fal-ai/kling-video/o3/standard/image-to-video"
+                arguments = {
+                    "prompt": prompt,
+                    "image_url": image_url,
+                    "duration": duration,
+                    "aspect_ratio": aspect_ratio,
+                    "negative_prompt": negative_prompt,
+                    "cfg_scale": cfg_scale,
+                    "generate_audio": generate_audio,
+                }
+                if end_image is not None:
+                    end_image_url = ImageUtils.upload_image(end_image)
+                    if end_image_url:
+                        arguments["end_image_url"] = end_image_url
+
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "kling-video/o3/standard", str(e)
+            )
+
+
+class FalKlingO3ProVideo:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "duration": (["3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"], {"default": "5"}),
+            },
+            "optional": {
+                "image": ("IMAGE",),
+                "end_image": ("IMAGE",),
+                "aspect_ratio": (["16:9", "9:16", "1:1"], {"default": "16:9"}),
+                "generate_audio": ("BOOLEAN", {"default": True}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "generate_video"
+    CATEGORY = "FAL/VideoGeneration"
+
+    def generate_video(self, prompt, duration, image=None, end_image=None, aspect_ratio="16:9", generate_audio=True):
+        try:
+            if image is None:
+                endpoint = "fal-ai/kling-video/o3/pro/text-to-video"
+                arguments = {
+                    "prompt": prompt,
+                    "duration": duration,
+                    "aspect_ratio": aspect_ratio,
+                    "generate_audio": generate_audio,
+                }
+            else:
+                image_url = ImageUtils.upload_image(image)
+                if not image_url:
+                    return ApiHandler.handle_video_generation_error(
+                        "kling-video/o3/pro", "Failed to upload image"
+                    )
+                endpoint = "fal-ai/kling-video/o3/pro/image-to-video"
+                arguments = {
+                    "prompt": prompt,
+                    "image_url": image_url,
+                    "duration": duration,
+                    "generate_audio": generate_audio,
+                }
+                if end_image is not None:
+                    end_image_url = ImageUtils.upload_image(end_image)
+                    if end_image_url:
+                        arguments["end_image_url"] = end_image_url
+
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            video_url = result["video"]["url"]
+            return (video_url,)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(
+                "kling-video/o3/pro", str(e)
+            )
+
+
 class FalWan26Video:
     @classmethod
     def INPUT_TYPES(cls):
@@ -3295,6 +3650,12 @@ NODE_CLASS_MAPPINGS = {
     "Kling21Pro_fal": FalKling21ProImageToVideo,
     "Kling25TurboPro_fal": FalKling25TurboProImageToVideo,
     "Kling26Pro_fal": FalKling26ProVideo,
+    "KlingV3Standard_fal": FalKlingV3StandardVideo,
+    "KlingV3Pro_fal": FalKlingV3ProVideo,
+    "KlingV3StandardMotionControl_fal": FalKlingV3StandardMotionControl,
+    "KlingV3ProMotionControl_fal": FalKlingV3ProMotionControl,
+    "KlingO3Standard_fal": FalKlingO3StandardVideo,
+    "KlingO3Pro_fal": FalKlingO3ProVideo,
     "Wan26_fal": FalWan26Video,
     "Wan26ReferenceToVideo_fal": FalWan26ReferenceToVideo,
     "Sora2Pro_fal": FalSora2ProImageToVideo,
@@ -3341,6 +3702,12 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "Kling21Pro_fal": "Kling v2.1 Pro Image-to-Video (fal)",
     "Kling25TurboPro_fal": "Kling v2.5 Turbo Pro Image-to-Video (fal)",
     "Kling26Pro_fal": "Kling v2.6 Pro Video Generation (fal)",
+    "KlingV3Standard_fal": "Kling V3 Standard Video Generation (fal)",
+    "KlingV3Pro_fal": "Kling V3 Pro Video Generation (fal)",
+    "KlingV3StandardMotionControl_fal": "Kling V3 Standard Motion Control (fal)",
+    "KlingV3ProMotionControl_fal": "Kling V3 Pro Motion Control (fal)",
+    "KlingO3Standard_fal": "Kling O3 Standard Video Generation (fal)",
+    "KlingO3Pro_fal": "Kling O3 Pro Video Generation (fal)",
     "Wan26_fal": "Wan 2.6 Video Generation (fal)",
     "Wan26ReferenceToVideo_fal": "Wan 2.6 Reference-to-Video (fal)",
     "Sora2Pro_fal": "Sora 2 Pro Image-to-Video (fal)",
