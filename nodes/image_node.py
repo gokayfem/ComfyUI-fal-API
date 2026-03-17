@@ -1823,6 +1823,253 @@ class SeedreamV4Edit:
             return ApiHandler.handle_image_generation_error(model_name, e)
 
 
+# https://fal.ai/api/openapi/queue/openapi.json?endpoint_id=fal-ai/bytedance/seedream/v4.5/edit
+class SeedreamV45Edit:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image_1": ("IMAGE",),
+                "image_size": (
+                    [
+                        "auto_4K",
+                        "square_hd",
+                        "square",
+                        "portrait_4_3",
+                        "portrait_16_9",
+                        "portrait_3_4",
+                        "portrait_9_16",
+                        "landscape_4_3",
+                        "landscape_16_9",
+                        "custom",
+                    ],
+                    {"default": "auto_4K"},
+                ),
+                "width": ("INT", {"default": 2048, "min": 1920, "max": 4096}),
+                "height": ("INT", {"default": 2048, "min": 1920, "max": 4096}),
+            },
+            "optional": {
+                "image_2": ("IMAGE",),
+                "image_3": ("IMAGE",),
+                "image_4": ("IMAGE",),
+                "image_5": ("IMAGE",),
+                "image_6": ("IMAGE",),
+                "image_7": ("IMAGE",),
+                "image_8": ("IMAGE",),
+                "image_9": ("IMAGE",),
+                "image_10": ("IMAGE",),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 6}),
+                "max_images": ("INT", {"default": 1, "min": 1, "max": 6}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                "sync_mode": ("BOOLEAN", {"default": False}),
+                "seed": ("INT", {"default": -1, "min": -1, "max": 2**32 - 1}),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        prompt,
+        image_1,
+        image_size,
+        width,
+        height,
+        num_images=1,
+        max_images=1,
+        image_2=None,
+        image_3=None,
+        image_4=None,
+        image_5=None,
+        image_6=None,
+        image_7=None,
+        image_8=None,
+        image_9=None,
+        image_10=None,
+        enable_safety_checker=True,
+        seed=-1,
+        sync_mode=False,
+    ):
+        model_name = "Seedream 4.5 Edit"
+
+        image_urls = []
+        for i, img in enumerate(
+            [
+                image_1,
+                image_2,
+                image_3,
+                image_4,
+                image_5,
+                image_6,
+                image_7,
+                image_8,
+                image_9,
+                image_10,
+            ],
+            1,
+        ):
+            if img is not None:
+                url = ImageUtils.upload_image(img)
+                if url:
+                    image_urls.append(url)
+                else:
+                    print(f"Error: Failed to upload image {i} for {model_name}")
+                    return ResultProcessor.create_blank_image()
+
+        # the total number of images (image inputs + image outputs) must not exceed 15
+        max_total_images = 15
+        potential_total = len(image_urls) + (num_images * max_images)
+        if potential_total > max_total_images:
+            print(
+                f"Error: Total images (inputs + outputs) must be <= {max_total_images}. "
+                f"inputs={len(image_urls)}, num_images={num_images}, max_images={max_images}"
+            )
+            return ResultProcessor.create_blank_image()
+
+        endpoint = "fal-ai/bytedance/seedream/v4.5/edit"
+        arguments = {
+            "prompt": prompt,
+            "image_urls": image_urls,
+            "num_images": num_images,
+            "max_images": max_images,
+            "enable_safety_checker": enable_safety_checker,
+            "sync_mode": sync_mode,
+        }
+        if image_size == "custom":
+            arguments["image_size"] = {"width": width, "height": height}
+        else:
+            arguments["image_size"] = image_size
+        if seed != -1:
+            arguments["seed"] = seed
+
+        try:
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error(model_name, e)
+
+
+# https://fal.ai/api/openapi/queue/openapi.json?endpoint_id=fal-ai/bytedance/seedream/v5/lite/edit
+class SeedreamV5LiteEdit:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image_1": ("IMAGE",),
+                "image_size": (
+                    [
+                        "auto_2K",
+                        "square_hd",
+                        "square",
+                        "portrait_4_3",
+                        "portrait_16_9",
+                        "portrait_3_4",
+                        "portrait_9_16",
+                        "landscape_4_3",
+                        "landscape_16_9",
+                        "custom",
+                    ],
+                    {"default": "auto_2K"},
+                ),
+                "width": ("INT", {"default": 1024, "min": 1024, "max": 3072}),
+                "height": ("INT", {"default": 1024, "min": 1024, "max": 3072}),
+            },
+            "optional": {
+                "image_2": ("IMAGE",),
+                "image_3": ("IMAGE",),
+                "image_4": ("IMAGE",),
+                "image_5": ("IMAGE",),
+                "image_6": ("IMAGE",),
+                "image_7": ("IMAGE",),
+                "image_8": ("IMAGE",),
+                "image_9": ("IMAGE",),
+                "image_10": ("IMAGE",),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 6}),
+                "max_images": ("INT", {"default": 1, "min": 1, "max": 6}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                "sync_mode": ("BOOLEAN", {"default": False}),
+                "seed": ("INT", {"default": -1, "min": -1, "max": 2**32 - 1}),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        prompt,
+        image_1,
+        image_size,
+        width,
+        height,
+        num_images=1,
+        max_images=1,
+        image_2=None,
+        image_3=None,
+        image_4=None,
+        image_5=None,
+        image_6=None,
+        image_7=None,
+        image_8=None,
+        image_9=None,
+        image_10=None,
+        enable_safety_checker=True,
+        seed=-1,
+        sync_mode=False,
+    ):
+        model_name = "Seedream 5 Lite Edit"
+
+        image_urls = []
+        for i, img in enumerate(
+            [
+                image_1,
+                image_2,
+                image_3,
+                image_4,
+                image_5,
+                image_6,
+                image_7,
+                image_8,
+                image_9,
+                image_10,
+            ],
+            1,
+        ):
+            if img is not None:
+                url = ImageUtils.upload_image(img)
+                if url:
+                    image_urls.append(url)
+                else:
+                    print(f"Error: Failed to upload image {i} for {model_name}")
+                    return ResultProcessor.create_blank_image()
+
+        endpoint = "fal-ai/bytedance/seedream/v5/lite/edit"
+        arguments = {
+            "prompt": prompt,
+            "image_urls": image_urls,
+            "num_images": num_images,
+            "max_images": max_images,
+            "enable_safety_checker": enable_safety_checker,
+            "sync_mode": sync_mode,
+        }
+        if image_size == "custom":
+            arguments["image_size"] = {"width": width, "height": height}
+        else:
+            arguments["image_size"] = image_size
+        if seed != -1:
+            arguments["seed"] = seed
+
+        try:
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error(model_name, e)
+
 
 class NanoBananaTextToImage:
     @classmethod
@@ -1921,6 +2168,103 @@ class NanoBananaEdit:
         except Exception as e:
             return ApiHandler.handle_image_generation_error("Nano Banana Edit", e)
 
+
+class NanoBanana2:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+            },
+            "optional": {
+                "image_1": ("IMAGE",),
+                "image_2": ("IMAGE",),
+                "image_3": ("IMAGE",),
+                "image_4": ("IMAGE",),
+                "images": ("IMAGE", {"default": None, "multiple": True}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "aspect_ratio": (
+                    [
+                        "auto", "21:9", "16:9", "3:2", "4:3", "5:4", "1:1", 
+                        "4:5", "3:4", "2:3", "9:16", "4:1", "1:4", "8:1", "1:8"
+                    ],
+                    {"default": "1:1"},
+                ),
+                "resolution": (["0.5K", "1K", "2K", "4K"], {"default": "1K"}),
+                "output_format": (["jpeg", "png", "webp"], {"default": "png"}),
+                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "4"}),
+                "thinking_level": (["none", "minimal", "high"], {"default": "none"}),
+                "enable_web_search": ("BOOLEAN", {"default": False}),
+                "limit_generations": ("BOOLEAN", {"default": True}),
+                "sync_mode": ("BOOLEAN", {"default": False}),
+                "seed": ("INT", {"default": -1, "min": -1, "max": 2**32 - 1}),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        prompt,
+        image_1=None,
+        image_2=None,
+        image_3=None,
+        image_4=None,
+        images=None,
+        num_images=1,
+        aspect_ratio="1:1",
+        resolution="1K",
+        output_format="png",
+        safety_tolerance="4",
+        thinking_level="none",
+        enable_web_search=False,
+        limit_generations=True,
+        sync_mode=False,
+        seed=-1,
+    ):
+        # Combine single image inputs and batch image inputs
+        singleImages = ImageUtils.prepare_images([image_1, image_2, image_3, image_4])
+        batchImages = ImageUtils.prepare_images(images)
+        image_urls = singleImages + batchImages
+
+        arguments = {
+            "prompt": prompt,
+            "num_images": num_images,
+            "aspect_ratio": aspect_ratio,
+            "resolution": resolution,
+            "output_format": output_format,
+            "safety_tolerance": safety_tolerance,
+            "enable_web_search": enable_web_search,
+            "limit_generations": limit_generations,
+            "sync_mode": sync_mode,
+        }
+
+        # Only pass thinking_level if it's not "none"
+        if thinking_level != "none":
+            arguments["thinking_level"] = thinking_level
+
+        if seed != -1:
+            arguments["seed"] = seed
+
+        # Conditional endpoint routing based on whether ANY images are provided
+        if len(image_urls) > 0:
+            # Use edit endpoint with image_urls array
+            endpoint = "fal-ai/nano-banana-2/edit"
+            arguments["image_urls"] = image_urls
+        else:
+            # Use text-to-image endpoint (no image_urls parameter)
+            endpoint = "fal-ai/nano-banana-2"
+            # Remove "auto" from aspect_ratio for text-to-image endpoint just in case it is unsupported
+            if aspect_ratio == "auto":
+                arguments["aspect_ratio"] = "1:1"
+
+        try:
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error("Nano Banana 2", e)
 
 class NanoBananaPro:
     @classmethod
@@ -2238,9 +2582,12 @@ NODE_CLASS_MAPPINGS = {
     "QwenImageEditPlusLoRA_fal": QwenImageEditPlusLoRA,
     "SeedEditV3_fal": SeedEditV3,
     "SeedreamV4Edit_fal": SeedreamV4Edit,
+    "SeedreamV45Edit_fal": SeedreamV45Edit,
+    "SeedreamV5LiteEdit_fal": SeedreamV5LiteEdit,
     "NanoBananaTextToImage_fal": NanoBananaTextToImage,
     "NanoBananaEdit_fal": NanoBananaEdit,
     "NanoBananaPro_fal": NanoBananaPro,
+    "NanoBanana2_fal": NanoBanana2,
     "ReveTextToImage_fal": ReveTextToImage,
     "Dreamina31TextToImage_fal": Dreamina31TextToImage,
     "GPTImage15Edit_fal": GPTImage15Edit,
@@ -2270,9 +2617,12 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "QwenImageEditPlusLoRA_fal": "Qwen Image Edit Plus LoRA (fal)",
     "SeedEditV3_fal": "SeedEdit 3.0 (fal)",
     "SeedreamV4Edit_fal": "Seedream 4.0 Edit (fal)",
+    "SeedreamV45Edit_fal": "Seedream 4.5 Edit (fal)",
+    "SeedreamV5LiteEdit_fal": "Seedream 5 Lite Edit (fal)",
     "NanoBananaTextToImage_fal": "Nano Banana Text-to-Image (fal)",
     "NanoBananaEdit_fal": "Nano Banana Edit (fal)",
     "NanoBananaPro_fal": "Nano Banana Pro (fal)",
+    "NanoBanana2_fal": "Nano Banana 2 (fal)",
     "ReveTextToImage_fal": "Reve Text-to-Image (fal)",
     "Dreamina31TextToImage_fal": "Dreamina v3.1 Text-to-Image (fal)",
     "GPTImage15Edit_fal": "GPT-Image 1.5 Edit (fal)",
