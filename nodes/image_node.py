@@ -1831,23 +1831,14 @@ class SeedreamV45Edit:
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
                 "image_1": ("IMAGE",),
-                "image_size": (
-                    [
-                        "auto_4K",
-                        "square_hd",
-                        "square",
-                        "portrait_4_3",
-                        "portrait_16_9",
-                        "portrait_3_4",
-                        "portrait_9_16",
-                        "landscape_4_3",
-                        "landscape_16_9",
-                        "custom",
-                    ],
-                    {"default": "auto_4K"},
+                "resolution": (["4K", "3K", "2K", "Native Auto"], {"default": "4K"}),
+                "aspect_ratio": (
+                    ["16:9", "9:16", "1:1", "4:3", "3:4", "3:2", "2:3", "custom"],
+                    {"default": "9:16"},
                 ),
-                "width": ("INT", {"default": 2048, "min": 1920, "max": 4096}),
-                "height": ("INT", {"default": 2048, "min": 1920, "max": 4096}),
+                "width": ("INT", {"default": 2160, "min": 1440, "max": 4096}),
+                "height": ("INT", {"default": 3840, "min": 1440, "max": 4096}),
+                "seed": ("INT", {"default": 0, "min": 0, "max": 4294967295}),
             },
             "optional": {
                 "image_2": ("IMAGE",),
@@ -1861,9 +1852,8 @@ class SeedreamV45Edit:
                 "image_10": ("IMAGE",),
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 6}),
                 "max_images": ("INT", {"default": 1, "min": 1, "max": 6}),
-                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                "enable_safety_checker": ("BOOLEAN", {"default": False}),
                 "sync_mode": ("BOOLEAN", {"default": False}),
-                "seed": ("INT", {"default": -1, "min": -1, "max": 2**32 - 1}),
             },
         }
 
@@ -1875,9 +1865,11 @@ class SeedreamV45Edit:
         self,
         prompt,
         image_1,
-        image_size,
+        resolution,
+        aspect_ratio,
         width,
         height,
+        seed,
         num_images=1,
         max_images=1,
         image_2=None,
@@ -1890,26 +1882,13 @@ class SeedreamV45Edit:
         image_9=None,
         image_10=None,
         enable_safety_checker=True,
-        seed=-1,
         sync_mode=False,
     ):
         model_name = "Seedream 4.5 Edit"
 
         image_urls = []
         for i, img in enumerate(
-            [
-                image_1,
-                image_2,
-                image_3,
-                image_4,
-                image_5,
-                image_6,
-                image_7,
-                image_8,
-                image_9,
-                image_10,
-            ],
-            1,
+            [image_1, image_2, image_3, image_4, image_5, image_6, image_7, image_8, image_9, image_10], 1
         ):
             if img is not None:
                 url = ImageUtils.upload_image(img)
@@ -1919,14 +1898,10 @@ class SeedreamV45Edit:
                     print(f"Error: Failed to upload image {i} for {model_name}")
                     return ResultProcessor.create_blank_image()
 
-        # the total number of images (image inputs + image outputs) must not exceed 15
         max_total_images = 15
         potential_total = len(image_urls) + (num_images * max_images)
         if potential_total > max_total_images:
-            print(
-                f"Error: Total images (inputs + outputs) must be <= {max_total_images}. "
-                f"inputs={len(image_urls)}, num_images={num_images}, max_images={max_images}"
-            )
+            print(f"Error: Total images (inputs + outputs) must be <= {max_total_images}.")
             return ResultProcessor.create_blank_image()
 
         endpoint = "fal-ai/bytedance/seedream/v4.5/edit"
@@ -1937,21 +1912,48 @@ class SeedreamV45Edit:
             "max_images": max_images,
             "enable_safety_checker": enable_safety_checker,
             "sync_mode": sync_mode,
+            "seed": seed,
         }
-        if image_size == "custom":
+
+        dim_map = {
+            "4K": {
+                "16:9": (3840, 2160), "9:16": (2160, 3840),
+                "1:1": (2880, 2880),
+                "4:3": (3328, 2496), "3:4": (2496, 3328),
+                "3:2": (3552, 2368), "2:3": (2368, 3552),
+            },
+            "3K": {
+                "16:9": (3008, 1696), "9:16": (1696, 3008),
+                "1:1": (2240, 2240),
+                "4:3": (2560, 1920), "3:4": (1920, 2560),
+                "3:2": (2752, 1824), "2:3": (1824, 2752),
+            },
+            "2K": {
+                "16:9": (2560, 1440), "9:16": (1440, 2560),
+                "1:1": (1920, 1920),
+                "4:3": (2240, 1680), "3:4": (1680, 2240),
+                "3:2": (2304, 1536), "2:3": (1536, 2304),
+            }
+        }
+
+        if aspect_ratio == "custom":
             arguments["image_size"] = {"width": width, "height": height}
+        elif resolution == "Native Auto":
+            native_map = {
+                "16:9": "landscape_16_9", "9:16": "portrait_9_16",
+                "1:1": "square",
+                "4:3": "landscape_4_3", "3:4": "portrait_3_4",
+            }
+            arguments["image_size"] = native_map.get(aspect_ratio, "auto_4K")
         else:
-            arguments["image_size"] = image_size
-        if seed != -1:
-            arguments["seed"] = seed
+            w, h = dim_map[resolution].get(aspect_ratio, (3840, 2160))
+            arguments["image_size"] = {"width": w, "height": h}
 
         try:
             result = ApiHandler.submit_and_get_result(endpoint, arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
             return ApiHandler.handle_image_generation_error(model_name, e)
-
-
 # https://fal.ai/api/openapi/queue/openapi.json?endpoint_id=fal-ai/bytedance/seedream/v5/lite/edit
 class SeedreamV5LiteEdit:
     @classmethod
@@ -1960,23 +1962,14 @@ class SeedreamV5LiteEdit:
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
                 "image_1": ("IMAGE",),
-                "image_size": (
-                    [
-                        "auto_2K",
-                        "square_hd",
-                        "square",
-                        "portrait_4_3",
-                        "portrait_16_9",
-                        "portrait_3_4",
-                        "portrait_9_16",
-                        "landscape_4_3",
-                        "landscape_16_9",
-                        "custom",
-                    ],
-                    {"default": "auto_2K"},
+                "resolution": (["4K", "3K", "2K", "Native Auto"], {"default": "2K"}),
+                "aspect_ratio": (
+                    ["16:9", "9:16", "1:1", "4:3", "3:4", "3:2", "2:3", "custom"],
+                    {"default": "9:16"},
                 ),
-                "width": ("INT", {"default": 1024, "min": 1024, "max": 3072}),
-                "height": ("INT", {"default": 1024, "min": 1024, "max": 3072}),
+                "width": ("INT", {"default": 1440, "min": 1024, "max": 4096}),
+                "height": ("INT", {"default": 2560, "min": 1024, "max": 4096}),
+                "seed": ("INT", {"default": 0, "min": 0, "max": 4294967295}),
             },
             "optional": {
                 "image_2": ("IMAGE",),
@@ -1992,7 +1985,6 @@ class SeedreamV5LiteEdit:
                 "max_images": ("INT", {"default": 1, "min": 1, "max": 6}),
                 "enable_safety_checker": ("BOOLEAN", {"default": True}),
                 "sync_mode": ("BOOLEAN", {"default": False}),
-                "seed": ("INT", {"default": -1, "min": -1, "max": 2**32 - 1}),
             },
         }
 
@@ -2004,9 +1996,11 @@ class SeedreamV5LiteEdit:
         self,
         prompt,
         image_1,
-        image_size,
+        resolution,
+        aspect_ratio,
         width,
         height,
+        seed,
         num_images=1,
         max_images=1,
         image_2=None,
@@ -2019,26 +2013,13 @@ class SeedreamV5LiteEdit:
         image_9=None,
         image_10=None,
         enable_safety_checker=True,
-        seed=-1,
         sync_mode=False,
     ):
         model_name = "Seedream 5 Lite Edit"
 
         image_urls = []
         for i, img in enumerate(
-            [
-                image_1,
-                image_2,
-                image_3,
-                image_4,
-                image_5,
-                image_6,
-                image_7,
-                image_8,
-                image_9,
-                image_10,
-            ],
-            1,
+            [image_1, image_2, image_3, image_4, image_5, image_6, image_7, image_8, image_9, image_10], 1
         ):
             if img is not None:
                 url = ImageUtils.upload_image(img)
@@ -2056,20 +2037,48 @@ class SeedreamV5LiteEdit:
             "max_images": max_images,
             "enable_safety_checker": enable_safety_checker,
             "sync_mode": sync_mode,
+            "seed": seed,
         }
-        if image_size == "custom":
+
+        dim_map = {
+            "4K": {
+                "16:9": (3840, 2160), "9:16": (2160, 3840),
+                "1:1": (2880, 2880),
+                "4:3": (3328, 2496), "3:4": (2496, 3328),
+                "3:2": (3552, 2368), "2:3": (2368, 3552),
+            },
+            "3K": {
+                "16:9": (3008, 1696), "9:16": (1696, 3008),
+                "1:1": (2240, 2240),
+                "4:3": (2560, 1920), "3:4": (1920, 2560),
+                "3:2": (2752, 1824), "2:3": (1824, 2752),
+            },
+            "2K": {
+                "16:9": (2560, 1440), "9:16": (1440, 2560),
+                "1:1": (1920, 1920),
+                "4:3": (2240, 1680), "3:4": (1680, 2240),
+                "3:2": (2304, 1536), "2:3": (1536, 2304),
+            }
+        }
+
+        if aspect_ratio == "custom":
             arguments["image_size"] = {"width": width, "height": height}
+        elif resolution == "Native Auto":
+            native_map = {
+                "16:9": "landscape_16_9", "9:16": "portrait_9_16",
+                "1:1": "square",
+                "4:3": "landscape_4_3", "3:4": "portrait_3_4",
+            }
+            arguments["image_size"] = native_map.get(aspect_ratio, "auto_2K")
         else:
-            arguments["image_size"] = image_size
-        if seed != -1:
-            arguments["seed"] = seed
+            w, h = dim_map[resolution].get(aspect_ratio, (2560, 1440))
+            arguments["image_size"] = {"width": w, "height": h}
 
         try:
             result = ApiHandler.submit_and_get_result(endpoint, arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
             return ApiHandler.handle_image_generation_error(model_name, e)
-
 
 class NanoBananaTextToImage:
     @classmethod
@@ -2175,6 +2184,7 @@ class NanoBanana2:
         return {
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
+                "seed": ("INT", {"default": 0, "min": 0, "max": 4294967295}),
             },
             "optional": {
                 "image_1": ("IMAGE",),
@@ -2197,7 +2207,7 @@ class NanoBanana2:
                 "enable_web_search": ("BOOLEAN", {"default": False}),
                 "limit_generations": ("BOOLEAN", {"default": True}),
                 "sync_mode": ("BOOLEAN", {"default": False}),
-                "seed": ("INT", {"default": -1, "min": -1, "max": 2**32 - 1}),
+                "enable_safety_checker": ("BOOLEAN", {"default": False, "tooltip": "Disable Fal.ai's master post-generation filter to prevent outputs from being replaced with black images."}),
             },
         }
 
@@ -2208,6 +2218,7 @@ class NanoBanana2:
     def generate_image(
         self,
         prompt,
+        seed,
         image_1=None,
         image_2=None,
         image_3=None,
@@ -2222,9 +2233,8 @@ class NanoBanana2:
         enable_web_search=False,
         limit_generations=True,
         sync_mode=False,
-        seed=-1,
+        enable_safety_checker=False,
     ):
-        # Combine single image inputs and batch image inputs
         singleImages = ImageUtils.prepare_images([image_1, image_2, image_3, image_4])
         batchImages = ImageUtils.prepare_images(images)
         image_urls = singleImages + batchImages
@@ -2239,24 +2249,18 @@ class NanoBanana2:
             "enable_web_search": enable_web_search,
             "limit_generations": limit_generations,
             "sync_mode": sync_mode,
+            "enable_safety_checker": enable_safety_checker,
+            "seed": seed,
         }
 
-        # Only pass thinking_level if it's not "none"
         if thinking_level != "none":
             arguments["thinking_level"] = thinking_level
 
-        if seed != -1:
-            arguments["seed"] = seed
-
-        # Conditional endpoint routing based on whether ANY images are provided
         if len(image_urls) > 0:
-            # Use edit endpoint with image_urls array
             endpoint = "fal-ai/nano-banana-2/edit"
             arguments["image_urls"] = image_urls
         else:
-            # Use text-to-image endpoint (no image_urls parameter)
             endpoint = "fal-ai/nano-banana-2"
-            # Remove "auto" from aspect_ratio for text-to-image endpoint just in case it is unsupported
             if aspect_ratio == "auto":
                 arguments["aspect_ratio"] = "1:1"
 
@@ -2265,6 +2269,7 @@ class NanoBanana2:
             return ResultProcessor.process_image_result(result)
         except Exception as e:
             return ApiHandler.handle_image_generation_error("Nano Banana 2", e)
+
 
 class NanoBananaPro:
     @classmethod
@@ -2333,6 +2338,103 @@ class NanoBananaPro:
             return ResultProcessor.process_image_result(result)
         except Exception as e:
             return ApiHandler.handle_image_generation_error("Nano Banana Pro", e)
+
+
+class NanoBananaProEdit:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "image_1": ("IMAGE", {"tooltip": "You can also feed an Image Batch directly into any of these image inputs!"}),
+                "resolution": (["1K", "2K", "4K"], {"default": "2K"}),
+                "aspect_ratio": (
+                    [
+                        "auto", "21:9", "16:9", "3:2", "4:3", "5:4", "1:1", 
+                        "4:5", "3:4", "2:3", "9:16"
+                    ],
+                    {"default": "9:16"},
+                ),
+                "safety_tolerance": (
+                    ["1", "2", "3", "4", "5", "6"], 
+                    {"default": "6", "tooltip": "The safety tolerance level for content moderation. 1 is the most strict (blocks most content), 6 is the least strict."}
+                ),
+                "seed": ("INT", {"default": 0, "min": 0, "max": 4294967295}),
+            },
+            "optional": {
+                "image_2": ("IMAGE",),
+                "image_3": ("IMAGE",),
+                "image_4": ("IMAGE",),
+                "images": ("IMAGE", {
+                    "default": None, 
+                    "multiple": True,
+                    "tooltip": "Tip: You can use a 'Make Image Batch' or similar node to combine up to 14 images into a single batch and feed it to any of these image inputs."
+                }),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "output_format": (["jpeg", "png", "webp"], {"default": "png"}),
+                "limit_generations": ("BOOLEAN", {"default": False, "tooltip": "If you type a prompt like 'Generate 4 different angles of this car' and leave limit_generations set to False, the model might try to follow your text instructions and output a grid of 4 cars. If you set it to True, the API will strictly disregard any instructions in your prompt regarding image quantity and force it to only generate a single image."}),
+                "enable_web_search": ("BOOLEAN", {"default": False}),
+                "sync_mode": ("BOOLEAN", {"default": False}),
+                "enable_safety_checker": ("BOOLEAN", {"default": False, "tooltip": "Disable Fal.ai's master post-generation filter to prevent outputs from being replaced with black images."}),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate_image"
+    CATEGORY = "FAL/Image"
+
+    def generate_image(
+        self,
+        prompt,
+        image_1,
+        resolution,
+        aspect_ratio,
+        safety_tolerance,
+        seed,
+        image_2=None,
+        image_3=None,
+        image_4=None,
+        images=None,
+        num_images=1,
+        output_format="png",
+        limit_generations=False,
+        enable_web_search=False,
+        sync_mode=False,
+        enable_safety_checker=False,
+    ):
+        model_name = "Nano Banana Pro Edit"
+
+        # Combine single image inputs and batch image inputs
+        singleImages = ImageUtils.prepare_images([image_1, image_2, image_3, image_4])
+        batchImages = ImageUtils.prepare_images(images)
+        image_urls = singleImages + batchImages
+
+        if len(image_urls) == 0:
+            print(f"Error: Failed to upload images for {model_name}")
+            return ResultProcessor.create_blank_image()
+
+        arguments = {
+            "prompt": prompt,
+            "image_urls": image_urls,
+            "num_images": num_images,
+            "aspect_ratio": aspect_ratio,
+            "resolution": resolution,
+            "output_format": output_format,
+            "safety_tolerance": safety_tolerance,
+            "limit_generations": limit_generations,
+            "enable_web_search": enable_web_search,
+            "sync_mode": sync_mode,
+            "enable_safety_checker": enable_safety_checker,
+            "seed": seed,
+        }
+
+        endpoint = "fal-ai/nano-banana-pro/edit"
+
+        try:
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            return ResultProcessor.process_image_result(result)
+        except Exception as e:
+            return ApiHandler.handle_image_generation_error(model_name, e)
 
 
 class ReveTextToImage:
@@ -2587,6 +2689,7 @@ NODE_CLASS_MAPPINGS = {
     "NanoBananaTextToImage_fal": NanoBananaTextToImage,
     "NanoBananaEdit_fal": NanoBananaEdit,
     "NanoBananaPro_fal": NanoBananaPro,
+    "NanoBananaProEdit_fal": NanoBananaProEdit,
     "NanoBanana2_fal": NanoBanana2,
     "ReveTextToImage_fal": ReveTextToImage,
     "Dreamina31TextToImage_fal": Dreamina31TextToImage,
@@ -2622,6 +2725,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "NanoBananaTextToImage_fal": "Nano Banana Text-to-Image (fal)",
     "NanoBananaEdit_fal": "Nano Banana Edit (fal)",
     "NanoBananaPro_fal": "Nano Banana Pro (fal)",
+    "NanoBananaProEdit_fal": "Nano Banana Pro Edit (fal)",
     "NanoBanana2_fal": "Nano Banana 2 (fal)",
     "ReveTextToImage_fal": "Reve Text-to-Image (fal)",
     "Dreamina31TextToImage_fal": "Dreamina v3.1 Text-to-Image (fal)",
