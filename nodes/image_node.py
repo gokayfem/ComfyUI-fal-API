@@ -2297,7 +2297,7 @@ class GPTImage2Edit:
         return {
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
-                "image_1": ("IMAGE",),
+                "images": ("IMAGE",),
                 "image_size": (
                     [
                         "auto",
@@ -2315,21 +2315,6 @@ class GPTImage2Edit:
                 "height": ("INT", {"default": 1024, "min": 256, "max": 3840}),
             },
             "optional": {
-                "image_2": ("IMAGE",),
-                "image_3": ("IMAGE",),
-                "image_4": ("IMAGE",),
-                "image_5": ("IMAGE",),
-                "image_6": ("IMAGE",),
-                "image_7": ("IMAGE",),
-                "image_8": ("IMAGE",),
-                "image_9": ("IMAGE",),
-                "image_10": ("IMAGE",),
-                "image_11": ("IMAGE",),
-                "image_12": ("IMAGE",),
-                "image_13": ("IMAGE",),
-                "image_14": ("IMAGE",),
-                "image_15": ("IMAGE",),
-                "image_16": ("IMAGE",),
                 "mask_image": ("IMAGE",),
                 "quality": (["low", "medium", "high"], {"default": "high"}),
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
@@ -2345,25 +2330,10 @@ class GPTImage2Edit:
     def edit_image(
         self,
         prompt,
-        image_1,
+        images,
         image_size,
         width,
         height,
-        image_2=None,
-        image_3=None,
-        image_4=None,
-        image_5=None,
-        image_6=None,
-        image_7=None,
-        image_8=None,
-        image_9=None,
-        image_10=None,
-        image_11=None,
-        image_12=None,
-        image_13=None,
-        image_14=None,
-        image_15=None,
-        image_16=None,
         mask_image=None,
         quality="high",
         num_images=1,
@@ -2372,35 +2342,15 @@ class GPTImage2Edit:
     ):
         model_name = "GPT-Image 2 Edit"
 
-        image_urls = []
-        for i, img in enumerate(
-            [
-                image_1,
-                image_2,
-                image_3,
-                image_4,
-                image_5,
-                image_6,
-                image_7,
-                image_8,
-                image_9,
-                image_10,
-                image_11,
-                image_12,
-                image_13,
-                image_14,
-                image_15,
-                image_16,
-            ],
-            1,
+        # Cap batch at 16 images (matches the previous per-slot ceiling)
+        if (
+            images is not None
+            and hasattr(images, "shape")
+            and len(images.shape) == 4
+            and images.shape[0] > 16
         ):
-            if img is not None:
-                url = ImageUtils.upload_image(img)
-                if url:
-                    image_urls.append(url)
-                else:
-                    print(f"Error: Failed to upload image {i} for {model_name}")
-                    return ResultProcessor.create_blank_image()
+            images = images[:16]
+        image_urls = ImageUtils.prepare_images(images)
 
         if len(image_urls) == 0:
             print(f"Error: No valid images provided for {model_name}")
