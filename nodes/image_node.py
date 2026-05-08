@@ -2297,9 +2297,10 @@ class GPTImage2Edit:
         return {
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
-                "image_1": ("IMAGE",),
+                "images": ("IMAGE",),
                 "image_size": (
                     [
+                        "auto",
                         "square_hd",
                         "square",
                         "portrait_4_3",
@@ -2308,31 +2309,14 @@ class GPTImage2Edit:
                         "landscape_16_9",
                         "custom",
                     ],
-                    {"default": "custom"},
+                    {"default": "auto"},
                 ),
-                "width": ("INT", {"default": 3840, "min": 768, "max": 4096}),
-                "height": ("INT", {"default": 2160, "min": 768, "max": 4096}),
+                "width": ("INT", {"default": 1024, "min": 256, "max": 3840}),
+                "height": ("INT", {"default": 1024, "min": 256, "max": 3840}),
             },
             "optional": {
-                "image_2": ("IMAGE",),
-                "image_3": ("IMAGE",),
-                "image_4": ("IMAGE",),
-                "image_5": ("IMAGE",),
-                "image_6": ("IMAGE",),
-                "image_7": ("IMAGE",),
-                "image_8": ("IMAGE",),
-                "image_9": ("IMAGE",),
-                "image_10": ("IMAGE",),
-                "image_11": ("IMAGE",),
-                "image_12": ("IMAGE",),
-                "image_13": ("IMAGE",),
-                "image_14": ("IMAGE",),
-                "image_15": ("IMAGE",),
-                "image_16": ("IMAGE",),                 
                 "mask_image": ("IMAGE",),
-                "background": (["auto", "transparent", "opaque"], {"default": "opaque"}),
                 "quality": (["low", "medium", "high"], {"default": "high"}),
-                "input_fidelity": (["low", "high"], {"default": "high"}),
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
                 "output_format": (["jpeg", "png", "webp"], {"default": "png"}),
                 "sync_mode": ("BOOLEAN", {"default": False}),
@@ -2346,64 +2330,27 @@ class GPTImage2Edit:
     def edit_image(
         self,
         prompt,
-        image_1,
+        images,
         image_size,
-        width,       
-        height,      
-        image_2=None,
-        image_3=None,
-        image_4=None,
-        image_5=None,
-        image_6=None,
-        image_7=None,
-        image_8=None,
-        image_9=None,
-        image_10=None,
-        image_11=None,
-        image_12=None,
-        image_13=None,
-        image_14=None,
-        image_15=None,
-        image_16=None,        
+        width,
+        height,
         mask_image=None,
-        background="opaque",
         quality="high",
-        input_fidelity="high",
         num_images=1,
         output_format="png",
         sync_mode=False,
     ):
         model_name = "GPT-Image 2 Edit"
 
-        image_urls = []
-        for i, img in enumerate(
-            [
-                image_1,
-                image_2,
-                image_3,
-                image_4,
-                image_5,
-                image_6,
-                image_7,
-                image_8,
-                image_9,
-                image_10,
-                image_11,
-                image_12,
-                image_13,
-                image_14,
-                image_15,
-                image_16,
-            ],
-            1,
+        # Cap batch at 16 images (matches the previous per-slot ceiling)
+        if (
+            images is not None
+            and hasattr(images, "shape")
+            and len(images.shape) == 4
+            and images.shape[0] > 16
         ):
-            if img is not None:
-                url = ImageUtils.upload_image(img)
-                if url:
-                    image_urls.append(url)
-                else:
-                    print(f"Error: Failed to upload image {i} for {model_name}")
-                    return ResultProcessor.create_blank_image()
+            images = images[:16]
+        image_urls = ImageUtils.prepare_images(images)
 
         if len(image_urls) == 0:
             print(f"Error: No valid images provided for {model_name}")
@@ -2412,9 +2359,7 @@ class GPTImage2Edit:
         arguments = {
             "prompt": prompt,
             "image_urls": image_urls,
-            "background": background,
             "quality": quality,
-            "input_fidelity": input_fidelity,
             "num_images": num_images,
             "output_format": output_format,
             "sync_mode": sync_mode,
@@ -2428,10 +2373,10 @@ class GPTImage2Edit:
         if mask_image is not None:
             mask_url = ImageUtils.upload_image(mask_image)
             if mask_url:
-                arguments["mask_image_url"] = mask_url
+                arguments["mask_url"] = mask_url
 
         try:
-            result = ApiHandler.submit_and_get_result("fal-ai/gpt-image-2/edit", arguments)
+            result = ApiHandler.submit_and_get_result("openai/gpt-image-2/edit", arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
             return ApiHandler.handle_image_generation_error(model_name, e)
@@ -2455,11 +2400,10 @@ class GPTImage2:
                         "landscape_16_9",
                         "custom",
                     ],
-                    {"default": "custom"},
+                    {"default": "landscape_4_3"},
                 ),
-                "width": ("INT", {"default": 3840, "min": 768, "max": 4096}),
-                "height": ("INT", {"default": 2160, "min": 768, "max": 4096}),
-                "background": (["auto", "transparent", "opaque"], {"default": "opaque"}),
+                "width": ("INT", {"default": 1024, "min": 256, "max": 3840, "step": 16}),
+                "height": ("INT", {"default": 768, "min": 256, "max": 3840, "step": 16}),
                 "quality": (["low", "medium", "high"], {"default": "high"}),
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
                 "output_format": (["jpeg", "png", "webp"], {"default": "png"}),
@@ -2474,10 +2418,9 @@ class GPTImage2:
     def generate_image(
         self,
         prompt,
-        image_size="custom",
-        width=3840,
-        height=2160,
-        background="auto",
+        image_size="landscape_4_3",
+        width=1024,
+        height=768,
         quality="high",
         num_images=1,
         output_format="png",
@@ -2485,7 +2428,6 @@ class GPTImage2:
     ):
         arguments = {
             "prompt": prompt,
-            "background": background,
             "quality": quality,
             "num_images": num_images,
             "output_format": output_format,
@@ -2498,7 +2440,7 @@ class GPTImage2:
             arguments["image_size"] = image_size
 
         try:
-            result = ApiHandler.submit_and_get_result("fal-ai/gpt-image-2", arguments)
+            result = ApiHandler.submit_and_get_result("openai/gpt-image-2", arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
             return ApiHandler.handle_image_generation_error("GPT-Image 2", e)
@@ -2534,6 +2476,8 @@ NODE_CLASS_MAPPINGS = {
     "Dreamina31TextToImage_fal": Dreamina31TextToImage,
     "GPTImage15Edit_fal": GPTImage15Edit,
     "GPTImage15_fal": GPTImage15,
+    "GPTImage2Edit_fal": GPTImage2Edit,
+    "GPTImage2_fal": GPTImage2,
 }
 
 
