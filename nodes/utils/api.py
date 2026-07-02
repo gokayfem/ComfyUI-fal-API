@@ -9,6 +9,7 @@ from typing import Any, Callable, NoReturn
 
 from .config import FalConfig
 from .errors import FalApiError, extract_error_message, raise_fal_error
+from .job_store import JobStore
 from .ledger import SessionLedger
 from .logger import logger
 from .pricing import PricingUtils
@@ -273,6 +274,12 @@ class ApiHandler:
                 raise
             raise_fal_error(endpoint, exc)
         logger.info("[%s] submitted async (request_id=%s)", endpoint, handle.request_id)
+        # Best-effort bookkeeping: the persistent job inbox lets this request
+        # be found and collected even after a ComfyUI restart.
+        try:
+            JobStore().record_submit(endpoint, handle.request_id)
+        except Exception as exc:
+            logger.debug("[%s] job store record_submit failed: %s", endpoint, exc)
         return handle.request_id
 
     @staticmethod
@@ -316,6 +323,12 @@ class ApiHandler:
                 _record_ledger_entry(endpoint, request_id, duration_s)
             else:
                 _record_ledger_entry(endpoint, request_id, duration_s, est_cost_override=None, free=True)
+        # Best-effort bookkeeping: mark the job collected in the persistent
+        # inbox (inserting it if it was submitted in another session).
+        try:
+            JobStore().mark_collected(request_id)
+        except Exception as exc:
+            logger.debug("[%s] job store mark_collected failed: %s", endpoint, exc)
         return result
 
     @staticmethod
