@@ -180,6 +180,15 @@ def _store_result_in_cache(
         logger.debug("[%s] result cache store failed: %s", endpoint, exc)
 
 
+def _remember_result_urls(endpoint: str, request_id: str | None, result: Any) -> None:
+    """Best-effort provenance bookkeeping: map result URLs to their request."""
+    if not request_id:
+        return
+    try:
+        ResultCache().remember_urls(endpoint, request_id, result)
+    except Exception as exc:
+        logger.debug("[%s] remember_urls failed: %s", endpoint, exc)
+
 def _raise_generation_error(model_name: str, error: Exception | str) -> NoReturn:
     """Normalize an exception or error string into a raised FalApiError."""
     if isinstance(error, BaseException):
@@ -253,6 +262,7 @@ class ApiHandler:
             _record_ledger_entry(endpoint, request_id_ref[0], duration_s)
 
         _store_result_in_cache(endpoint, arguments, result, request_id_ref[0])
+        _remember_result_urls(endpoint, request_id_ref[0], result)
         return result
 
     @staticmethod
@@ -329,6 +339,7 @@ class ApiHandler:
             JobStore().mark_collected(request_id)
         except Exception as exc:
             logger.debug("[%s] job store mark_collected failed: %s", endpoint, exc)
+        _remember_result_urls(endpoint, request_id, result)
         return result
 
     @staticmethod
