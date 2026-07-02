@@ -9,6 +9,7 @@ The implementations now live in the ``nodes/utils`` package.
 
 from .utils import (
     ApiHandler,
+    ArchiveUtils,
     BillingUtils,
     FalApiError,
     FalConfig,
@@ -25,6 +26,7 @@ from .utils import (
 
 __all__ = [
     "ApiHandler",
+    "ArchiveUtils",
     "BillingUtils",
     "FalApiError",
     "FalConfig",

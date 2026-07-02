@@ -1,6 +1,7 @@
 """Core utilities for the ComfyUI-fal-API node pack."""
 
 from .api import ApiHandler
+from .archive import ArchiveUtils
 from .billing import BillingUtils, SpendGuard
 from .config import FalConfig
 from .errors import FalApiError, extract_error_message, raise_fal_error
@@ -14,6 +15,7 @@ from .result_cache import ResultCache
 
 __all__ = [
     "ApiHandler",
+    "ArchiveUtils",
     "BillingUtils",
     "FalApiError",
     "FalConfig",

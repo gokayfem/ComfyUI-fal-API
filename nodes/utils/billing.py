@@ -139,16 +139,16 @@ class BillingUtils:
         as SpendGuard.preflight do not hammer the API; ``force=True`` bypasses.
         """
         global _balance_cache
-        now = time.time()
-        if not force:
-            with _balance_lock:
-                value, fetched_at = _balance_cache
-            if fetched_at > 0 and now - fetched_at < _BALANCE_CACHE_TTL_S:
-                return value
-        value = _fetch_balance()
+        # the fetch happens under the lock so a cold-start burst of parallel
+        # callers (e.g. 8 caption workers hitting SpendGuard at once) collapses
+        # into a single API call instead of hammering /account/billing
         with _balance_lock:
+            value, fetched_at = _balance_cache
+            if not force and fetched_at > 0 and time.time() - fetched_at < _BALANCE_CACHE_TTL_S:
+                return value
+            value = _fetch_balance()
             _balance_cache = [value, time.time()]
-        return value
+            return value
 
     @staticmethod
     def get_recent_usage(limit: int = 50) -> list[dict[str, Any]] | None:

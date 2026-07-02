@@ -17,6 +17,7 @@ Custom nodes that bring the entire [fal.ai](https://fal.ai) catalog into ComfyUI
   - [Vision Language Models (VLMs)](#vision-language-models-vlms)
 - [Auto-Generated Nodes](#auto-generated-nodes)
 - [Platform Utilities](#platform-utilities)
+- [Utility Nodes](#utility-nodes-24)
 - [Generated Model List](#generated-model-list)
 - [Registry Maintenance](#registry-maintenance)
 - [Troubleshooting](#troubleshooting)
@@ -277,6 +278,16 @@ All frontend features degrade silently on older ComfyUI versions.
 ### Fal Save Media from URL
 
 fal result URLs eventually expire from the CDN. This node downloads any result URL into your ComfyUI `output/` directory (subfolders + collision-safe numbering) so generations are persisted with your other outputs.
+
+## Utility Nodes (2.4)
+
+Twenty nodes under `FAL/Utils` covering everything between your assets and a fal endpoint — no other packs needed:
+
+- **Dataset** (`FAL/Utils/Dataset`): *Images → Training ZIP URL* (standard LoRA caption layout), *Folder → ZIP URL*, *Video → Frame Dataset ZIP URL*, *Batch Caption Images* (parallel VLM captioning). The full pipeline: Load Image Folder → Batch Caption → Images→ZIP → any trainer node.
+- **Load** (`FAL/Utils/Load`): *Load Image from URL* (multi-URL batching), *Load Audio from URL*, *Load Image Folder*, *Upload Folder as ZIP URL*.
+- **Video** (`FAL/Utils/Video`): *Extract Frames* (efficient last-frame seek — chain into image-to-video for endless extension), *Trim* (keyframe remux, no re-encode), *Concat* (auto resolution/fps normalize), *Mux Audio + Video* (marry TTS/music to generated video), *Video → Audio*.
+- **Image** (`FAL/Utils/Image`): *Image Grid with Labels*, *Resize to fal Preset* (cover/contain/stretch to the standard image_size dims), *Image ↔ Base64*.
+- **Data** (`FAL/Utils/Data`): *JSON Extract* (dot/bracket path queries against any `result_json` output), *Prompt Lines* (cycling line picker), *Text Template*.
 
 ## Generated Model List
 
