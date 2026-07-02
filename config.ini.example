@@ -1,2 +1,21 @@
 [API]
 FAL_KEY = <your_fal_api_key_here>
+
+; --- Optional sections (defaults shown; uncomment to change) ---
+
+; [dynamic_nodes]
+; enabled = true
+; categories = text-to-image,image-to-video
+
+; [cache]
+; Persistent result cache: identical fal calls are served from disk (free)
+; across ComfyUI restarts. Bypass per node with force_rerun.
+; enabled = true
+; ttl_days = 7
+; max_entries = 5000
+
+; [spend_guard]
+; Refuse to submit jobs once the session's estimated spend reaches the
+; budget, or when the account balance falls below the floor. 0 = disabled.
+; session_budget_usd = 0
+; min_balance_usd = 0

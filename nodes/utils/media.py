@@ -156,7 +156,13 @@ def _stream_to_temp_file(source: Any, suffix: str) -> str:
 
 
 class MediaUtils:
-    """Utility functions for video/audio download, conversion, and upload."""
+    """Utility functions for video/audio download, conversion, and upload.
+
+    Local-file uploads (upload_video/upload_audio) route through
+    ImageUtils.upload_file, which consults the persistent upload cache
+    (sha256 of file bytes) so identical content is never uploaded twice.
+    http(s) URL inputs pass through untouched.
+    """
 
     @staticmethod
     def download_url_to_temp(url: str, suffix: str) -> str:

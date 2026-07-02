@@ -56,6 +56,18 @@ def test_session_costs_reports(pack):
     assert isinstance(total, float)
 
 
+def test_save_media_blocks_path_traversal(pack, errors_mod):
+    import importlib
+
+    from conftest import PKG
+
+    platform = importlib.import_module(f"{PKG}.nodes.platform_node")
+    with pytest.raises(errors_mod.FalApiError):
+        platform._resolve_save_directory("../../../../tmp/evil")
+    directory, basename = platform._resolve_save_directory("fal/media")
+    assert basename == "media"
+
+
 def test_save_media_rejects_empty_url(pack, errors_mod):
     cls = pack.NODE_CLASS_MAPPINGS["FalSaveMediaURL_fal"]
     node = cls()

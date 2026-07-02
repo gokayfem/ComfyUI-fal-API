@@ -5,6 +5,7 @@ ComfyUI IMAGE convention: float32 tensors in [0, 1] with shape (B, H, W, C).
 
 from __future__ import annotations
 
+import hashlib
 import io
 import os
 import tempfile
@@ -22,6 +23,56 @@ from .logger import logger
 
 _DOWNLOAD_TIMEOUT = (10, 180)
 _MAX_PARALLEL_TRANSFERS = 8
+_HASH_CHUNK_SIZE = 1 << 20  # 1 MiB
+
+
+def _hash_file(path: str) -> str | None:
+    """Return the sha256 hex digest of a file's bytes, or None on any error."""
+    try:
+        digest = hashlib.sha256()
+        with open(path, "rb") as handle:
+            for chunk in iter(lambda: handle.read(_HASH_CHUNK_SIZE), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+    except Exception as exc:
+        logger.debug("failed to hash %s for upload cache: %s", path, exc)
+        return None
+
+
+def _upload_cache_lookup(file_path: Any) -> tuple[str | None, str | None]:
+    """Hash a local file and consult the persistent upload cache.
+
+    Returns (content_hash, cached_url); both None when the file cannot be
+    hashed or caching is unavailable. Never raises.
+    """
+    try:
+        if not isinstance(file_path, (str, os.PathLike)):
+            return None, None
+        content_hash = _hash_file(os.fspath(file_path))
+        if content_hash is None:
+            return None, None
+
+        from .result_cache import ResultCache
+
+        cached_url = ResultCache().get_upload(content_hash)
+        if cached_url:
+            logger.debug("upload cache hit (sha256=%s...)", content_hash[:12])
+        return content_hash, cached_url
+    except Exception as exc:
+        logger.debug("upload cache lookup failed: %s", exc)
+        return None, None
+
+
+def _upload_cache_store(content_hash: str | None, url: str) -> None:
+    """Remember a completed upload in the persistent cache. Never raises."""
+    if content_hash is None:
+        return
+    try:
+        from .result_cache import ResultCache
+
+        ResultCache().put_upload(content_hash, url)
+    except Exception as exc:
+        logger.debug("upload cache store failed: %s", exc)
 
 
 def _safe_unlink(path: str) -> None:
@@ -109,15 +160,24 @@ class ImageUtils:
 
     @staticmethod
     def upload_file(file_path: Any) -> str:
-        """Upload a local file to fal.ai and return its URL."""
+        """Upload a local file to fal.ai and return its URL.
+
+        Identical file contents reuse the previously uploaded URL via the
+        persistent upload cache (keyed by sha256), skipping the transfer.
+        """
+        content_hash, cached_url = _upload_cache_lookup(file_path)
+        if cached_url:
+            return cached_url
         try:
             client = FalConfig().get_client()
-            return client.upload_file(file_path)
+            url = client.upload_file(file_path)
         except FalApiError:
             raise
         except Exception as exc:
             logger.error("Failed to upload file %s: %s", file_path, exc)
             raise_fal_error("file-upload", exc)
+        _upload_cache_store(content_hash, url)
+        return url
 
     @staticmethod
     def mask_to_image(mask: torch.Tensor) -> torch.Tensor:

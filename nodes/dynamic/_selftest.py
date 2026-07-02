@@ -216,7 +216,7 @@ def _test_fixture_behaviour(dyn, stub):
 
     # --- end-to-end run() per output kind ---
     flux_node = factory.build_node_class(flux)()
-    assert flux_node.run(**kwargs) == ("IMAGE_TENSOR",)
+    assert flux_node.run(**kwargs) == ("IMAGE_TENSOR", "https://x/i.png")
 
     kling_node = factory.build_node_class(kling)()
     out = kling_node.run(prompt="move", image_url="TENSOR", duration="5",
@@ -271,6 +271,153 @@ def _test_fixture_behaviour(dyn, stub):
     print("[fixture] behaviour tests passed")
 
 
+def _file_input(name, media_kind, required=False, is_list=False, type_="string"):
+    return {
+        "name": name, "type": type_, "required": required, "default": None,
+        "enum": None, "min": None, "max": None, "description": "",
+        "media_kind": media_kind, "is_list": is_list, "multiline": False,
+        "has_custom_size": False,
+    }
+
+
+def _test_direct_url_passthrough(stub):
+    from importlib import import_module
+
+    arguments = import_module(f"{PKG}.dynamic.arguments")
+    factory = import_module(f"{PKG}.dynamic.factory")
+    schema = import_module(f"{PKG}.dynamic.schema_to_inputs")
+
+    models = _load_models(PACKAGE_DIR / "_fixture_registry.json")
+    by_id = {m["endpoint_id"]: m for m in models}
+    kling = by_id["fal-ai/kling-video/v2/master/image-to-video"]
+    tripo = by_id["tripo3d/tripo/v2.5/image-to-3d"]
+    flux = by_id["fal-ai/flux/dev"]
+
+    # --- twins present and placed: required media → start of optional ---
+    it = schema.build_input_types(kling)
+    assert list(it["optional"])[0] == "image_url_direct_url"
+    assert it["optional"]["image_url_direct_url"][0] == "STRING"
+    assert "image_url_direct_url" not in it["required"]
+
+    uit = schema.build_input_types(by_id["fal-ai/video-upscaler"])
+    assert list(uit["optional"])[0] == "video_url_direct_url"
+
+    # optional is_list media → twin immediately after its media input
+    tit = schema.build_input_types(tripo)
+    tkeys = list(tit["optional"])
+    assert tkeys[0] == "image_url_direct_url"
+    assert tkeys.index("image_urls_direct_url") == tkeys.index("image_urls") + 1
+    assert "Comma" in tit["optional"]["image_urls_direct_url"][1]["tooltip"]
+
+    # no twin for text-only models or media_kind "file"
+    fit = schema.build_input_types(flux)
+    assert not any(k.endswith("_direct_url") for k in {**fit["required"], **fit["optional"]})
+    file_model = {**kling, "inputs": [_file_input("doc_url", "file", required=True)]}
+    ffit = schema.build_input_types(file_model)
+    assert not any(k.endswith("_direct_url") for k in {**ffit["required"], **ffit["optional"]})
+
+    # collision guard: a literal *_direct_url input suppresses the generated twin
+    collide = {**kling, "inputs": [
+        _file_input("image_url", "image", required=True),
+        _file_input("image_url_direct_url", None),
+    ]}
+    cit = schema.build_input_types(collide)
+    assert list(cit["optional"]).count("image_url_direct_url") == 1
+
+    # --- passthrough beats tensor upload; twin key never leaks ---
+    kargs = arguments.build_arguments(kling, {
+        "prompt": "move", "image_url": "TENSOR",
+        "image_url_direct_url": "  https://cdn.fal.media/start.png  ",
+        "duration": "5", "negative_prompt": "", "cfg_scale": 0.5,
+    })
+    assert kargs["image_url"] == "https://cdn.fal.media/start.png"
+    assert not any(k.endswith("_direct_url") for k in kargs)
+
+    # media input None or absent: URL still wins
+    for image_value in ({"image_url": None}, {}):
+        k2 = arguments.build_arguments(
+            kling,
+            {"prompt": "m", "image_url_direct_url": "https://cdn.fal.media/s.png", **image_value},
+        )
+        assert k2["image_url"] == "https://cdn.fal.media/s.png"
+
+    # blank twin falls back to the normal upload path
+    k3 = arguments.build_arguments(
+        kling, {"prompt": "m", "image_url": "TENSOR", "image_url_direct_url": "   "}
+    )
+    assert k3["image_url"] == "https://stub.fal.media/image.png"
+
+    # non-http(s) raises
+    try:
+        arguments.build_arguments(kling, {"prompt": "x", "image_url_direct_url": "ftp://nope"})
+        raise AssertionError("expected FalApiError for non-http(s) direct URL")
+    except stub.FalApiError:
+        pass
+
+    # is_list twin: comma-separated string → list of URLs
+    targs = arguments.build_arguments(tripo, {
+        "image_url": "TENSOR", "texture": "HD", "seed": -1,
+        "image_urls_direct_url": "https://a/1.png, https://a/2.png ,https://a/3.png",
+    })
+    assert targs["image_urls"] == ["https://a/1.png", "https://a/2.png", "https://a/3.png"]
+    assert targs["image_url"] == "https://stub.fal.media/image.png"
+    assert not any(k.endswith("_direct_url") for k in targs)
+
+    try:
+        arguments.build_arguments(tripo, {"image_urls_direct_url": "https://a/1.png, nope"})
+        raise AssertionError("expected FalApiError for bad URL in list")
+    except stub.FalApiError:
+        pass
+
+    # collision model: the literal input passes through as a plain string argument
+    cargs = arguments.build_arguments(
+        collide, {"image_url": "TENSOR", "image_url_direct_url": "not-a-url"}
+    )
+    assert cargs["image_url"] == "https://stub.fal.media/image.png"
+    assert cargs["image_url_direct_url"] == "not-a-url"
+
+    # --- skip_cache plumbing: old signature tolerated, new one receives the flag ---
+    node = factory.build_node_class(flux)()
+    node.run(prompt="hi", force_rerun=True)
+    assert len(stub.ApiHandler.last_call) == 2  # legacy stub: called without skip_cache
+
+    def with_skip(endpoint, arguments, timeout=None, skip_cache=False):
+        stub.ApiHandler.last_call = (endpoint, arguments, skip_cache)
+        return _CANNED_RESULTS.get(endpoint, {"ok": True})
+
+    original = stub.ApiHandler.submit_and_get_result
+    stub.ApiHandler.submit_and_get_result = staticmethod(with_skip)
+    try:
+        node.run(prompt="hi", force_rerun=True)
+        assert stub.ApiHandler.last_call[2] is True
+        node.run(prompt="hi", force_rerun=False)
+        assert stub.ApiHandler.last_call[2] is False
+    finally:
+        stub.ApiHandler.submit_and_get_result = original
+
+    print("[fixture] direct-url passthrough tests passed")
+
+
+def _twin_sweep(models, schema):
+    """Real-registry sweep: build every INPUT_TYPES, count twin coverage."""
+    gained_nodes = 0
+    twin_count = 0
+    for model in models:
+        input_types = schema.build_input_types(model)
+        names = {inp["name"] for inp in model.get("inputs", [])}
+        overlap = set(input_types["required"]) & set(input_types["optional"])
+        assert not overlap, f"{model['endpoint_id']}: bucket overlap {overlap}"
+        twins = [
+            key for key in input_types["optional"]
+            if key.endswith("_direct_url") and key not in names
+        ]
+        if twins:
+            gained_nodes += 1
+            twin_count += len(twins)
+    print(f"[real] direct-url twins: {twin_count} twin inputs across "
+          f"{gained_nodes}/{len(models)} nodes")
+
+
 def _dump_samples(models, factory):
     samples = [
         ("flux", "text-to-image"),
@@ -315,10 +462,13 @@ def main() -> int:
     assert built == 5
 
     _test_fixture_behaviour(dyn, stub)
+    _test_direct_url_passthrough(stub)
 
     if REAL_REGISTRY.is_file():
+        schema = import_module(f"{PKG}.dynamic.schema_to_inputs")
         real_models = _load_models(REAL_REGISTRY)
         built, skipped = _check_registry(real_models, factory, outputs, "real")
+        _twin_sweep(real_models, schema)
         classes, display = dyn.get_dynamic_mappings()
         print(f"[real] loader registered {len(classes)} nodes "
               f"(incl. any-endpoint), display names unique: "

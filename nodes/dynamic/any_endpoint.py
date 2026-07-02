@@ -213,6 +213,8 @@ class FalAnyEndpoint:
             endpoint, arguments_json, image, image_2, video, audio, seed
         )
 
-        result = ApiHandler.submit_and_get_result(endpoint, arguments)
+        result = ApiHandler.submit_and_get_result(
+            endpoint, arguments, skip_cache=bool(force_rerun)
+        )
 
         return extract_flexible_outputs(result)

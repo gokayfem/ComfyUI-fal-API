@@ -30,13 +30,19 @@ _MAX_SEED = 2**31 - 1
 _SAVE_COUNTER_LIMIT = 100_000
 
 
-def _collect_result(node_name: str, endpoint_id: str, request_id: str) -> tuple[Any, Any, Any, str]:
-    """Fetch a queued result by id and extract flexible outputs from it."""
+def _collect_result(
+    node_name: str, endpoint_id: str, request_id: str, record_cost: bool = True
+) -> tuple[Any, Any, Any, str]:
+    """Fetch a queued result by id and extract flexible outputs from it.
+
+    ``record_cost=False`` marks a pure recovery of a past request — the fetch
+    is logged for traceability but adds no new spend to the session ledger.
+    """
     endpoint = (endpoint_id or "").strip()
     request = (request_id or "").strip()
     if not endpoint or not request:
         raise FalApiError(node_name, "Both endpoint_id and request_id are required")
-    result = ApiHandler.result_from_request_id(endpoint, request)
+    result = ApiHandler.result_from_request_id(endpoint, request, record_cost=record_cost)
     return extract_flexible_outputs(result)
 
 
@@ -201,7 +207,9 @@ class FalResultByRequestId:
         }
 
     def fetch(self, endpoint_id: str, request_id: str) -> tuple[Any, Any, Any, str]:
-        return _collect_result("FalResultByRequestId", endpoint_id, request_id)
+        return _collect_result(
+            "FalResultByRequestId", endpoint_id, request_id, record_cost=False
+        )
 
 
 class FalCostEstimator:
@@ -322,12 +330,37 @@ def _suffix_from_url(url: str) -> str:
     return suffix if suffix else ".bin"
 
 
-def _unique_destination(directory: str, basename: str, suffix: str) -> str:
-    """First non-existing '<basename>_00001<suffix>'-style path in directory."""
+def _resolve_save_directory(filename_prefix: str) -> tuple[str, str]:
+    """Split the prefix into a confined save directory and a basename.
+
+    The resolved directory must stay inside the ComfyUI output directory —
+    a shared workflow must not be able to write outside it via '..' segments.
+    """
+    prefix = (filename_prefix or "").strip().strip("/") or "fal/media"
+    subdir, basename = os.path.split(prefix)
+    basename = basename or "media"
+    output_root = os.path.realpath(_output_directory())
+    directory = os.path.realpath(os.path.join(output_root, subdir))
+    if directory != output_root and not directory.startswith(output_root + os.sep):
+        raise FalApiError(
+            "FalSaveMediaURL",
+            f"filename_prefix escapes the output directory: {filename_prefix!r}",
+        )
+    return directory, basename
+
+
+def _claim_unique_destination(directory: str, basename: str, suffix: str) -> str:
+    """Atomically claim the first free '<basename>_00001<suffix>' path.
+
+    O_CREAT|O_EXCL closes the check-then-act race between concurrent saves.
+    """
     for counter in range(1, _SAVE_COUNTER_LIMIT):
         candidate = os.path.join(directory, f"{basename}_{counter:05d}{suffix}")
-        if not os.path.exists(candidate):
+        try:
+            os.close(os.open(candidate, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
             return candidate
+        except FileExistsError:
+            continue
     raise FalApiError(
         "FalSaveMediaURL",
         f"Could not find a free filename for '{basename}{suffix}' in {directory}",
@@ -376,16 +409,13 @@ class FalSaveMediaURL:
                 f"Expected an http(s) URL to save, got: {target_url!r}",
             )
 
-        prefix = (filename_prefix or "").strip().strip("/") or "fal/media"
-        subdir, basename = os.path.split(prefix)
-        basename = basename or "media"
-        directory = os.path.join(_output_directory(), subdir)
+        directory, basename = _resolve_save_directory(filename_prefix)
         suffix = _suffix_from_url(target_url)
 
         temp_path = MediaUtils.download_url_to_temp(target_url, suffix)
         try:
             os.makedirs(directory, exist_ok=True)
-            destination = _unique_destination(directory, basename, suffix)
+            destination = _claim_unique_destination(directory, basename, suffix)
             shutil.move(temp_path, destination)
         except FalApiError:
             raise

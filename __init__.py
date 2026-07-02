@@ -9,6 +9,7 @@ node_list = [
     "trainer_node",
     "upscaler_node",
     "platform_node",
+    "billing_node",
 ]
 
 NODE_CLASS_MAPPINGS = {}

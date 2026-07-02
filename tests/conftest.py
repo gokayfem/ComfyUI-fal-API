@@ -4,13 +4,21 @@ from __future__ import annotations
 
 import importlib
 import importlib.util
+import os
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 PKG = "ComfyUI_fal_API"
+
+# keep the persistent result cache out of the user's real cache dir during tests
+os.environ.setdefault(
+    "COMFYUI_FAL_API_CACHE_DB",
+    str(Path(tempfile.mkdtemp(prefix="fal-api-test-cache-")) / "cache.db"),
+)
 
 
 def _load_package():

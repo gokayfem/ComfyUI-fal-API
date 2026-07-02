@@ -2,7 +2,7 @@
 
 **Every fal model in ComfyUI, one API key.**
 
-Custom nodes that bring the entire [fal.ai](https://fal.ai) catalog into ComfyUI: ~90 curated hand-written nodes for the most popular models, plus ~1,391 auto-generated nodes covering every live public model on fal — image, video, audio, 3D, LLMs and more. One `FAL_KEY` unlocks all of them.
+Custom nodes that bring the entire [fal.ai](https://fal.ai) catalog into ComfyUI: ~90 curated hand-written nodes for the most popular models, plus ~1,391 auto-generated nodes covering every live public model on fal — image, video, audio, 3D, LLMs and more. One `FAL_KEY` unlocks all of them. With a persistent result cache (never pay for the same call twice), spend guards, async fan-out, and zero-I/O fal→fal chaining.
 
 ## Table of Contents
 
@@ -226,7 +226,7 @@ If ~893 extra nodes is more than you want, use the `[dynamic_nodes]` config sect
 
 ## Platform Utilities
 
-New in 2.1: utilities built on fal's platform primitives (queue, request ids, per-model pricing) — found under `FAL/Platform`.
+New in 2.1/2.2: utilities built on fal's platform primitives (queue, request ids, per-model pricing) — found under `FAL/Platform`.
 
 ### Async fan-out: Fal Submit + Fal Collect
 
@@ -243,6 +243,18 @@ Enter an endpoint id and a run count → a cost report and a `total_usd` float, 
 ### Fal Session Costs
 
 An in-memory ledger records every fal call this session (endpoint, duration, request id, estimated cost). This node reports the running total — "47 calls, ~$6.20" — with the last calls itemized so you can copy request ids. Optional `reset` clears it after reporting.
+
+### Persistent result cache (2.2)
+
+Identical fal calls are served from a **disk cache** — free and instant — across ComfyUI restarts. Re-open yesterday's workflow and only the nodes you changed re-run. Uploads are deduplicated too (the same input image is uploaded to fal storage once, ever). Bypass per node with `force_rerun`; configure via `[cache]` in config.ini (`enabled`, `ttl_days`, `max_entries`).
+
+### Spend Guard + Fal Account Balance (2.2)
+
+Set `[spend_guard] session_budget_usd` and/or `min_balance_usd` in config.ini and the pack **refuses to submit** once the session's estimated spend hits your budget or your fal balance drops below the floor — the node errors before money moves, never after. The **Fal Account Balance** node reports your live balance (requires an admin-scoped key for the billing API; scoped keys degrade gracefully).
+
+### URL passthrough: zero-I/O fal→fal chains (2.2)
+
+Every auto-generated node's media input has an optional `*_direct_url` twin, and image nodes output `image_urls` alongside the IMAGE tensor (video/audio/file nodes already output URLs). Wire a fal node's URL output into the next fal node's `*_direct_url` input and the intermediate media **never touches your machine** — no download, no re-upload. Chain image → video → upscale at fal speed.
 
 ### Fal Save Media from URL
 
