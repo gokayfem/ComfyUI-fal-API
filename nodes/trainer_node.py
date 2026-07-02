@@ -1,46 +1,15 @@
-import os
-import tempfile
-import zipfile
-
-import torch
-from PIL import Image
-
-from .fal_utils import ApiHandler, FalConfig, ImageUtils
+from .fal_utils import ApiHandler, ArchiveUtils, FalConfig
 
 # Initialize FalConfig
 fal_config = FalConfig()
 
 
 def create_zip_from_images(images):
-    """Create a zip file from a list of images."""
+    """Create a zip file from a list of images and upload it (returns the URL)."""
     try:
-        with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as temp_zip:
-            with zipfile.ZipFile(temp_zip, "w") as zf:
-                for idx, img_tensor in enumerate(images):
-                    # Convert tensor to PIL Image
-                    if isinstance(img_tensor, torch.Tensor):
-                        # Convert to numpy and scale to 0-255 range
-                        img_np = (img_tensor.cpu().numpy() * 255).astype("uint8")
-                        # Handle different tensor formats
-                        if img_np.shape[0] == 3:  # If in format (C, H, W)
-                            img_np = img_np.transpose(1, 2, 0)
-                        img = Image.fromarray(img_np)
-                    else:
-                        img = img_tensor
-
-                    # Save image to temporary file
-                    with tempfile.NamedTemporaryFile(
-                        suffix=".png", delete=False
-                    ) as temp_img:
-                        img.save(temp_img, format="PNG")
-                        temp_img_path = temp_img.name
-
-                    # Add to zip file
-                    zf.write(temp_img_path, f"image_{idx}.png")
-                    os.unlink(temp_img_path)
-
-            # Upload the zip through the shared utility (raises on failure)
-            return ImageUtils.upload_file(temp_zip.name)
+        zip_path = ArchiveUtils.zip_images(images)
+        # Upload the zip through the shared utility (raises on failure)
+        return ArchiveUtils.upload_zip(zip_path)
     except Exception as e:
         return ApiHandler.handle_text_generation_error(
             "flux-lora-fast-training", f"Failed to create zip file: {str(e)}"

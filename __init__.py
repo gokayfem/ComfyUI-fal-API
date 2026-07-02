@@ -11,6 +11,11 @@ node_list = [
     "platform_node",
     "billing_node",
     "inbox_node",
+    "util_dataset_node",
+    "util_media_in_node",
+    "util_video_node",
+    "util_image_node",
+    "util_data_node",
 ]
 
 NODE_CLASS_MAPPINGS = {}
