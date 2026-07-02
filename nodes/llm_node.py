@@ -9,7 +9,14 @@ class LLMNode:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "prompt": (
+                    "STRING",
+                    {
+                        "default": "",
+                        "multiline": True,
+                        "tooltip": "User prompt sent to the model.",
+                    },
+                ),
                 "model": (
                     [
                         "google/gemini-2.5-flash",
@@ -19,15 +26,55 @@ class LLMNode:
                         "meta-llama/llama-4-maverick",
                         "Custom",
                     ],
-                    {"default": "google/gemini-2.5-flash"},
+                    {
+                        "default": "google/gemini-2.5-flash",
+                        "tooltip": "Model to use. Select 'Custom' to type any OpenRouter model id in custom_model_name.",
+                    },
                 ),
-                "system_prompt": ("STRING", {"default": "", "multiline": True}),
-                "temperature": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.1}),
-                "reasoning": ("BOOLEAN", {"default": False}),
+                "system_prompt": (
+                    "STRING",
+                    {
+                        "default": "",
+                        "multiline": True,
+                        "tooltip": "Optional system prompt to steer the model's behavior.",
+                    },
+                ),
+                "temperature": (
+                    "FLOAT",
+                    {
+                        "default": 1.0,
+                        "min": 0.0,
+                        "max": 2.0,
+                        "step": 0.1,
+                        "tooltip": "Sampling temperature. Lower is more deterministic.",
+                    },
+                ),
+                "reasoning": (
+                    "BOOLEAN",
+                    {
+                        "default": False,
+                        "tooltip": "Request the model's reasoning trace (returned on the 'reasoning' output).",
+                    },
+                ),
             },
             "optional": {
-                "max_tokens": ("INT", {"default": 0, "min": 0, "max": 100000}),
-                "custom_model_name": ("STRING", {"default": "", "multiline": False}),
+                "max_tokens": (
+                    "INT",
+                    {
+                        "default": 0,
+                        "min": 0,
+                        "max": 100000,
+                        "tooltip": "Maximum output tokens. 0 uses the model default.",
+                    },
+                ),
+                "custom_model_name": (
+                    "STRING",
+                    {
+                        "default": "",
+                        "multiline": False,
+                        "tooltip": "OpenRouter model id used when model is set to 'Custom'.",
+                    },
+                ),
             },
         }
 
@@ -41,10 +88,10 @@ class LLMNode:
             # Handle custom model selection
             if model == "Custom":
                 if not custom_model_name or custom_model_name.strip() == "":
-                    error_result = ApiHandler.handle_text_generation_error(
+                    # Raises a clear FalApiError
+                    ApiHandler.handle_text_generation_error(
                         "Custom", "Custom model name is required when 'Custom' is selected"
                     )
-                    return (error_result[0], "")
                 model = custom_model_name.strip()
 
             arguments = {
@@ -68,8 +115,9 @@ class LLMNode:
 
             return (output_text, reasoning_text)
         except Exception as e:
-            error_result = ApiHandler.handle_text_generation_error(model, str(e))
-            return (error_result[0], "")
+            # Raises a clear FalApiError (passes an existing FalApiError through
+            # unchanged, so the custom-model validation error is not re-wrapped)
+            return ApiHandler.handle_text_generation_error(model, e)
 
 
 # Node class mappings

@@ -1,10 +1,4 @@
-from .fal_utils import ApiHandler, ImageUtils, ResultProcessor
-
-
-# Remove all the configuration code since it's now handled by FalConfig
-def upload_image(image):
-    """Upload image tensor to FAL and return URL."""
-    return ImageUtils.upload_image(image)
+from .fal_utils import ApiHandler, ImageUtils, ResultProcessor, logger
 
 
 class Sana:
@@ -12,7 +6,7 @@ class Sana:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
                 "image_size": (
                     [
                         "square_hd",
@@ -23,28 +17,28 @@ class Sana:
                         "landscape_16_9",
                         "custom",
                     ],
-                    {"default": "square_hd"},
+                    {"default": "square_hd", "tooltip": "Preset output size/aspect ratio; select 'custom' to use width and height"},
                 ),
                 "width": (
                     "INT",
-                    {"default": 3840, "min": 512, "max": 4096, "step": 16},
+                    {"default": 3840, "min": 512, "max": 4096, "step": 16, "tooltip": "Output width in pixels (used when image_size is 'custom')"},
                 ),
                 "height": (
                     "INT",
-                    {"default": 2160, "min": 512, "max": 4096, "step": 16},
+                    {"default": 2160, "min": 512, "max": 4096, "step": 16, "tooltip": "Output height in pixels (used when image_size is 'custom')"},
                 ),
-                "num_inference_steps": ("INT", {"default": 18, "min": 1, "max": 50}),
+                "num_inference_steps": ("INT", {"default": 18, "min": 1, "max": 50, "tooltip": "Number of denoising steps; more steps can improve quality but take longer"}),
                 "guidance_scale": (
                     "FLOAT",
-                    {"default": 5.0, "min": 1.0, "max": 20.0, "step": 0.1},
+                    {"default": 5.0, "min": 1.0, "max": 20.0, "step": 0.1, "tooltip": "CFG scale: how closely the output follows the prompt (higher = stricter)"},
                 ),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4, "tooltip": "Number of images to generate per run"}),
             },
             "optional": {
-                "negative_prompt": ("STRING", {"default": "", "multiline": True}),
-                "seed": ("INT", {"default": -1}),
-                "enable_safety_checker": ("BOOLEAN", {"default": True}),
-                "output_format": (["png", "jpeg"], {"default": "png"}),
+                "negative_prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "What to avoid in the generated image"}),
+                "seed": ("INT", {"default": -1, "tooltip": "Random seed for reproducible results; leave at the default for a random seed"}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True, "tooltip": "Run the safety checker on generated images"}),
+                "output_format": (["png", "jpeg"], {"default": "png", "tooltip": "File format of the generated image"}),
             },
         }
 
@@ -96,7 +90,7 @@ class Recraft:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
                 "image_size": (
                     [
                         "square_hd",
@@ -107,12 +101,12 @@ class Recraft:
                         "landscape_16_9",
                         "custom",
                     ],
-                    {"default": "square_hd"},
+                    {"default": "square_hd", "tooltip": "Preset output size/aspect ratio; select 'custom' to use width and height"},
                 ),
-                "width": ("INT", {"default": 512, "min": 512, "max": 2048, "step": 16}),
+                "width": ("INT", {"default": 512, "min": 512, "max": 2048, "step": 16, "tooltip": "Output width in pixels (used when image_size is 'custom')"}),
                 "height": (
                     "INT",
-                    {"default": 512, "min": 512, "max": 2048, "step": 16},
+                    {"default": 512, "min": 512, "max": 2048, "step": 16, "tooltip": "Output height in pixels (used when image_size is 'custom')"},
                 ),
                 "style": (
                     [
@@ -141,11 +135,11 @@ class Recraft:
                         "vector_illustration/line_circuit",
                         "vector_illustration/linocut",
                     ],
-                    {"default": "realistic_image"},
+                    {"default": "realistic_image", "tooltip": "Recraft generation style (realistic photo, digital illustration, vector art, ...)"},
                 ),
             },
             "optional": {
-                "style_id": ("STRING", {"default": ""}),
+                "style_id": ("STRING", {"default": "", "tooltip": "ID of a custom Recraft style; overrides the preset style when set"}),
             },
         }
 
@@ -179,7 +173,7 @@ class HidreamFull:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
                 "image_size": (
                     [
                         "square_hd",
@@ -190,23 +184,23 @@ class HidreamFull:
                         "landscape_16_9",
                         "custom",
                     ],
-                    {"default": "landscape_4_3"},
+                    {"default": "landscape_4_3", "tooltip": "Preset output size/aspect ratio; select 'custom' to use width and height"},
                 ),
                 "width": (
                     "INT",
-                    {"default": 1024, "min": 512, "max": 1440, "step": 32},
+                    {"default": 1024, "min": 512, "max": 1440, "step": 32, "tooltip": "Output width in pixels (used when image_size is 'custom')"},
                 ),
                 "height": (
                     "INT",
-                    {"default": 768, "min": 512, "max": 1440, "step": 32},
+                    {"default": 768, "min": 512, "max": 1440, "step": 32, "tooltip": "Output height in pixels (used when image_size is 'custom')"},
                 ),
-                "num_inference_steps": ("INT", {"default": 28, "min": 1, "max": 100}),
-                "guidance_scale": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 20.0}),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 10}),
-                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2"}),
+                "num_inference_steps": ("INT", {"default": 28, "min": 1, "max": 100, "tooltip": "Number of denoising steps; more steps can improve quality but take longer"}),
+                "guidance_scale": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 20.0, "tooltip": "CFG scale: how closely the output follows the prompt (higher = stricter)"}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 10, "tooltip": "Number of images to generate per run"}),
+                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2", "tooltip": "Content moderation strictness (1 = strictest, 6 = most permissive)"}),
             },
             "optional": {
-                "seed": ("INT", {"default": -1}),
+                "seed": ("INT", {"default": -1, "tooltip": "Random seed for reproducible results; leave at the default for a random seed"}),
             },
         }
 
@@ -254,7 +248,7 @@ class Ideogramv3:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
                 "image_size": (
                     [
                         "square_hd",
@@ -265,23 +259,23 @@ class Ideogramv3:
                         "landscape_16_9",
                         "custom",
                     ],
-                    {"default": "landscape_4_3"},
+                    {"default": "landscape_4_3", "tooltip": "Preset output size/aspect ratio; select 'custom' to use width and height"},
                 ),
                 "width": (
                     "INT",
-                    {"default": 1024, "min": 512, "max": 1440, "step": 32},
+                    {"default": 1024, "min": 512, "max": 1440, "step": 32, "tooltip": "Output width in pixels (used when image_size is 'custom')"},
                 ),
                 "height": (
                     "INT",
-                    {"default": 768, "min": 512, "max": 1440, "step": 32},
+                    {"default": 768, "min": 512, "max": 1440, "step": 32, "tooltip": "Output height in pixels (used when image_size is 'custom')"},
                 ),
-                "num_inference_steps": ("INT", {"default": 28, "min": 1, "max": 100}),
-                "guidance_scale": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 20.0}),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 10}),
-                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2"}),
+                "num_inference_steps": ("INT", {"default": 28, "min": 1, "max": 100, "tooltip": "Number of denoising steps; more steps can improve quality but take longer"}),
+                "guidance_scale": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 20.0, "tooltip": "CFG scale: how closely the output follows the prompt (higher = stricter)"}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 10, "tooltip": "Number of images to generate per run"}),
+                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2", "tooltip": "Content moderation strictness (1 = strictest, 6 = most permissive)"}),
             },
             "optional": {
-                "seed": ("INT", {"default": -1}),
+                "seed": ("INT", {"default": -1, "tooltip": "Random seed for reproducible results; leave at the default for a random seed"}),
             },
         }
 
@@ -327,7 +321,7 @@ class FluxPro:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
                 "image_size": (
                     [
                         "square_hd",
@@ -338,23 +332,23 @@ class FluxPro:
                         "landscape_16_9",
                         "custom",
                     ],
-                    {"default": "landscape_4_3"},
+                    {"default": "landscape_4_3", "tooltip": "Preset output size/aspect ratio; select 'custom' to use width and height"},
                 ),
                 "width": (
                     "INT",
-                    {"default": 1024, "min": 512, "max": 1440, "step": 32},
+                    {"default": 1024, "min": 512, "max": 1440, "step": 32, "tooltip": "Output width in pixels (used when image_size is 'custom')"},
                 ),
                 "height": (
                     "INT",
-                    {"default": 768, "min": 512, "max": 1440, "step": 32},
+                    {"default": 768, "min": 512, "max": 1440, "step": 32, "tooltip": "Output height in pixels (used when image_size is 'custom')"},
                 ),
-                "num_inference_steps": ("INT", {"default": 28, "min": 1, "max": 100}),
-                "guidance_scale": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 20.0}),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 10}),
-                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2"}),
+                "num_inference_steps": ("INT", {"default": 28, "min": 1, "max": 100, "tooltip": "Number of denoising steps; more steps can improve quality but take longer"}),
+                "guidance_scale": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 20.0, "tooltip": "CFG scale: how closely the output follows the prompt (higher = stricter)"}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 10, "tooltip": "Number of images to generate per run"}),
+                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2", "tooltip": "Content moderation strictness (1 = strictest, 6 = most permissive)"}),
             },
             "optional": {
-                "seed": ("INT", {"default": -1}),
+                "seed": ("INT", {"default": -1, "tooltip": "Random seed for reproducible results; leave at the default for a random seed"}),
             },
         }
 
@@ -400,7 +394,7 @@ class FluxDev:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
                 "image_size": (
                     [
                         "square_hd",
@@ -411,23 +405,23 @@ class FluxDev:
                         "landscape_16_9",
                         "custom",
                     ],
-                    {"default": "landscape_4_3"},
+                    {"default": "landscape_4_3", "tooltip": "Preset output size/aspect ratio; select 'custom' to use width and height"},
                 ),
                 "width": (
                     "INT",
-                    {"default": 1024, "min": 512, "max": 1536, "step": 16},
+                    {"default": 1024, "min": 512, "max": 1536, "step": 16, "tooltip": "Output width in pixels (used when image_size is 'custom')"},
                 ),
                 "height": (
                     "INT",
-                    {"default": 768, "min": 512, "max": 1536, "step": 16},
+                    {"default": 768, "min": 512, "max": 1536, "step": 16, "tooltip": "Output height in pixels (used when image_size is 'custom')"},
                 ),
-                "num_inference_steps": ("INT", {"default": 28, "min": 1, "max": 100}),
-                "guidance_scale": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 20.0}),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 10}),
-                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                "num_inference_steps": ("INT", {"default": 28, "min": 1, "max": 100, "tooltip": "Number of denoising steps; more steps can improve quality but take longer"}),
+                "guidance_scale": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 20.0, "tooltip": "CFG scale: how closely the output follows the prompt (higher = stricter)"}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 10, "tooltip": "Number of images to generate per run"}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True, "tooltip": "Run the safety checker on generated images"}),
             },
             "optional": {
-                "seed": ("INT", {"default": -1}),
+                "seed": ("INT", {"default": -1, "tooltip": "Random seed for reproducible results; leave at the default for a random seed"}),
             },
         }
 
@@ -473,7 +467,7 @@ class FluxSchnell:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
                 "image_size": (
                     [
                         "square_hd",
@@ -484,22 +478,22 @@ class FluxSchnell:
                         "landscape_16_9",
                         "custom",
                     ],
-                    {"default": "landscape_4_3"},
+                    {"default": "landscape_4_3", "tooltip": "Preset output size/aspect ratio; select 'custom' to use width and height"},
                 ),
                 "width": (
                     "INT",
-                    {"default": 1024, "min": 512, "max": 1536, "step": 32},
+                    {"default": 1024, "min": 512, "max": 1536, "step": 32, "tooltip": "Output width in pixels (used when image_size is 'custom')"},
                 ),
                 "height": (
                     "INT",
-                    {"default": 768, "min": 512, "max": 1536, "step": 32},
+                    {"default": 768, "min": 512, "max": 1536, "step": 32, "tooltip": "Output height in pixels (used when image_size is 'custom')"},
                 ),
-                "num_inference_steps": ("INT", {"default": 4, "min": 1, "max": 100}),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 10}),
-                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                "num_inference_steps": ("INT", {"default": 4, "min": 1, "max": 100, "tooltip": "Number of denoising steps; more steps can improve quality but take longer"}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 10, "tooltip": "Number of images to generate per run"}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True, "tooltip": "Run the safety checker on generated images"}),
             },
             "optional": {
-                "seed": ("INT", {"default": -1}),
+                "seed": ("INT", {"default": -1, "tooltip": "Random seed for reproducible results; leave at the default for a random seed"}),
             },
         }
 
@@ -543,7 +537,7 @@ class FluxPro11:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
                 "image_size": (
                     [
                         "square_hd",
@@ -554,22 +548,22 @@ class FluxPro11:
                         "landscape_16_9",
                         "custom",
                     ],
-                    {"default": "landscape_4_3"},
+                    {"default": "landscape_4_3", "tooltip": "Preset output size/aspect ratio; select 'custom' to use width and height"},
                 ),
                 "width": (
                     "INT",
-                    {"default": 1024, "min": 512, "max": 1440, "step": 32},
+                    {"default": 1024, "min": 512, "max": 1440, "step": 32, "tooltip": "Output width in pixels (used when image_size is 'custom')"},
                 ),
                 "height": (
                     "INT",
-                    {"default": 768, "min": 512, "max": 1440, "step": 32},
+                    {"default": 768, "min": 512, "max": 1440, "step": 32, "tooltip": "Output height in pixels (used when image_size is 'custom')"},
                 ),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 10}),
-                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2"}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 10, "tooltip": "Number of images to generate per run"}),
+                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2", "tooltip": "Content moderation strictness (1 = strictest, 6 = most permissive)"}),
             },
             "optional": {
-                "seed": ("INT", {"default": -1}),
-                "sync_mode": ("BOOLEAN", {"default": False}),
+                "seed": ("INT", {"default": -1, "tooltip": "Random seed for reproducible results; leave at the default for a random seed"}),
+                "sync_mode": ("BOOLEAN", {"default": False, "tooltip": "Wait for generation and return the image data directly instead of a hosted URL"}),
             },
         }
 
@@ -613,18 +607,18 @@ class FluxPro1Fill:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 10}),
-                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2"}),
-                "output_format": (["png", "jpeg"], {"default": "png"}),
-                
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 10, "tooltip": "Number of images to generate per run"}),
+                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2", "tooltip": "Content moderation strictness (1 = strictest, 6 = most permissive)"}),
+                "output_format": (["png", "jpeg"], {"default": "png", "tooltip": "File format of the generated image"}),
+
             },
             "optional": {
-                "image": ("IMAGE", {"default": None}),
-                "mask_image": ("IMAGE", {"default": None}),
-                "seed": ("INT", {"default": -1}),
-                "sync_mode": ("BOOLEAN", {"default": False}),
-                "enhance_prompt": ("BOOLEAN", {"default": True}),
+                "image": ("IMAGE", {"default": None, "tooltip": "Input image to edit or transform"}),
+                "mask_image": ("IMAGE", {"default": None, "tooltip": "Inpainting mask: white areas are regenerated, black areas are preserved"}),
+                "seed": ("INT", {"default": -1, "tooltip": "Random seed for reproducible results; leave at the default for a random seed"}),
+                "sync_mode": ("BOOLEAN", {"default": False, "tooltip": "Wait for generation and return the image data directly instead of a hosted URL"}),
+                "enhance_prompt": ("BOOLEAN", {"default": True, "tooltip": "Let the model automatically enhance and expand the prompt"}),
             },
         }
 
@@ -653,18 +647,12 @@ class FluxPro1Fill:
         arguments = {
             "prompt": prompt,
             "num_images": num_images,
-            "safety_tolerance": safety_tolerance,
-            "sync_mode": sync_mode,
-        }
-        arguments={
-            "prompt": prompt,
-            "num_images": num_images,
             "sync_mode": sync_mode,
             "output_format": output_format,
             "safety_tolerance": safety_tolerance,
             "image_url": image_url,
             "mask_url": mask_url,
-            "enhance_prompt": enhance_prompt
+            "enhance_prompt": enhance_prompt,
         }
         if seed != 0:
             arguments["seed"] = seed
@@ -681,19 +669,19 @@ class FluxUltra:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
                 "aspect_ratio": (
                     ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16", "9:21"],
-                    {"default": "16:9"},
+                    {"default": "16:9", "tooltip": "Aspect ratio of the generated image"},
                 ),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 1}),
-                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2"}),
-                "enable_safety_checker": ("BOOLEAN", {"default": True}),
-                "raw": ("BOOLEAN", {"default": False}),
-                "sync_mode": ("BOOLEAN", {"default": False}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 1, "tooltip": "Number of images to generate per run"}),
+                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2", "tooltip": "Content moderation strictness (1 = strictest, 6 = most permissive)"}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True, "tooltip": "Run the safety checker on generated images"}),
+                "raw": ("BOOLEAN", {"default": False, "tooltip": "Generate less processed, more natural-looking images (Flux Ultra raw mode)"}),
+                "sync_mode": ("BOOLEAN", {"default": False, "tooltip": "Wait for generation and return the image data directly instead of a hosted URL"}),
             },
             "optional": {
-                "seed": ("INT", {"default": -1}),
+                "seed": ("INT", {"default": -1, "tooltip": "Random seed for reproducible results; leave at the default for a random seed"}),
             },
         }
 
@@ -738,7 +726,7 @@ class FluxLora:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
                 "image_size": (
                     [
                         "square_hd",
@@ -749,35 +737,35 @@ class FluxLora:
                         "landscape_16_9",
                         "custom",
                     ],
-                    {"default": "landscape_4_3"},
+                    {"default": "landscape_4_3", "tooltip": "Preset output size/aspect ratio; select 'custom' to use width and height"},
                 ),
                 "width": (
                     "INT",
-                    {"default": 1024, "min": 512, "max": 1536, "step": 16},
+                    {"default": 1024, "min": 512, "max": 1536, "step": 16, "tooltip": "Output width in pixels (used when image_size is 'custom')"},
                 ),
                 "height": (
                     "INT",
-                    {"default": 768, "min": 512, "max": 1536, "step": 16},
+                    {"default": 768, "min": 512, "max": 1536, "step": 16, "tooltip": "Output height in pixels (used when image_size is 'custom')"},
                 ),
-                "num_inference_steps": ("INT", {"default": 28, "min": 1, "max": 50}),
+                "num_inference_steps": ("INT", {"default": 28, "min": 1, "max": 50, "tooltip": "Number of denoising steps; more steps can improve quality but take longer"}),
                 "guidance_scale": (
                     "FLOAT",
-                    {"default": 3.0, "min": 0.0, "max": 20.0, "step": 0.1},
+                    {"default": 3.0, "min": 0.0, "max": 20.0, "step": 0.1, "tooltip": "CFG scale: how closely the output follows the prompt (higher = stricter)"},
                 ),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
-                "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4, "tooltip": "Number of images to generate per run"}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True, "tooltip": "Run the safety checker on generated images"}),
             },
             "optional": {
-                "seed": ("INT", {"default": -1}),
-                "lora_path_1": ("STRING", {"default": ""}),
+                "seed": ("INT", {"default": -1, "tooltip": "Random seed for reproducible results; leave at the default for a random seed"}),
+                "lora_path_1": ("STRING", {"default": "", "tooltip": "URL or path of LoRA weights file #1 to apply"}),
                 "lora_scale_1": (
                     "FLOAT",
-                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05},
+                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05, "tooltip": "Strength of LoRA #1 (1.0 = full effect)"},
                 ),
-                "lora_path_2": ("STRING", {"default": ""}),
+                "lora_path_2": ("STRING", {"default": "", "tooltip": "URL or path of LoRA weights file #2 to apply"}),
                 "lora_scale_2": (
                     "FLOAT",
-                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05},
+                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05, "tooltip": "Strength of LoRA #2 (1.0 = full effect)"},
                 ),
             },
         }
@@ -837,7 +825,7 @@ class FluxGeneral:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
                 "image_size": (
                     [
                         "square_hd",
@@ -848,43 +836,43 @@ class FluxGeneral:
                         "landscape_16_9",
                         "custom",
                     ],
-                    {"default": "landscape_4_3"},
+                    {"default": "landscape_4_3", "tooltip": "Preset output size/aspect ratio; select 'custom' to use width and height"},
                 ),
                 "width": (
                     "INT",
-                    {"default": 1024, "min": 512, "max": 1536, "step": 16},
+                    {"default": 1024, "min": 512, "max": 1536, "step": 16, "tooltip": "Output width in pixels (used when image_size is 'custom')"},
                 ),
                 "height": (
                     "INT",
-                    {"default": 768, "min": 512, "max": 1536, "step": 16},
+                    {"default": 768, "min": 512, "max": 1536, "step": 16, "tooltip": "Output height in pixels (used when image_size is 'custom')"},
                 ),
-                "num_inference_steps": ("INT", {"default": 28, "min": 1, "max": 50}),
+                "num_inference_steps": ("INT", {"default": 28, "min": 1, "max": 50, "tooltip": "Number of denoising steps; more steps can improve quality but take longer"}),
                 "guidance_scale": (
                     "FLOAT",
-                    {"default": 3.0, "min": 0.0, "max": 20.0, "step": 0.1},
+                    {"default": 3.0, "min": 0.0, "max": 20.0, "step": 0.1, "tooltip": "CFG scale: how closely the output follows the prompt (higher = stricter)"},
                 ),
                 "real_cfg_scale": (
                     "FLOAT",
-                    {"default": 3.3, "min": 0.0, "max": 5.0, "step": 0.1},
+                    {"default": 3.3, "min": 0.0, "max": 5.0, "step": 0.1, "tooltip": "Classical CFG scale used when use_real_cfg is enabled"},
                 ),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
-                "enable_safety_checker": ("BOOLEAN", {"default": False}),
-                "use_real_cfg": ("BOOLEAN", {"default": False}),
-                "sync_mode": ("BOOLEAN", {"default": False}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4, "tooltip": "Number of images to generate per run"}),
+                "enable_safety_checker": ("BOOLEAN", {"default": False, "tooltip": "Run the safety checker on generated images"}),
+                "use_real_cfg": ("BOOLEAN", {"default": False, "tooltip": "Use classical CFG instead of Flux's distilled guidance"}),
+                "sync_mode": ("BOOLEAN", {"default": False, "tooltip": "Wait for generation and return the image data directly instead of a hosted URL"}),
             },
             "optional": {
-                "seed": ("INT", {"default": -1}),
+                "seed": ("INT", {"default": -1, "tooltip": "Random seed for reproducible results; leave at the default for a random seed"}),
                 "ip_adapter_scale": (
                     "FLOAT",
-                    {"default": 0.6, "min": 0.0, "max": 1.0, "step": 0.1},
+                    {"default": 0.6, "min": 0.0, "max": 1.0, "step": 0.1, "tooltip": "Strength of the IP-Adapter image conditioning"},
                 ),
                 "controlnet_conditioning_scale": (
                     "FLOAT",
-                    {"default": 0.6, "min": 0.0, "max": 1.0, "step": 0.1},
+                    {"default": 0.6, "min": 0.0, "max": 1.0, "step": 0.1, "tooltip": "Strength of the ControlNet conditioning"},
                 ),
                 "ip_adapters": (
                     ["None", "XLabs-AI/flux-ip-adapter"],
-                    {"default": "None"},
+                    {"default": "None", "tooltip": "IP-Adapter model for image-prompt conditioning"},
                 ),
                 "controlnets": (
                     [
@@ -898,7 +886,7 @@ class FluxGeneral:
                         "jasperai/Flux.1-dev-Controlnet-Upscaler",
                         "promeai/FLUX.1-controlnet-lineart-promeai",
                     ],
-                    {"default": "None"},
+                    {"default": "None", "tooltip": "ControlNet model used to guide generation"},
                 ),
                 "controlnet_unions": (
                     [
@@ -906,25 +894,25 @@ class FluxGeneral:
                         "Shakker-Labs/FLUX.1-dev-ControlNet-Union-Pro",
                         "InstantX/FLUX.1-dev-Controlnet-Union",
                     ],
-                    {"default": "None"},
+                    {"default": "None", "tooltip": "ControlNet Union model used to guide generation"},
                 ),
                 "controlnet_union_control_mode": (
                     ["canny", "tile", "depth", "blur", "pose", "gray", "low_quality"],
-                    {"default": "canny"},
+                    {"default": "canny", "tooltip": "Control mode for the ControlNet Union model (canny, depth, pose, ...)"},
                 ),
-                "control_image": ("IMAGE",),
-                "control_mask": ("MASK",),
-                "ip_adapter_image": ("IMAGE",),
-                "ip_adapter_mask": ("MASK",),
-                "lora_path_1": ("STRING", {"default": ""}),
+                "control_image": ("IMAGE", {"tooltip": "Control image for the selected ControlNet"}),
+                "control_mask": ("MASK", {"tooltip": "Mask limiting where the ControlNet conditioning is applied"}),
+                "ip_adapter_image": ("IMAGE", {"tooltip": "Reference image for the IP-Adapter"}),
+                "ip_adapter_mask": ("MASK", {"tooltip": "Mask limiting where the IP-Adapter conditioning is applied"}),
+                "lora_path_1": ("STRING", {"default": "", "tooltip": "URL or path of LoRA weights file #1 to apply"}),
                 "lora_scale_1": (
                     "FLOAT",
-                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05},
+                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05, "tooltip": "Strength of LoRA #1 (1.0 = full effect)"},
                 ),
-                "lora_path_2": ("STRING", {"default": ""}),
+                "lora_path_2": ("STRING", {"default": "", "tooltip": "URL or path of LoRA weights file #2 to apply"}),
                 "lora_scale_2": (
                     "FLOAT",
-                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05},
+                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05, "tooltip": "Strength of LoRA #2 (1.0 = full effect)"},
                 ),
             },
         }
@@ -1109,8 +1097,8 @@ class FluxProKontext:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
-                "image": ("IMAGE",),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
+                "image": ("IMAGE", {"tooltip": "Input image to edit or transform"}),
             },
             "optional": {
                 "aspect_ratio": (
@@ -1126,18 +1114,18 @@ class FluxProKontext:
                         "9:16",
                         "9:21",
                     ],
-                    {"default": None},
+                    {"default": None, "tooltip": "Aspect ratio of the generated image"},
                 ),
-                "max_quality": ("BOOLEAN", {"default": False}),
+                "max_quality": ("BOOLEAN", {"default": False, "tooltip": "Use the higher-quality 'Max' endpoint (better results, higher cost)"}),
                 "guidance_scale": (
                     "FLOAT",
-                    {"default": 3.5, "min": 1.0, "max": 20.0, "step": 0.1},
+                    {"default": 3.5, "min": 1.0, "max": 20.0, "step": 0.1, "tooltip": "CFG scale: how closely the output follows the prompt (higher = stricter)"},
                 ),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
-                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2"}),
-                "output_format": (["jpeg", "png"], {"default": "jpeg"}),
-                "sync_mode": ("BOOLEAN", {"default": False}),
-                "seed": ("INT", {"default": 0, "min": 0, "max": 2**32 - 1}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4, "tooltip": "Number of images to generate per run"}),
+                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2", "tooltip": "Content moderation strictness (1 = strictest, 6 = most permissive)"}),
+                "output_format": (["jpeg", "png"], {"default": "jpeg", "tooltip": "File format of the generated image"}),
+                "sync_mode": ("BOOLEAN", {"default": False, "tooltip": "Wait for generation and return the image data directly instead of a hosted URL"}),
+                "seed": ("INT", {"default": 0, "min": 0, "max": 2**32 - 1, "tooltip": "Random seed for reproducible results; leave at the default for a random seed"}),
             },
         }
 
@@ -1158,12 +1146,8 @@ class FluxProKontext:
         sync_mode=False,
         seed=0,
     ):
-        # Upload the input image to get URL
+        # Upload the input image to get URL (raises on failure)
         image_url = ImageUtils.upload_image(image)
-        if not image_url:
-            model_name = "Flux Pro Kontext Max" if max_quality else "Flux Pro Kontext"
-            print(f"Error: Failed to upload image for {model_name}")
-            return ResultProcessor.create_blank_image()
 
         # Dynamic endpoint selection based on max_quality toggle
         endpoint = (
@@ -1197,13 +1181,13 @@ class FluxProKontextMulti:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
-                "image_1": ("IMAGE",),
-                "image_2": ("IMAGE",),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
+                "image_1": ("IMAGE", {"tooltip": "Input reference image 1"}),
+                "image_2": ("IMAGE", {"tooltip": "Input reference image 2"}),
             },
             "optional": {
-                "image_3": ("IMAGE",),
-                "image_4": ("IMAGE",),
+                "image_3": ("IMAGE", {"tooltip": "Input reference image 3"}),
+                "image_4": ("IMAGE", {"tooltip": "Input reference image 4"}),
                 "aspect_ratio": (
                     [
                         None,
@@ -1217,18 +1201,18 @@ class FluxProKontextMulti:
                         "9:16",
                         "9:21",
                     ],
-                    {"default": None},
+                    {"default": None, "tooltip": "Aspect ratio of the generated image"},
                 ),
-                "max_quality": ("BOOLEAN", {"default": False}),
+                "max_quality": ("BOOLEAN", {"default": False, "tooltip": "Use the higher-quality 'Max' endpoint (better results, higher cost)"}),
                 "guidance_scale": (
                     "FLOAT",
-                    {"default": 3.5, "min": 1.0, "max": 20.0, "step": 0.1},
+                    {"default": 3.5, "min": 1.0, "max": 20.0, "step": 0.1, "tooltip": "CFG scale: how closely the output follows the prompt (higher = stricter)"},
                 ),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
-                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2"}),
-                "output_format": (["jpeg", "png"], {"default": "jpeg"}),
-                "sync_mode": ("BOOLEAN", {"default": False}),
-                "seed": ("INT", {"default": 0, "min": 0, "max": 2**32 - 1}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4, "tooltip": "Number of images to generate per run"}),
+                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2", "tooltip": "Content moderation strictness (1 = strictest, 6 = most permissive)"}),
+                "output_format": (["jpeg", "png"], {"default": "jpeg", "tooltip": "File format of the generated image"}),
+                "sync_mode": ("BOOLEAN", {"default": False, "tooltip": "Wait for generation and return the image data directly instead of a hosted URL"}),
+                "seed": ("INT", {"default": 0, "min": 0, "max": 2**32 - 1, "tooltip": "Random seed for reproducible results; leave at the default for a random seed"}),
             },
         }
 
@@ -1252,22 +1236,12 @@ class FluxProKontextMulti:
         sync_mode=False,
         seed=0,
     ):
-        # Upload all provided images
-        image_urls = []
-
-        for i, img in enumerate([image_1, image_2, image_3, image_4], 1):
-            if img is not None:
-                url = ImageUtils.upload_image(img)
-                if url:
-                    image_urls.append(url)
-                else:
-                    model_name = (
-                        "Flux Pro Kontext Max Multi"
-                        if max_quality
-                        else "Flux Pro Kontext Multi"
-                    )
-                    print(f"Error: Failed to upload image {i} for {model_name}")
-                    return ResultProcessor.create_blank_image()
+        # Upload all provided images (upload raises on failure)
+        image_urls = [
+            ImageUtils.upload_image(img)
+            for img in [image_1, image_2, image_3, image_4]
+            if img is not None
+        ]
 
         if len(image_urls) < 2:
             model_name = (
@@ -1275,8 +1249,9 @@ class FluxProKontextMulti:
                 if max_quality
                 else "Flux Pro Kontext Multi"
             )
-            print(f"Error: At least 2 images required for {model_name}")
-            return ResultProcessor.create_blank_image()
+            return ApiHandler.handle_image_generation_error(
+                model_name, "At least 2 images are required."
+            )
 
         # Dynamic endpoint selection based on max_quality toggle
         endpoint = (
@@ -1316,23 +1291,23 @@ class FluxProKontextTextToImage:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
             },
             "optional": {
                 "aspect_ratio": (
                     ["21:9", "16:9", "4:3", "3:2", "1:1", "2:3", "3:4", "9:16", "9:21"],
-                    {"default": "1:1"},
+                    {"default": "1:1", "tooltip": "Aspect ratio of the generated image"},
                 ),
-                "max_quality": ("BOOLEAN", {"default": False}),
+                "max_quality": ("BOOLEAN", {"default": False, "tooltip": "Use the higher-quality 'Max' endpoint (better results, higher cost)"}),
                 "guidance_scale": (
                     "FLOAT",
-                    {"default": 3.5, "min": 1.0, "max": 20.0, "step": 0.1},
+                    {"default": 3.5, "min": 1.0, "max": 20.0, "step": 0.1, "tooltip": "CFG scale: how closely the output follows the prompt (higher = stricter)"},
                 ),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
-                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2"}),
-                "output_format": (["jpeg", "png"], {"default": "jpeg"}),
-                "sync_mode": ("BOOLEAN", {"default": False}),
-                "seed": ("INT", {"default": 0, "min": 0, "max": 2**32 - 1}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4, "tooltip": "Number of images to generate per run"}),
+                "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2", "tooltip": "Content moderation strictness (1 = strictest, 6 = most permissive)"}),
+                "output_format": (["jpeg", "png"], {"default": "jpeg", "tooltip": "File format of the generated image"}),
+                "sync_mode": ("BOOLEAN", {"default": False, "tooltip": "Wait for generation and return the image data directly instead of a hosted URL"}),
+                "seed": ("INT", {"default": 0, "min": 0, "max": 2**32 - 1, "tooltip": "Random seed for reproducible results; leave at the default for a random seed"}),
             },
         }
 
@@ -1389,7 +1364,7 @@ class Imagen4PreviewNode:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
             },
         }
 
@@ -1419,8 +1394,8 @@ class QwenImageEdit:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
-                "image": ("IMAGE",),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
+                "image": ("IMAGE", {"tooltip": "Input image to edit or transform"}),
                 "image_size": (
                     [
                         "square_hd",
@@ -1431,30 +1406,30 @@ class QwenImageEdit:
                         "landscape_16_9",
                         "custom",
                     ],
-                    {"default": "square_hd"},
+                    {"default": "square_hd", "tooltip": "Preset output size/aspect ratio; select 'custom' to use width and height"},
                 ),
                 "width": (
                     "INT",
-                    {"default": 512, "min": 128, "max": 2048, "step": 8},
+                    {"default": 512, "min": 128, "max": 2048, "step": 8, "tooltip": "Output width in pixels (used when image_size is 'custom')"},
                 ),
                 "height": (
                     "INT",
-                    {"default": 512, "min": 128, "max": 2048, "step": 8},
+                    {"default": 512, "min": 128, "max": 2048, "step": 8, "tooltip": "Output height in pixels (used when image_size is 'custom')"},
                 ),
-                "num_inference_steps": ("INT", {"default": 30, "min": 1, "max": 50}),
+                "num_inference_steps": ("INT", {"default": 30, "min": 1, "max": 50, "tooltip": "Number of denoising steps; more steps can improve quality but take longer"}),
                 "guidance_scale": (
                     "FLOAT",
-                    {"default": 4.0, "min": 1.0, "max": 20.0, "step": 0.1},
+                    {"default": 4.0, "min": 1.0, "max": 20.0, "step": 0.1, "tooltip": "CFG scale: how closely the output follows the prompt (higher = stricter)"},
                 ),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
-                "enable_safety_checker": ("BOOLEAN", {"default": True}),
-                "output_format": (["png", "jpeg"], {"default": "png"}),
-                "acceleration": (["none", "regular", "high"], {"default": "none"}),
-                "sync_mode": ("BOOLEAN", {"default": False}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4, "tooltip": "Number of images to generate per run"}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True, "tooltip": "Run the safety checker on generated images"}),
+                "output_format": (["png", "jpeg"], {"default": "png", "tooltip": "File format of the generated image"}),
+                "acceleration": (["none", "regular", "high"], {"default": "none", "tooltip": "Inference acceleration level; higher is faster with a possible quality trade-off"}),
+                "sync_mode": ("BOOLEAN", {"default": False, "tooltip": "Wait for generation and return the image data directly instead of a hosted URL"}),
             },
             "optional": {
-                "negative_prompt": ("STRING", {"default": "", "multiline": True}),
-                "seed": ("INT", {"default": -1}),
+                "negative_prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "What to avoid in the generated image"}),
+                "seed": ("INT", {"default": -1, "tooltip": "Random seed for reproducible results; leave at the default for a random seed"}),
             },
         }
 
@@ -1481,9 +1456,6 @@ class QwenImageEdit:
     ):
         model_name = "Qwen Image Edit"
         image_url = ImageUtils.upload_image(image)
-        if not image_url:
-            print(f"Error: Failed to upload image for {model_name}")
-            return ResultProcessor.create_blank_image()
 
         arguments = {
             "prompt": prompt,
@@ -1520,8 +1492,8 @@ class QwenImageEditPlusLoRA:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
-                "images": ("IMAGE", {"default": None, "multiple": True})
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
+                "images": ("IMAGE", {"default": None, "multiple": True, "tooltip": "Batched input images; every image in the batch is uploaded as a reference"})
             },
             "optional": {
                 "image_size": (
@@ -1534,36 +1506,36 @@ class QwenImageEditPlusLoRA:
                         "landscape_4_3",
                         "landscape_16_9",
                     ],
-                    {"default": "landscape_16_9"},
+                    {"default": "landscape_16_9", "tooltip": "Preset output size/aspect ratio; select 'custom' to use width and height"},
                 ),
-                "custom_width": ("INT", {"default": 1920, "min": 128, "max": 2048, "step": 8}),
-                "custom_height": ("INT", {"default": 1080, "min": 128, "max": 2048, "step": 8}),
-                "num_inference_steps": ("INT", {"default": 28, "min": 2, "max": 50}),
-                "guidance_scale": ("FLOAT", {"default": 4.0, "min": 0.0, "max": 20.0, "step": 0.1}),
-                "negative_prompt": ("STRING", {"default": "", "multiline": True}),
-                "seed": ("INT", {"default": -1}),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
-                "enable_safety_checker": ("BOOLEAN", {"default": True}),
-                "output_format": (["png", "jpeg"], {"default": "png"}),
-                "lora_path_1": ("STRING", {"default": ""}),
+                "custom_width": ("INT", {"default": 1920, "min": 128, "max": 2048, "step": 8, "tooltip": "Output width in pixels (used when image_size is 'custom')"}),
+                "custom_height": ("INT", {"default": 1080, "min": 128, "max": 2048, "step": 8, "tooltip": "Output height in pixels (used when image_size is 'custom')"}),
+                "num_inference_steps": ("INT", {"default": 28, "min": 2, "max": 50, "tooltip": "Number of denoising steps; more steps can improve quality but take longer"}),
+                "guidance_scale": ("FLOAT", {"default": 4.0, "min": 0.0, "max": 20.0, "step": 0.1, "tooltip": "CFG scale: how closely the output follows the prompt (higher = stricter)"}),
+                "negative_prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "What to avoid in the generated image"}),
+                "seed": ("INT", {"default": -1, "tooltip": "Random seed for reproducible results; leave at the default for a random seed"}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4, "tooltip": "Number of images to generate per run"}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True, "tooltip": "Run the safety checker on generated images"}),
+                "output_format": (["png", "jpeg"], {"default": "png", "tooltip": "File format of the generated image"}),
+                "lora_path_1": ("STRING", {"default": "", "tooltip": "URL or path of LoRA weights file #1 to apply"}),
                 "lora_scale_1": (
                     "FLOAT",
-                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05},
+                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05, "tooltip": "Strength of LoRA #1 (1.0 = full effect)"},
                 ),
-                "lora_path_2": ("STRING", {"default": ""}),
+                "lora_path_2": ("STRING", {"default": "", "tooltip": "URL or path of LoRA weights file #2 to apply"}),
                 "lora_scale_2": (
                     "FLOAT",
-                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05},
+                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05, "tooltip": "Strength of LoRA #2 (1.0 = full effect)"},
                 ),
-                "lora_path_3": ("STRING", {"default": ""}),
+                "lora_path_3": ("STRING", {"default": "", "tooltip": "URL or path of LoRA weights file #3 to apply"}),
                 "lora_scale_3": (
                     "FLOAT",
-                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05},
+                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05, "tooltip": "Strength of LoRA #3 (1.0 = full effect)"},
                 ),
-                "lora_path_4": ("STRING", {"default": ""}),
+                "lora_path_4": ("STRING", {"default": "", "tooltip": "URL or path of LoRA weights file #4 to apply"}),
                 "lora_scale_4": (
                     "FLOAT",
-                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05},
+                    {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05, "tooltip": "Strength of LoRA #4 (1.0 = full effect)"},
                 ),
             },
         }
@@ -1600,8 +1572,9 @@ class QwenImageEditPlusLoRA:
         # Handle multiple images
         image_urls = ImageUtils.prepare_images(images)
         if not image_urls:
-            print(f"Error: No images provided for {model_name}")
-            return ResultProcessor.create_blank_image()
+            return ApiHandler.handle_image_generation_error(
+                model_name, "No images provided."
+            )
 
         arguments = {
             "prompt": prompt,
@@ -1652,15 +1625,15 @@ class SeedEditV3:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
-                "image": ("IMAGE",),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
+                "image": ("IMAGE", {"tooltip": "Input image to edit or transform"}),
             },
             "optional": {
                 "guidance_scale": (
                     "FLOAT",
-                    {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.1},
+                    {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.1, "tooltip": "CFG scale: how closely the output follows the prompt (higher = stricter)"},
                 ),
-                "seed": ("INT", {"default": -1, "min": -1, "max": 2**32 - 1}),
+                "seed": ("INT", {"default": -1, "min": -1, "max": 2**32 - 1, "tooltip": "Random seed for reproducible results; leave at the default for a random seed"}),
             },
         }
 
@@ -1677,9 +1650,6 @@ class SeedEditV3:
     ):
         model_name = "SeedEdit 3.0"
         image_url = ImageUtils.upload_image(image)
-        if not image_url:
-            print(f"Error: Failed to upload image for {model_name}")
-            return ResultProcessor.create_blank_image()
 
         endpoint = "fal-ai/bytedance/seededit/v3/edit-image"
         arguments = {
@@ -1703,8 +1673,8 @@ class SeedreamV4Edit:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
-                "image_1": ("IMAGE",),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
+                "image_1": ("IMAGE", {"tooltip": "Input reference image 1"}),
                 "image_size": (
                     [
                         "square_hd",
@@ -1715,26 +1685,26 @@ class SeedreamV4Edit:
                         "landscape_16_9",
                         "custom",
                     ],
-                    {"default": "square_hd"},
+                    {"default": "square_hd", "tooltip": "Preset output size/aspect ratio; select 'custom' to use width and height"},
                 ),
-                "width": ("INT", {"default": 3840, "min": 1024, "max": 4096}),
-                "height": ("INT", {"default": 2160, "min": 1024, "max": 4096}),
+                "width": ("INT", {"default": 3840, "min": 1024, "max": 4096, "tooltip": "Output width in pixels (used when image_size is 'custom')"}),
+                "height": ("INT", {"default": 2160, "min": 1024, "max": 4096, "tooltip": "Output height in pixels (used when image_size is 'custom')"}),
             },
             "optional": {
-                "image_2": ("IMAGE",),
-                "image_3": ("IMAGE",),
-                "image_4": ("IMAGE",),
-                "image_5": ("IMAGE",),
-                "image_6": ("IMAGE",),
-                "image_7": ("IMAGE",),
-                "image_8": ("IMAGE",),
-                "image_9": ("IMAGE",),
-                "image_10": ("IMAGE",),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 6}),
-                "max_images": ("INT", {"default": 1, "min": 1, "max": 6}),
-                "enable_safety_checker": ("BOOLEAN", {"default": True}),
-                "sync_mode": ("BOOLEAN", {"default": False}),
-                "seed": ("INT", {"default": -1, "min": -1, "max": 2**32 - 1}),
+                "image_2": ("IMAGE", {"tooltip": "Input reference image 2"}),
+                "image_3": ("IMAGE", {"tooltip": "Input reference image 3"}),
+                "image_4": ("IMAGE", {"tooltip": "Input reference image 4"}),
+                "image_5": ("IMAGE", {"tooltip": "Input reference image 5"}),
+                "image_6": ("IMAGE", {"tooltip": "Input reference image 6"}),
+                "image_7": ("IMAGE", {"tooltip": "Input reference image 7"}),
+                "image_8": ("IMAGE", {"tooltip": "Input reference image 8"}),
+                "image_9": ("IMAGE", {"tooltip": "Input reference image 9"}),
+                "image_10": ("IMAGE", {"tooltip": "Input reference image 10"}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 6, "tooltip": "Number of images to generate per run"}),
+                "max_images": ("INT", {"default": 1, "min": 1, "max": 6, "tooltip": "Maximum images returned per generation; total inputs + outputs must not exceed 15"}),
+                "enable_safety_checker": ("BOOLEAN", {"default": True, "tooltip": "Run the safety checker on generated images"}),
+                "sync_mode": ("BOOLEAN", {"default": False, "tooltip": "Wait for generation and return the image data directly instead of a hosted URL"}),
+                "seed": ("INT", {"default": -1, "min": -1, "max": 2**32 - 1, "tooltip": "Random seed for reproducible results; leave at the default for a random seed"}),
             },
         }
 
@@ -1766,9 +1736,10 @@ class SeedreamV4Edit:
     ):
         model_name = "Seedream 4.0 Edit"
 
-        image_urls = []
-        for i, img in enumerate(
-            [
+        # Upload all provided images (upload raises on failure)
+        image_urls = [
+            ImageUtils.upload_image(img)
+            for img in [
                 image_1,
                 image_2,
                 image_3,
@@ -1779,26 +1750,19 @@ class SeedreamV4Edit:
                 image_8,
                 image_9,
                 image_10,
-            ],
-            1,
-        ):
-            if img is not None:
-                url = ImageUtils.upload_image(img)
-                if url:
-                    image_urls.append(url)
-                else:
-                    print(f"Error: Failed to upload image {i} for {model_name}")
-                    return ResultProcessor.create_blank_image()
+            ]
+            if img is not None
+        ]
 
         # the total number of images (image inputs + image outputs) must not exceed 15
         max_total_images = 15
         potential_total = len(image_urls) + (num_images * max_images)
         if potential_total > max_total_images:
-            print(
-                f"Error: Total images (inputs + outputs) must be <= {max_total_images}. "
-                f"inputs={len(image_urls)}, num_images={num_images}, max_images={max_images}"
+            return ApiHandler.handle_image_generation_error(
+                model_name,
+                f"Total images (inputs + outputs) must be <= {max_total_images}. "
+                f"inputs={len(image_urls)}, num_images={num_images}, max_images={max_images}",
             )
-            return ResultProcessor.create_blank_image()
 
         endpoint = "fal-ai/bytedance/seedream/v4/edit"
         arguments = {
@@ -1829,16 +1793,16 @@ class NanoBananaTextToImage:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
             },
             "optional": {
                 "aspect_ratio": (
                     ["21:9", "1:1", "4:3", "3:2", "2:3", "5:4", "4:5", "3:4", "16:9", "9:16"],
-                    {"default": "1:1"},
+                    {"default": "1:1", "tooltip": "Aspect ratio of the generated image"},
                 ),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
-                "output_format": (["jpeg", "png"], {"default": "png"}),
-                "sync_mode": ("BOOLEAN", {"default": False}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4, "tooltip": "Number of images to generate per run"}),
+                "output_format": (["jpeg", "png"], {"default": "png", "tooltip": "File format of the generated image"}),
+                "sync_mode": ("BOOLEAN", {"default": False, "tooltip": "Wait for generation and return the image data directly instead of a hosted URL"}),
             },
         }
 
@@ -1874,16 +1838,16 @@ class NanoBananaEdit:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
-                "image_1": ("IMAGE",),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
+                "image_1": ("IMAGE", {"tooltip": "Input reference image 1"}),
             },
             "optional": {
-                "image_2": ("IMAGE",),
-                "image_3": ("IMAGE",),
-                "image_4": ("IMAGE",),
-                "images": ("IMAGE", {"default": None, "multiple": True}),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
-                "output_format": (["jpeg", "png"], {"default": "jpeg"}),
+                "image_2": ("IMAGE", {"tooltip": "Input reference image 2"}),
+                "image_3": ("IMAGE", {"tooltip": "Input reference image 3"}),
+                "image_4": ("IMAGE", {"tooltip": "Input reference image 4"}),
+                "images": ("IMAGE", {"default": None, "multiple": True, "tooltip": "Batched input images; every image in the batch is uploaded as a reference"}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4, "tooltip": "Number of images to generate per run"}),
+                "output_format": (["jpeg", "png"], {"default": "jpeg", "tooltip": "File format of the generated image"}),
             },
         }
 
@@ -1906,7 +1870,7 @@ class NanoBananaEdit:
         singleImages = ImageUtils.prepare_images([image_1, image_2, image_3, image_4])
         batchImages = ImageUtils.prepare_images(images)
         image_urls = singleImages + batchImages
-        
+
 
         arguments = {
             "prompt": prompt,
@@ -1927,18 +1891,18 @@ class NanoBananaPro:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
             },
             "optional": {
-                "images": ("IMAGE",),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "images": ("IMAGE", {"tooltip": "Batched input images; every image in the batch is uploaded as a reference"}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4, "tooltip": "Number of images to generate per run"}),
                 "aspect_ratio": (
                     ["auto", "21:9", "16:9", "3:2", "4:3", "5:4", "1:1", "4:5", "3:4", "2:3", "9:16"],
-                    {"default": "1:1"},
+                    {"default": "1:1", "tooltip": "Aspect ratio of the generated image"},
                 ),
-                "output_format": (["jpeg", "png", "webp"], {"default": "png"}),
-                "resolution": (["1K", "2K", "4K"], {"default": "1K"}),
-                "sync_mode": ("BOOLEAN", {"default": False}),
+                "output_format": (["jpeg", "png", "webp"], {"default": "png", "tooltip": "File format of the generated image"}),
+                "resolution": (["1K", "2K", "4K"], {"default": "1K", "tooltip": "Output resolution tier of the generated image"}),
+                "sync_mode": ("BOOLEAN", {"default": False, "tooltip": "Wait for generation and return the image data directly instead of a hosted URL"}),
             },
         }
 
@@ -1959,6 +1923,9 @@ class NanoBananaPro:
         # Prepare image URLs from optional input, limit to 14 images max
         if images is not None and hasattr(images, 'shape') and len(images.shape) == 4 and images.shape[0] > 14:
             # If batch has more than 14 images, take only first 14
+            logger.warning(
+                "Nano Banana Pro: more than 14 input images provided; using the first 14"
+            )
             images = images[:14]
         image_urls = ImageUtils.prepare_images(images)
 
@@ -1996,20 +1963,20 @@ class NanoBanana2:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
             },
             "optional": {
-                "images": ("IMAGE",),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
+                "images": ("IMAGE", {"tooltip": "Batched input images; every image in the batch is uploaded as a reference"}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4, "tooltip": "Number of images to generate per run"}),
                 "aspect_ratio": (
                     ["auto", "21:9", "16:9", "3:2", "4:3", "5:4", "1:1", "4:5", "3:4", "2:3", "9:16"],
-                    {"default": "1:1"},
+                    {"default": "1:1", "tooltip": "Aspect ratio of the generated image"},
                 ),
-                "output_format": (["jpeg", "png", "webp"], {"default": "png"}),
-                "resolution": (["0.5K", "1K", "2K", "4K"], {"default": "1K"}),
-                "seed": ("INT", {"default": -1, "min": -1, "max": 2147483647}),
-                "enable_web_search": ("BOOLEAN", {"default": False}),
-                "sync_mode": ("BOOLEAN", {"default": False}),
+                "output_format": (["jpeg", "png", "webp"], {"default": "png", "tooltip": "File format of the generated image"}),
+                "resolution": (["0.5K", "1K", "2K", "4K"], {"default": "1K", "tooltip": "Output resolution tier of the generated image"}),
+                "seed": ("INT", {"default": -1, "min": -1, "max": 2147483647, "tooltip": "Random seed for reproducible results; leave at the default for a random seed"}),
+                "enable_web_search": ("BOOLEAN", {"default": False, "tooltip": "Allow the model to use web search for factual or current context"}),
+                "sync_mode": ("BOOLEAN", {"default": False, "tooltip": "Wait for generation and return the image data directly instead of a hosted URL"}),
             },
         }
 
@@ -2031,6 +1998,9 @@ class NanoBanana2:
     ):
         # Prepare image URLs from optional input, limit to 14 images max
         if images is not None and hasattr(images, 'shape') and len(images.shape) == 4 and images.shape[0] > 14:
+            logger.warning(
+                "Nano Banana 2: more than 14 input images provided; using the first 14"
+            )
             images = images[:14]
         image_urls = ImageUtils.prepare_images(images)
 
@@ -2071,15 +2041,15 @@ class ReveTextToImage:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
             },
             "optional": {
                 "aspect_ratio": (
                     ["16:9", "4:3", "3:2", "1:1", "2:3", "3:4", "9:16"],
-                    {"default": "3:2"},
+                    {"default": "3:2", "tooltip": "Aspect ratio of the generated image"},
                 ),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
-                "output_format": (["jpeg", "png"], {"default": "png"}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4, "tooltip": "Number of images to generate per run"}),
+                "output_format": (["jpeg", "png"], {"default": "png", "tooltip": "File format of the generated image"}),
             },
         }
 
@@ -2113,7 +2083,7 @@ class Dreamina31TextToImage:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
                 "image_size": (
                     [
                         "square_hd",
@@ -2124,15 +2094,15 @@ class Dreamina31TextToImage:
                         "landscape_16_9",
                         "custom",
                     ],
-                    {"default": "square_hd"},
+                    {"default": "square_hd", "tooltip": "Preset output size/aspect ratio; select 'custom' to use width and height"},
                 ),
             },
             "optional": {
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
-                "sync_mode": ("BOOLEAN", {"default": False}),
-                "output_format": (["jpeg", "png"], {"default": "png"}),
-                "seed": ("INT", {"default": -1, "min": -1, "max": 2**32 - 1}),
-                "enhance_prompt": ("BOOLEAN", {"default": False}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4, "tooltip": "Number of images to generate per run"}),
+                "sync_mode": ("BOOLEAN", {"default": False, "tooltip": "Wait for generation and return the image data directly instead of a hosted URL"}),
+                "output_format": (["jpeg", "png"], {"default": "png", "tooltip": "File format of the generated image"}),
+                "seed": ("INT", {"default": -1, "min": -1, "max": 2**32 - 1, "tooltip": "Random seed for reproducible results; leave at the default for a random seed"}),
+                "enhance_prompt": ("BOOLEAN", {"default": False, "tooltip": "Let the model automatically enhance and expand the prompt"}),
             },
         }
 
@@ -2174,18 +2144,18 @@ class GPTImage15Edit:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
-                "images": ("IMAGE",),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
+                "images": ("IMAGE", {"tooltip": "Batched input images; every image in the batch is uploaded as a reference"}),
             },
             "optional": {
-                "mask_image": ("IMAGE",),
-                "image_size": (["auto", "1024x1024", "1536x1024", "1024x1536"], {"default": "auto"}),
-                "background": (["auto", "transparent", "opaque"], {"default": "auto"}),
-                "quality": (["low", "medium", "high"], {"default": "high"}),
-                "input_fidelity": (["low", "high"], {"default": "high"}),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
-                "output_format": (["jpeg", "png", "webp"], {"default": "png"}),
-                "sync_mode": ("BOOLEAN", {"default": False}),
+                "mask_image": ("IMAGE", {"tooltip": "Inpainting mask: white areas are regenerated, black areas are preserved"}),
+                "image_size": (["auto", "1024x1024", "1536x1024", "1024x1536"], {"default": "auto", "tooltip": "Preset output size/aspect ratio; select 'custom' to use width and height"}),
+                "background": (["auto", "transparent", "opaque"], {"default": "auto", "tooltip": "Background transparency of the generated image (transparent requires png/webp)"}),
+                "quality": (["low", "medium", "high"], {"default": "high", "tooltip": "Rendering quality; higher quality costs more and takes longer"}),
+                "input_fidelity": (["low", "high"], {"default": "high", "tooltip": "How closely the output preserves the input image(s)"}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4, "tooltip": "Number of images to generate per run"}),
+                "output_format": (["jpeg", "png", "webp"], {"default": "png", "tooltip": "File format of the generated image"}),
+                "sync_mode": ("BOOLEAN", {"default": False, "tooltip": "Wait for generation and return the image data directly instead of a hosted URL"}),
             },
         }
 
@@ -2211,12 +2181,16 @@ class GPTImage15Edit:
         # Prepare image URLs from input, limit to 16 images max
         if images is not None and hasattr(images, 'shape') and len(images.shape) == 4 and images.shape[0] > 16:
             # If batch has more than 16 images, take only first 16
+            logger.warning(
+                f"{model_name}: more than 16 input images provided; using the first 16"
+            )
             images = images[:16]
         image_urls = ImageUtils.prepare_images(images)
 
         if len(image_urls) == 0:
-            print(f"Error: No valid images provided for {model_name}")
-            return ResultProcessor.create_blank_image()
+            return ApiHandler.handle_image_generation_error(
+                model_name, "No valid images provided."
+            )
 
         arguments = {
             "prompt": prompt,
@@ -2232,9 +2206,7 @@ class GPTImage15Edit:
 
         # Add optional mask image
         if mask_image is not None:
-            mask_url = ImageUtils.upload_image(mask_image)
-            if mask_url:
-                arguments["mask_image_url"] = mask_url
+            arguments["mask_image_url"] = ImageUtils.upload_image(mask_image)
 
         try:
             result = ApiHandler.submit_and_get_result("fal-ai/gpt-image-1.5/edit", arguments)
@@ -2248,15 +2220,15 @@ class GPTImage15:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
             },
             "optional": {
-                "image_size": (["1024x1024", "1536x1024", "1024x1536"], {"default": "1024x1024"}),
-                "background": (["auto", "transparent", "opaque"], {"default": "auto"}),
-                "quality": (["low", "medium", "high"], {"default": "high"}),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
-                "output_format": (["jpeg", "png", "webp"], {"default": "png"}),
-                "sync_mode": ("BOOLEAN", {"default": False}),
+                "image_size": (["1024x1024", "1536x1024", "1024x1536"], {"default": "1024x1024", "tooltip": "Preset output size/aspect ratio; select 'custom' to use width and height"}),
+                "background": (["auto", "transparent", "opaque"], {"default": "auto", "tooltip": "Background transparency of the generated image (transparent requires png/webp)"}),
+                "quality": (["low", "medium", "high"], {"default": "high", "tooltip": "Rendering quality; higher quality costs more and takes longer"}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4, "tooltip": "Number of images to generate per run"}),
+                "output_format": (["jpeg", "png", "webp"], {"default": "png", "tooltip": "File format of the generated image"}),
+                "sync_mode": ("BOOLEAN", {"default": False, "tooltip": "Wait for generation and return the image data directly instead of a hosted URL"}),
             },
         }
 
@@ -2296,8 +2268,8 @@ class GPTImage2Edit:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
-                "image_1": ("IMAGE",),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
+                "image_1": ("IMAGE", {"tooltip": "Input reference image 1"}),
                 "image_size": (
                     [
                         "square_hd",
@@ -2308,34 +2280,34 @@ class GPTImage2Edit:
                         "landscape_16_9",
                         "custom",
                     ],
-                    {"default": "custom"},
+                    {"default": "custom", "tooltip": "Preset output size/aspect ratio; select 'custom' to use width and height"},
                 ),
-                "width": ("INT", {"default": 3840, "min": 768, "max": 4096}),
-                "height": ("INT", {"default": 2160, "min": 768, "max": 4096}),
+                "width": ("INT", {"default": 3840, "min": 768, "max": 4096, "tooltip": "Output width in pixels (used when image_size is 'custom')"}),
+                "height": ("INT", {"default": 2160, "min": 768, "max": 4096, "tooltip": "Output height in pixels (used when image_size is 'custom')"}),
             },
             "optional": {
-                "image_2": ("IMAGE",),
-                "image_3": ("IMAGE",),
-                "image_4": ("IMAGE",),
-                "image_5": ("IMAGE",),
-                "image_6": ("IMAGE",),
-                "image_7": ("IMAGE",),
-                "image_8": ("IMAGE",),
-                "image_9": ("IMAGE",),
-                "image_10": ("IMAGE",),
-                "image_11": ("IMAGE",),
-                "image_12": ("IMAGE",),
-                "image_13": ("IMAGE",),
-                "image_14": ("IMAGE",),
-                "image_15": ("IMAGE",),
-                "image_16": ("IMAGE",),                 
-                "mask_image": ("IMAGE",),
-                "background": (["auto", "transparent", "opaque"], {"default": "opaque"}),
-                "quality": (["low", "medium", "high"], {"default": "high"}),
-                "input_fidelity": (["low", "high"], {"default": "high"}),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
-                "output_format": (["jpeg", "png", "webp"], {"default": "png"}),
-                "sync_mode": ("BOOLEAN", {"default": False}),
+                "image_2": ("IMAGE", {"tooltip": "Input reference image 2"}),
+                "image_3": ("IMAGE", {"tooltip": "Input reference image 3"}),
+                "image_4": ("IMAGE", {"tooltip": "Input reference image 4"}),
+                "image_5": ("IMAGE", {"tooltip": "Input reference image 5"}),
+                "image_6": ("IMAGE", {"tooltip": "Input reference image 6"}),
+                "image_7": ("IMAGE", {"tooltip": "Input reference image 7"}),
+                "image_8": ("IMAGE", {"tooltip": "Input reference image 8"}),
+                "image_9": ("IMAGE", {"tooltip": "Input reference image 9"}),
+                "image_10": ("IMAGE", {"tooltip": "Input reference image 10"}),
+                "image_11": ("IMAGE", {"tooltip": "Input reference image 11"}),
+                "image_12": ("IMAGE", {"tooltip": "Input reference image 12"}),
+                "image_13": ("IMAGE", {"tooltip": "Input reference image 13"}),
+                "image_14": ("IMAGE", {"tooltip": "Input reference image 14"}),
+                "image_15": ("IMAGE", {"tooltip": "Input reference image 15"}),
+                "image_16": ("IMAGE", {"tooltip": "Input reference image 16"}),
+                "mask_image": ("IMAGE", {"tooltip": "Inpainting mask: white areas are regenerated, black areas are preserved"}),
+                "background": (["auto", "transparent", "opaque"], {"default": "opaque", "tooltip": "Background transparency of the generated image (transparent requires png/webp)"}),
+                "quality": (["low", "medium", "high"], {"default": "high", "tooltip": "Rendering quality; higher quality costs more and takes longer"}),
+                "input_fidelity": (["low", "high"], {"default": "high", "tooltip": "How closely the output preserves the input image(s)"}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4, "tooltip": "Number of images to generate per run"}),
+                "output_format": (["jpeg", "png", "webp"], {"default": "png", "tooltip": "File format of the generated image"}),
+                "sync_mode": ("BOOLEAN", {"default": False, "tooltip": "Wait for generation and return the image data directly instead of a hosted URL"}),
             },
         }
 
@@ -2348,8 +2320,8 @@ class GPTImage2Edit:
         prompt,
         image_1,
         image_size,
-        width,       
-        height,      
+        width,
+        height,
         image_2=None,
         image_3=None,
         image_4=None,
@@ -2364,7 +2336,7 @@ class GPTImage2Edit:
         image_13=None,
         image_14=None,
         image_15=None,
-        image_16=None,        
+        image_16=None,
         mask_image=None,
         background="opaque",
         quality="high",
@@ -2375,9 +2347,10 @@ class GPTImage2Edit:
     ):
         model_name = "GPT-Image 2 Edit"
 
-        image_urls = []
-        for i, img in enumerate(
-            [
+        # Upload all provided images (upload raises on failure)
+        image_urls = [
+            ImageUtils.upload_image(img)
+            for img in [
                 image_1,
                 image_2,
                 image_3,
@@ -2394,20 +2367,14 @@ class GPTImage2Edit:
                 image_14,
                 image_15,
                 image_16,
-            ],
-            1,
-        ):
-            if img is not None:
-                url = ImageUtils.upload_image(img)
-                if url:
-                    image_urls.append(url)
-                else:
-                    print(f"Error: Failed to upload image {i} for {model_name}")
-                    return ResultProcessor.create_blank_image()
+            ]
+            if img is not None
+        ]
 
         if len(image_urls) == 0:
-            print(f"Error: No valid images provided for {model_name}")
-            return ResultProcessor.create_blank_image()
+            return ApiHandler.handle_image_generation_error(
+                model_name, "No valid images provided."
+            )
 
         arguments = {
             "prompt": prompt,
@@ -2426,9 +2393,7 @@ class GPTImage2Edit:
             arguments["image_size"] = image_size
 
         if mask_image is not None:
-            mask_url = ImageUtils.upload_image(mask_image)
-            if mask_url:
-                arguments["mask_image_url"] = mask_url
+            arguments["mask_image_url"] = ImageUtils.upload_image(mask_image)
 
         try:
             result = ApiHandler.submit_and_get_result("fal-ai/gpt-image-2/edit", arguments)
@@ -2442,7 +2407,7 @@ class GPTImage2:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "prompt": ("STRING", {"default": "", "multiline": True, "tooltip": "Text prompt describing the image to generate or the edit to apply"}),
             },
             "optional": {
                 "image_size": (
@@ -2455,15 +2420,15 @@ class GPTImage2:
                         "landscape_16_9",
                         "custom",
                     ],
-                    {"default": "custom"},
+                    {"default": "custom", "tooltip": "Preset output size/aspect ratio; select 'custom' to use width and height"},
                 ),
-                "width": ("INT", {"default": 3840, "min": 768, "max": 4096}),
-                "height": ("INT", {"default": 2160, "min": 768, "max": 4096}),
-                "background": (["auto", "transparent", "opaque"], {"default": "opaque"}),
-                "quality": (["low", "medium", "high"], {"default": "high"}),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
-                "output_format": (["jpeg", "png", "webp"], {"default": "png"}),
-                "sync_mode": ("BOOLEAN", {"default": False}),
+                "width": ("INT", {"default": 3840, "min": 768, "max": 4096, "tooltip": "Output width in pixels (used when image_size is 'custom')"}),
+                "height": ("INT", {"default": 2160, "min": 768, "max": 4096, "tooltip": "Output height in pixels (used when image_size is 'custom')"}),
+                "background": (["auto", "transparent", "opaque"], {"default": "opaque", "tooltip": "Background transparency of the generated image (transparent requires png/webp)"}),
+                "quality": (["low", "medium", "high"], {"default": "high", "tooltip": "Rendering quality; higher quality costs more and takes longer"}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 4, "tooltip": "Number of images to generate per run"}),
+                "output_format": (["jpeg", "png", "webp"], {"default": "png", "tooltip": "File format of the generated image"}),
+                "sync_mode": ("BOOLEAN", {"default": False, "tooltip": "Wait for generation and return the image data directly instead of a hosted URL"}),
             },
         }
 
@@ -2534,6 +2499,8 @@ NODE_CLASS_MAPPINGS = {
     "Dreamina31TextToImage_fal": Dreamina31TextToImage,
     "GPTImage15Edit_fal": GPTImage15Edit,
     "GPTImage15_fal": GPTImage15,
+    "GPTImage2Edit_fal": GPTImage2Edit,
+    "GPTImage2_fal": GPTImage2,
 }
 
 

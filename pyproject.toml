@@ -1,9 +1,17 @@
 [project]
 name = "fal-api"
-description = "Custom nodes for using fal API. Video generation with Kling, Runway, Luma. Image generation with Flux. LLMs and VLMs OpenAI, Claude, Llama and Gemini."
-version = "1.0.12"
+description = "Custom nodes for using fal API with auto-generated full-catalog coverage of fal.ai models. Video generation with Kling, Runway, Luma. Image generation with Flux. LLMs and VLMs OpenAI, Claude, Llama and Gemini."
+version = "2.0.0"
 license = {file = "LICENSE"}
-dependencies = ["fal-client", "torch"]
+requires-python = ">=3.9"
+dependencies = [
+    "fal-client>=1.0,<2",
+    "torch",
+    "opencv-python",
+    "numpy",
+    "pillow",
+    "requests",
+]
 
 [project.urls]
 Repository = "https://github.com/gokayfem/ComfyUI-fal-API"
@@ -13,3 +21,13 @@ Repository = "https://github.com/gokayfem/ComfyUI-fal-API"
 PublisherId = "gokayfem"
 DisplayName = "ComfyUI-fal-API"
 Icon = ""
+
+[tool.ruff]
+target-version = "py39"
+line-length = 120
+exclude = ["example_workflows"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+# E501: legacy long lines throughout the codebase; revisit once files are refactored.
+ignore = ["E501"]

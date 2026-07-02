@@ -5,7 +5,7 @@ import zipfile
 import torch
 from PIL import Image
 
-from .fal_utils import ApiHandler, FalConfig
+from .fal_utils import ApiHandler, FalConfig, ImageUtils
 
 # Initialize FalConfig
 fal_config = FalConfig()
@@ -39,9 +39,8 @@ def create_zip_from_images(images):
                     zf.write(temp_img_path, f"image_{idx}.png")
                     os.unlink(temp_img_path)
 
-            # Use fal_client.upload_file instead of ApiHandler.upload_file
-            client = FalConfig().get_client()
-            return client.upload_file(temp_zip.name)
+            # Upload the zip through the shared utility (raises on failure)
+            return ImageUtils.upload_file(temp_zip.name)
     except Exception as e:
         return ApiHandler.handle_text_generation_error(
             "flux-lora-fast-training", f"Failed to create zip file: {str(e)}"
@@ -53,19 +52,64 @@ class FluxLoraTrainerNode:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "images": ("IMAGE",),
+                "images": (
+                    "IMAGE",
+                    {"tooltip": "Training images. Ignored when images_zip_url is set."},
+                ),
                 "steps": (
                     "INT",
-                    {"default": 1000, "min": 100, "max": 10000, "step": 100},
+                    {
+                        "default": 1000,
+                        "min": 100,
+                        "max": 10000,
+                        "step": 100,
+                        "tooltip": "Number of training steps.",
+                    },
                 ),
-                "create_masks": ("BOOLEAN", {"default": True}),
-                "is_style": ("BOOLEAN", {"default": False}),
+                "create_masks": (
+                    "BOOLEAN",
+                    {
+                        "default": True,
+                        "tooltip": "Automatically create segmentation masks for subject training.",
+                    },
+                ),
+                "is_style": (
+                    "BOOLEAN",
+                    {
+                        "default": False,
+                        "tooltip": "Enable for style LoRAs instead of subject LoRAs.",
+                    },
+                ),
             },
             "optional": {
-                "trigger_word": ("STRING", {"default": ""}),
-                "images_zip_url": ("STRING", {"default": ""}),
-                "is_input_format_already_preprocessed": ("BOOLEAN", {"default": False}),
-                "data_archive_format": ("STRING", {"default": ""}),
+                "trigger_word": (
+                    "STRING",
+                    {
+                        "default": "",
+                        "tooltip": "Token used to invoke the trained concept in prompts.",
+                    },
+                ),
+                "images_zip_url": (
+                    "STRING",
+                    {
+                        "default": "",
+                        "tooltip": "URL of a pre-uploaded zip of training images. Overrides the IMAGE input.",
+                    },
+                ),
+                "is_input_format_already_preprocessed": (
+                    "BOOLEAN",
+                    {
+                        "default": False,
+                        "tooltip": "Set when the archive already contains preprocessed data (images + captions).",
+                    },
+                ),
+                "data_archive_format": (
+                    "STRING",
+                    {
+                        "default": "",
+                        "tooltip": "Archive format hint (e.g. 'zip') when it cannot be inferred from the URL.",
+                    },
+                ),
             },
         }
 
@@ -119,7 +163,7 @@ class FluxLoraTrainerNode:
 
         except Exception as e:
             return ApiHandler.handle_text_generation_error(
-                "flux-lora-fast-training", str(e)
+                "flux-lora-fast-training", e
             )
 
 
@@ -128,21 +172,59 @@ class HunyuanVideoLoraTrainerNode:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "images": ("IMAGE",),
+                "images": (
+                    "IMAGE",
+                    {"tooltip": "Training images. Ignored when images_zip_url is set."},
+                ),
                 "steps": (
                     "INT",
-                    {"default": 1000, "min": 100, "max": 10000, "step": 100},
+                    {
+                        "default": 1000,
+                        "min": 100,
+                        "max": 10000,
+                        "step": 100,
+                        "tooltip": "Number of training steps.",
+                    },
                 ),
             },
             "optional": {
-                "trigger_word": ("STRING", {"default": ""}),
+                "trigger_word": (
+                    "STRING",
+                    {
+                        "default": "",
+                        "tooltip": "Token used to invoke the trained concept in prompts.",
+                    },
+                ),
                 "learning_rate": (
                     "FLOAT",
-                    {"default": 0.0001, "min": 0.00001, "max": 0.01},
+                    {
+                        "default": 0.0001,
+                        "min": 0.00001,
+                        "max": 0.01,
+                        "tooltip": "Training learning rate.",
+                    },
                 ),
-                "do_caption": ("BOOLEAN", {"default": True}),
-                "images_zip_url": ("STRING", {"default": ""}),
-                "data_archive_format": ("STRING", {"default": ""}),
+                "do_caption": (
+                    "BOOLEAN",
+                    {
+                        "default": True,
+                        "tooltip": "Automatically caption the training images.",
+                    },
+                ),
+                "images_zip_url": (
+                    "STRING",
+                    {
+                        "default": "",
+                        "tooltip": "URL of a pre-uploaded zip of training images. Overrides the IMAGE input.",
+                    },
+                ),
+                "data_archive_format": (
+                    "STRING",
+                    {
+                        "default": "",
+                        "tooltip": "Archive format hint (e.g. 'zip') when it cannot be inferred from the URL.",
+                    },
+                ),
             },
         }
 
@@ -194,7 +276,7 @@ class HunyuanVideoLoraTrainerNode:
 
         except Exception as e:
             return ApiHandler.handle_text_generation_error(
-                "hunyuan-video-lora-training", str(e)
+                "hunyuan-video-lora-training", e
             )
 
 
@@ -203,19 +285,48 @@ class WanLoraTrainerNode:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "training_data_url": ("STRING", {"default": ""}),
+                "training_data_url": (
+                    "STRING",
+                    {
+                        "default": "",
+                        "tooltip": "URL of the training data archive (images/videos with optional captions).",
+                    },
+                ),
                 "number_of_steps": (
                     "INT",
-                    {"default": 400, "min": 5, "max": 10000, "step": 1},
+                    {
+                        "default": 400,
+                        "min": 5,
+                        "max": 10000,
+                        "step": 1,
+                        "tooltip": "Number of training steps.",
+                    },
                 ),
                 "learning_rate": (
                     "FLOAT",
-                    {"default": 0.0002, "min": 0.00001, "max": 0.01},
+                    {
+                        "default": 0.0002,
+                        "min": 0.00001,
+                        "max": 0.01,
+                        "tooltip": "Training learning rate.",
+                    },
                 ),
             },
             "optional": {
-                "trigger_phrase": ("STRING", {"default": ""}),
-                "auto_scale_input": ("BOOLEAN", {"default": True}),
+                "trigger_phrase": (
+                    "STRING",
+                    {
+                        "default": "",
+                        "tooltip": "Phrase used to invoke the trained concept in prompts.",
+                    },
+                ),
+                "auto_scale_input": (
+                    "BOOLEAN",
+                    {
+                        "default": True,
+                        "tooltip": "Automatically rescale input media to the training resolution.",
+                    },
+                ),
             },
         }
 
@@ -255,7 +366,7 @@ class WanLoraTrainerNode:
             return (lora_url,)
 
         except Exception as e:
-            return ApiHandler.handle_text_generation_error("wan-trainer", str(e))
+            return ApiHandler.handle_text_generation_error("wan-trainer", e)
 
 
 class LtxVideoTrainerNode:
@@ -263,46 +374,128 @@ class LtxVideoTrainerNode:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "training_data_url": ("STRING", {"default": ""}),
-                "rank": (["8", "16", "32", "64", "128"], {"default": "128"}),
+                "training_data_url": (
+                    "STRING",
+                    {
+                        "default": "",
+                        "tooltip": "URL of the training data archive (videos/images with optional captions).",
+                    },
+                ),
+                "rank": (
+                    ["8", "16", "32", "64", "128"],
+                    {
+                        "default": "128",
+                        "tooltip": "LoRA rank. Higher rank captures more detail but produces larger files.",
+                    },
+                ),
                 "number_of_steps": (
                     "INT",
-                    {"default": 1000, "min": 100, "max": 10000, "step": 1},
+                    {
+                        "default": 1000,
+                        "min": 100,
+                        "max": 10000,
+                        "step": 1,
+                        "tooltip": "Number of training steps.",
+                    },
                 ),
-                "number_of_frames": ("INT", {"default": 81, "min": 1, "max": 1000}),
-                "frame_rate": ("INT", {"default": 25, "min": 1, "max": 60}),
-                "resolution": (["low", "medium", "high"], {"default": "medium"}),
-                "aspect_ratio": (["16:9", "1:1", "9:16"], {"default": "1:1"}),
+                "number_of_frames": (
+                    "INT",
+                    {
+                        "default": 81,
+                        "min": 1,
+                        "max": 1000,
+                        "tooltip": "Frames per training sample.",
+                    },
+                ),
+                "frame_rate": (
+                    "INT",
+                    {
+                        "default": 25,
+                        "min": 1,
+                        "max": 60,
+                        "tooltip": "Frame rate used for training samples.",
+                    },
+                ),
+                "resolution": (
+                    ["low", "medium", "high"],
+                    {"default": "medium", "tooltip": "Training resolution."},
+                ),
+                "aspect_ratio": (
+                    ["16:9", "1:1", "9:16"],
+                    {"default": "1:1", "tooltip": "Training aspect ratio."},
+                ),
                 "learning_rate": (
                     "FLOAT",
-                    {"default": 0.0002, "min": 0.00001, "max": 0.01},
+                    {
+                        "default": 0.0002,
+                        "min": 0.00001,
+                        "max": 0.01,
+                        "tooltip": "Training learning rate.",
+                    },
                 ),
             },
             "optional": {
-                "trigger_phrase": ("STRING", {"default": ""}),
-                "auto_scale_input": ("BOOLEAN", {"default": False}),
-                "split_input_into_scenes": ("BOOLEAN", {"default": True}),
+                "trigger_phrase": (
+                    "STRING",
+                    {
+                        "default": "",
+                        "tooltip": "Phrase used to invoke the trained concept in prompts.",
+                    },
+                ),
+                "auto_scale_input": (
+                    "BOOLEAN",
+                    {
+                        "default": False,
+                        "tooltip": "Automatically rescale input media to the training resolution.",
+                    },
+                ),
+                "split_input_into_scenes": (
+                    "BOOLEAN",
+                    {
+                        "default": True,
+                        "tooltip": "Split long input videos into individual scenes before training.",
+                    },
+                ),
                 "split_input_duration_threshold": (
                     "FLOAT",
-                    {"default": 30.0, "min": 1.0, "max": 300.0},
+                    {
+                        "default": 30.0,
+                        "min": 1.0,
+                        "max": 300.0,
+                        "tooltip": "Videos longer than this many seconds are split into scenes.",
+                    },
                 ),
                 "validation_negative_prompt": (
                     "STRING",
-                    {"default": "blurry, low quality, bad quality, out of focus"},
+                    {
+                        "default": "blurry, low quality, bad quality, out of focus",
+                        "tooltip": "Negative prompt used for validation renders during training.",
+                    },
                 ),
                 "validation_number_of_frames": (
                     "INT",
-                    {"default": 81, "min": 1, "max": 1000},
+                    {
+                        "default": 81,
+                        "min": 1,
+                        "max": 1000,
+                        "tooltip": "Frames per validation render.",
+                    },
                 ),
                 "validation_resolution": (
                     ["low", "medium", "high"],
-                    {"default": "high"},
+                    {"default": "high", "tooltip": "Resolution of validation renders."},
                 ),
                 "validation_aspect_ratio": (
                     ["16:9", "1:1", "9:16"],
-                    {"default": "1:1"},
+                    {"default": "1:1", "tooltip": "Aspect ratio of validation renders."},
                 ),
-                "validation_reverse": ("BOOLEAN", {"default": False}),
+                "validation_reverse": (
+                    "BOOLEAN",
+                    {
+                        "default": False,
+                        "tooltip": "Also render reversed validation videos.",
+                    },
+                ),
             },
         }
 
@@ -368,7 +561,7 @@ class LtxVideoTrainerNode:
             return (lora_url,)
 
         except Exception as e:
-            return ApiHandler.handle_text_generation_error("ltx-video-trainer", str(e))
+            return ApiHandler.handle_text_generation_error("ltx-video-trainer", e)
 
 
 # Node class mappings

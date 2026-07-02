@@ -1,0 +1,139 @@
+#!/usr/bin/env python3
+"""Regenerate the auto-generated model list section of README.md.
+
+Reads data/fal_registry.json and rewrites ONLY the section between
+`<!-- BEGIN GENERATED MODEL LIST -->` and `<!-- END GENERATED MODEL LIST -->`
+in README.md. Everything outside the markers is left untouched, and running
+the script twice in a row produces no diff.
+
+Usage:
+    python scripts/build_readme.py
+"""
+
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+from typing import Any
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+REGISTRY_PATH = REPO_ROOT / "data" / "fal_registry.json"
+README_PATH = REPO_ROOT / "README.md"
+
+BEGIN_MARKER = "<!-- BEGIN GENERATED MODEL LIST -->"
+END_MARKER = "<!-- END GENERATED MODEL LIST -->"
+
+MODEL_URL_TEMPLATE = "https://fal.ai/models/{endpoint_id}"
+
+
+def load_registry(path: Path) -> dict[str, Any]:
+    try:
+        with open(path, encoding="utf-8") as handle:
+            registry = json.load(handle)
+    except (OSError, ValueError) as err:
+        raise SystemExit(f"Failed to read registry at {path}: {err}") from err
+    if not isinstance(registry.get("models"), list):
+        raise SystemExit(f"Registry at {path} has no 'models' list")
+    return registry
+
+
+def escape_cell(text: str) -> str:
+    """Make a value safe inside a markdown table cell."""
+    return " ".join(str(text).split()).replace("|", "\\|")
+
+
+def group_by_category(
+    models: list[dict[str, Any]],
+) -> list[tuple[str, list[dict[str, Any]]]]:
+    """Group models by category, categories sorted by size desc then name."""
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for model in models:
+        category = str(model.get("category") or "other")
+        grouped = {**grouped, category: [*grouped.get(category, []), model]}
+    return sorted(grouped.items(), key=lambda item: (-len(item[1]), item[0]))
+
+
+def model_sort_key(model: dict[str, Any]) -> tuple[str, str]:
+    title = str(model.get("title") or model.get("endpoint_id") or "")
+    return (title.casefold(), str(model.get("endpoint_id") or ""))
+
+
+def render_model_row(model: dict[str, Any]) -> str:
+    endpoint_id = str(model.get("endpoint_id") or "")
+    title = escape_cell(model.get("title") or endpoint_id)
+    lab = escape_cell(model.get("lab") or "—") or "—"
+    output = escape_cell(model.get("output_kind") or "json")
+    url = MODEL_URL_TEMPLATE.format(endpoint_id=endpoint_id)
+    endpoint_cell = f"[`{escape_cell(endpoint_id)}`]({url})"
+    return f"| {title} | {endpoint_cell} | {lab} | {output} |"
+
+
+def render_category(category: str, models: list[dict[str, Any]]) -> str:
+    rows = [render_model_row(m) for m in sorted(models, key=model_sort_key)]
+    count = len(models)
+    noun = "model" if count == 1 else "models"
+    return "\n".join(
+        [
+            "<details>",
+            f"<summary><strong>{category}</strong> — {count} {noun}</summary>",
+            "",
+            "| Model | Endpoint | Lab | Output |",
+            "| --- | --- | --- | --- |",
+            *rows,
+            "",
+            "</details>",
+        ]
+    )
+
+
+def render_generated_section(registry: dict[str, Any]) -> str:
+    models = registry["models"]
+    model_count = registry.get("model_count", len(models))
+    published = [str(m.get("published_at", "")) for m in registry.get("models", [])]
+    generated_date = max(published)[:10] if any(published) else "unknown"
+    summary = (
+        f"{model_count} models · newest model {generated_date} · "
+        "refresh with `scripts/build_registry.py`"
+    )
+    blocks = [
+        render_category(category, grouped)
+        for category, grouped in group_by_category(models)
+    ]
+    return "\n\n".join([summary, *blocks])
+
+
+def replace_between_markers(readme: str, generated: str) -> str:
+    begin = readme.find(BEGIN_MARKER)
+    end = readme.find(END_MARKER)
+    if begin == -1 or end == -1 or end < begin:
+        raise SystemExit(
+            f"README.md must contain '{BEGIN_MARKER}' followed by '{END_MARKER}'"
+        )
+    head = readme[: begin + len(BEGIN_MARKER)]
+    tail = readme[end:]
+    return f"{head}\n\n{generated}\n\n{tail}"
+
+
+def main() -> int:
+    registry = load_registry(REGISTRY_PATH)
+    try:
+        readme = README_PATH.read_text(encoding="utf-8")
+    except OSError as err:
+        raise SystemExit(f"Failed to read {README_PATH}: {err}") from err
+
+    updated = replace_between_markers(readme, render_generated_section(registry))
+    if updated == readme:
+        print(f"README.md already up to date ({registry.get('model_count')} models)")
+        return 0
+
+    README_PATH.write_text(updated, encoding="utf-8")
+    print(
+        f"README.md model list regenerated: {registry.get('model_count')} models, "
+        f"{len(group_by_category(registry['models']))} categories"
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
