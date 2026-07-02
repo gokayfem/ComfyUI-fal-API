@@ -23,6 +23,8 @@ jobs:
           python-version: "3.11"
       - name: Rebuild registry
         run: python scripts/build_registry.py --out data/fal_registry.json 
+      - name: Regenerate MODELS.md
+        run: python scripts/build_readme.py
       - name: Summarize changes
         id: diff
         run: |

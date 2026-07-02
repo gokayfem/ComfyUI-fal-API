@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "featured": [
+    {"endpoint_id": "fal-ai/kling-video/o3/pro/text-to-video", "display_name": null},
+    {"endpoint_id": "fal-ai/kling-video/o3/pro/image-to-video", "display_name": null},
+    {"endpoint_id": "fal-ai/veo3.1", "display_name": "Veo 3.1 Text to Video (fal)"},
+    {"endpoint_id": "fal-ai/veo3.1/image-to-video", "display_name": "Veo 3.1 Image to Video (fal)"},
+    {"endpoint_id": "fal-ai/wan/v2.7/text-to-video", "display_name": "Wan 2.7 Text to Video (fal)"},
+    {"endpoint_id": "fal-ai/wan/v2.7/image-to-video", "display_name": "Wan 2.7 Image to Video (fal)"},
+    {"endpoint_id": "bytedance/seedance-2.0/text-to-video", "display_name": "Seedance 2.0 Text to Video (fal)"},
+    {"endpoint_id": "bytedance/seedance-2.0/image-to-video", "display_name": "Seedance 2.0 Image to Video (fal)"},
+    {"endpoint_id": "fal-ai/sora-2/text-to-video/pro", "display_name": "Sora 2 Pro Text to Video (fal)"},
+    {"endpoint_id": "fal-ai/sora-2/image-to-video/pro", "display_name": "Sora 2 Pro Image to Video (fal)"},
+    {"endpoint_id": "fal-ai/minimax/hailuo-2.3/pro/image-to-video", "display_name": null},
+    {"endpoint_id": "fal-ai/flux-2-max", "display_name": null},
+    {"endpoint_id": "fal-ai/flux-2-max/edit", "display_name": "Flux 2 Max Edit (fal)"},
+    {"endpoint_id": "fal-ai/nano-banana-2", "display_name": null},
+    {"endpoint_id": "fal-ai/nano-banana-2/edit", "display_name": "Nano Banana 2 Edit (fal)"},
+    {"endpoint_id": "openai/gpt-image-2", "display_name": "GPT Image 2 (fal)"},
+    {"endpoint_id": "openai/gpt-image-2/edit", "display_name": "GPT Image 2 Edit (fal)"},
+    {"endpoint_id": "fal-ai/bytedance/seedream/v4.5/text-to-image", "display_name": "Seedream 4.5 Text to Image (fal)"},
+    {"endpoint_id": "fal-ai/bytedance/seedream/v4.5/edit", "display_name": "Seedream 4.5 Edit (fal)"},
+    {"endpoint_id": "fal-ai/recraft/v4.1/pro/text-to-image", "display_name": null},
+    {"endpoint_id": "ideogram/v4", "display_name": null},
+    {"endpoint_id": "fal-ai/elevenlabs/tts/eleven-v3", "display_name": "ElevenLabs TTS Eleven v3 (fal)"},
+    {"endpoint_id": "fal-ai/elevenlabs/speech-to-text/scribe-v2", "display_name": "ElevenLabs Scribe v2 (fal)"},
+    {"endpoint_id": "fal-ai/hunyuan-3d/v3.1/pro/image-to-3d", "display_name": null},
+    {"endpoint_id": "fal-ai/topaz/upscale/image", "display_name": "Topaz Image Upscale (fal)"},
+    {"endpoint_id": "fal-ai/topaz/upscale/video", "display_name": null}
+  ]
+}

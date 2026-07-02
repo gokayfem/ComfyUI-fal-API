@@ -17,6 +17,7 @@ Stdlib only. Usage:
 import argparse
 import json
 import logging
+import os
 import time
 import urllib.error
 import urllib.request
@@ -621,7 +622,10 @@ def main():
         "models": records,
     }
 
-    with open(args.out, "w", encoding="utf-8") as handle:
+    # atomic write: the live sidebar refresh runs this inside a running
+    # ComfyUI — a crash mid-write must not corrupt the tracked registry
+    tmp_out = args.out + ".tmp"
+    with open(tmp_out, "w", encoding="utf-8") as handle:
         json.dump(
             registry,
             handle,
@@ -631,6 +635,8 @@ def main():
             ensure_ascii=False,
         )
         handle.write("\n")
+
+    os.replace(tmp_out, args.out)
 
     log_summary(records, skipped)
     logger.info("Wrote %d models to %s", len(records), args.out)

@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import threading
+import time
 from typing import Any, Callable
 
 from .utils.billing import BillingUtils
@@ -188,9 +189,120 @@ def _search_models(
             "title": model.get("title") or model["endpoint_id"],
             "category": model.get("category"),
             "label": (info or {}).get("label"),
+            "thumbnail": model.get("thumbnail") or None,
         }
         for model, info in hits[:capped]
     ]
+
+
+# -- registry freshness + refresh -----------------------------------------------
+
+_RESTART_NOTE = "Restart ComfyUI after the refresh finishes: new nodes register at import time."
+_REFRESH_TIMEOUT_S = 1800
+
+_refresh_lock = threading.Lock()
+_refresh_state: dict[str, Any] = {
+    "running": False,
+    "started_at": None,
+    "finished_at": None,
+    "ok": None,
+    "message": "Registry refresh has not been started.",
+}
+
+
+def _repo_root() -> str:
+    nodes_dir = os.path.dirname(os.path.abspath(__file__))
+    return os.path.dirname(nodes_dir)
+
+
+def _registry_status() -> dict[str, Any]:
+    """Cached diff of the live fal catalog vs. the local registry (may fetch)."""
+    from .utils.freshness import check_for_new_models
+
+    return check_for_new_models(timeout_s=20)
+
+
+def _refresh_status() -> dict[str, Any]:
+    """Snapshot of the background registry-refresh state."""
+    with _refresh_lock:
+        return {**_refresh_state, "restart_note": _RESTART_NOTE}
+
+
+def _run_refresh_subprocess() -> tuple[bool, str]:
+    """Run scripts/build_registry.py; returns (ok, message)."""
+    import subprocess
+    import sys
+
+    root = _repo_root()
+    command = [
+        sys.executable,
+        os.path.join(root, "scripts", "build_registry.py"),
+        "--out",
+        os.path.join("data", "fal_registry.json"),
+    ]
+    completed = subprocess.run(
+        command, cwd=root, capture_output=True, text=True, timeout=_REFRESH_TIMEOUT_S
+    )
+    if completed.returncode != 0:
+        tail = (completed.stderr or completed.stdout or "").strip()[-500:]
+        return False, f"build_registry.py exited with {completed.returncode}: {tail}"
+    return True, f"Registry refreshed. {_RESTART_NOTE}"
+
+
+def _finish_refresh(ok: bool, message: str) -> None:
+    global _refresh_state
+    with _refresh_lock:
+        _refresh_state = {
+            **_refresh_state,
+            "running": False,
+            "finished_at": time.time(),
+            "ok": ok,
+            "message": message,
+        }
+
+
+def _refresh_worker(runner: Callable[[], tuple[bool, str]]) -> None:
+    """Run the refresh and record the outcome. Never raises."""
+    try:
+        ok, message = runner()
+    except Exception as exc:
+        logger.warning("server_routes: registry refresh failed: %s", exc)
+        ok, message = False, f"Registry refresh failed: {exc}"
+    _finish_refresh(ok, message)
+    logger.info("server_routes: registry refresh finished (ok=%s): %s", ok, message)
+
+
+def _start_refresh(
+    runner: Callable[[], tuple[bool, str]] | None = None,
+    spawn: Callable[[Callable[[], None]], None] | None = None,
+) -> dict[str, Any]:
+    """Start a background registry rebuild; no-op when one is already running.
+
+    ``runner``/``spawn`` are injectable for tests (stub subprocess / run inline).
+    """
+    global _refresh_state
+    with _refresh_lock:
+        if _refresh_state["running"]:
+            return {"started": False, **_refresh_state, "restart_note": _RESTART_NOTE}
+        _refresh_state = {
+            **_refresh_state,
+            "running": True,
+            "started_at": time.time(),
+            "finished_at": None,
+            "ok": None,
+            "message": "Registry refresh running — rebuilding data/fal_registry.json...",
+        }
+
+    active_runner = runner or _run_refresh_subprocess
+
+    def work() -> None:
+        _refresh_worker(active_runner)
+
+    if spawn is not None:
+        spawn(work)
+    else:
+        threading.Thread(target=work, name="fal-registry-refresh", daemon=True).start()
+    return {"started": True, **_refresh_status()}
 
 
 def _cancel(endpoint_id: str, request_id: str) -> dict[str, Any]:
@@ -280,6 +392,18 @@ async def models_route(request: Any) -> Any:
     )
 
 
+async def registry_status_route(request: Any) -> Any:
+    return _guarded(_registry_status, "/fal_api/registry_status")
+
+
+async def registry_refresh_start_route(request: Any) -> Any:
+    return _guarded(_start_refresh, "/fal_api/registry_refresh")
+
+
+async def registry_refresh_status_route(request: Any) -> Any:
+    return _guarded(_refresh_status, "/fal_api/registry_refresh")
+
+
 async def cancel_route(request: Any) -> Any:
     try:
         body = await request.json()
@@ -299,6 +423,9 @@ ROUTES: tuple[tuple[str, str, Callable[..., Any]], ...] = (
     ("GET", "/fal_api/jobs", jobs_route),
     ("GET", "/fal_api/balance", balance_route),
     ("GET", "/fal_api/models", models_route),
+    ("GET", "/fal_api/registry_status", registry_status_route),
+    ("GET", "/fal_api/registry_refresh", registry_refresh_status_route),
+    ("POST", "/fal_api/registry_refresh", registry_refresh_start_route),
     ("POST", "/fal_api/cancel", cancel_route),
 )
 

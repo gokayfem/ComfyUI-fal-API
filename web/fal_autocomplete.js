@@ -39,22 +39,48 @@ function findTarget(canvas, value) {
   return null;
 }
 
+function resultThumb(model) {
+  if (!model?.thumbnail || typeof model.thumbnail !== "string") return null;
+  try {
+    const img = document.createElement("img");
+    img.className = "fal-suggest-thumb";
+    img.src = model.thumbnail;
+    img.loading = "lazy";
+    img.decoding = "async";
+    img.alt = "";
+    img.addEventListener("error", () => {
+      img.style.display = "none";
+    });
+    return img;
+  } catch (error) {
+    console.debug("[fal] suggestion thumbnail failed", error);
+    return null;
+  }
+}
+
 function resultRow(model, apply) {
   const row = document.createElement("div");
   row.className = "fal-suggest-item";
+
+  const thumb = resultThumb(model);
+  if (thumb) row.append(thumb);
+
+  const text = document.createElement("div");
+  text.className = "fal-suggest-text";
   const title = document.createElement("span");
   title.className = "fal-suggest-title";
   title.textContent = model.title || model.endpoint_id;
   const endpoint = document.createElement("span");
   endpoint.className = "fal-suggest-endpoint";
   endpoint.textContent = model.endpoint_id;
-  row.append(title, endpoint);
+  text.append(title, endpoint);
   if (model.label) {
     const price = document.createElement("span");
     price.className = "fal-suggest-price";
     price.textContent = model.label;
-    row.append(price);
+    text.append(price);
   }
+  row.append(text);
   row.addEventListener("mousedown", (event) => {
     event.preventDefault();
     event.stopPropagation();

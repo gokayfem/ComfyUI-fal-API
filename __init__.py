@@ -16,6 +16,7 @@ node_list = [
     "util_video_node",
     "util_image_node",
     "util_data_node",
+    "builder_node",
 ]
 
 NODE_CLASS_MAPPINGS = {}

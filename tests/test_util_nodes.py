@@ -111,7 +111,7 @@ def test_extract_frames_from_real_video(pack, tmp_path):
 
 def test_all_util_nodes_have_tooltips(pack):
     util_keys = [k for k, c in pack.NODE_CLASS_MAPPINGS.items() if c.CATEGORY.startswith("FAL/Utils")]
-    assert len(util_keys) == 20
+    assert len(util_keys) == 28  # 20 utility nodes + 8 typed builders
     for key in util_keys:
         input_types = pack.NODE_CLASS_MAPPINGS[key].INPUT_TYPES()
         for bucket in ("required", "optional"):

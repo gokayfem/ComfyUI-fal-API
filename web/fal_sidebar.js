@@ -4,6 +4,9 @@ import { formatUsd, getJson, humanAge, postJson, shortEndpoint } from "./fal_api
 
 const REFRESH_MS = 3000;
 const JOB_LIMIT = 50;
+const REGISTRY_TITLE_LIMIT = 5;
+const REGISTRY_POLL_MS = 3000;
+const REGISTRY_POLL_MAX = 600;
 
 let refreshTimer = null;
 let panelRoot = null;
@@ -87,14 +90,116 @@ function buildPanel() {
 
   const jobsHeader = element("div", "fal-jobs-header", "Jobs");
   const jobs = element("div", "fal-jobs");
-  root.append(stats, jobsHeader, jobs);
+
+  const registryHeader = element("div", "fal-jobs-header", "Registry");
+  const registry = element("div", "fal-registry");
+  registry.append(element("div", "fal-muted", "checking for new models…"));
+
+  root.append(stats, jobsHeader, jobs, registryHeader, registry);
   return {
     root,
     sessionValue: session.lastChild,
     balanceValue: balance.lastChild,
     jobsHeader,
     jobs,
+    registryHeader,
+    registry,
   };
+}
+
+// -- Registry freshness section -------------------------------------------------
+
+function registryDone(view, ok, message) {
+  const note = element(
+    "div",
+    ok ? "fal-registry-done" : "fal-registry-error",
+    ok ? "done — restart ComfyUI to load new nodes" : message || "refresh failed"
+  );
+  view.registry.append(note);
+}
+
+async function pollRefresh(view, button) {
+  for (let attempt = 0; attempt < REGISTRY_POLL_MAX; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, REGISTRY_POLL_MS));
+    if (!view.registry.isConnected) return;
+    let status = null;
+    try {
+      status = await getJson("/registry_refresh");
+    } catch (error) {
+      console.debug("[fal] registry refresh poll failed", error);
+      continue;
+    }
+    if (status && status.running === false && status.finished_at) {
+      registryDone(view, status.ok === true, status.message);
+      return;
+    }
+  }
+  if (button) button.textContent = "Still running \u2014 check back later";
+}
+
+async function startRegistryRefresh(view, button) {
+  try {
+    button.disabled = true;
+    button.textContent = "Refreshing…";
+    const result = await postJson("/registry_refresh", {});
+    if (!result?.started && result?.running !== true) {
+      registryDone(view, false, result?.message || "could not start refresh");
+      return;
+    }
+    await pollRefresh(view, button);
+  } catch (error) {
+    console.debug("[fal] registry refresh failed", error);
+    registryDone(view, false, "refresh request failed");
+  }
+}
+
+function renderRegistry(view, status) {
+  try {
+    const count = Number(status?.new_count) || 0;
+    if (count <= 0) {
+      view.registry.replaceChildren(element("div", "fal-muted", "Registry is up to date."));
+      return;
+    }
+    const box = element("div", "fal-registry-news");
+    box.append(
+      element("div", "fal-registry-count", `${count} new model${count === 1 ? "" : "s"} on fal`)
+    );
+    const models = Array.isArray(status?.new_models) ? status.new_models : [];
+    for (const model of models.slice(0, REGISTRY_TITLE_LIMIT)) {
+      const title = model?.title || model?.endpoint_id || "";
+      if (!title) continue;
+      const row = element("div", "fal-registry-model", title);
+      if (model?.endpoint_id) row.title = model.endpoint_id;
+      box.append(row);
+    }
+    if (count > REGISTRY_TITLE_LIMIT) {
+      box.append(element("div", "fal-muted", `…and ${count - REGISTRY_TITLE_LIMIT} more`));
+    }
+    const button = element("button", "fal-registry-refresh", "Refresh registry");
+    button.addEventListener("click", () => {
+      startRegistryRefresh(view, button).catch((error) =>
+        console.debug("[fal] registry refresh flow failed", error)
+      );
+    });
+    box.append(button);
+    view.registry.replaceChildren(box);
+  } catch (error) {
+    console.debug("[fal] registry render failed", error);
+  }
+}
+
+async function loadRegistrySection(view) {
+  try {
+    const status = await getJson("/registry_status");
+    renderRegistry(view, status);
+  } catch (error) {
+    console.debug("[fal] registry status failed", error);
+    try {
+      view.registry.replaceChildren(element("div", "fal-muted", "Registry status unavailable."));
+    } catch (renderError) {
+      console.debug("[fal] registry fallback render failed", renderError);
+    }
+  }
 }
 
 function renderSession(target, data) {
@@ -156,6 +261,10 @@ export function mountPanel(container) {
   panelRoot = view.root;
   container.replaceChildren(view.root);
   startRefreshLoop(view);
+  // Fetched once per panel open (server-side result is cached for an hour).
+  loadRegistrySection(view).catch((error) =>
+    console.debug("[fal] registry section load failed", error)
+  );
 }
 
 function mountFloatingFallback() {

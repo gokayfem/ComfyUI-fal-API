@@ -165,10 +165,27 @@
 
 .fal-suggest-item {
   display: flex;
-  flex-direction: column;
-  gap: 1px;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
   padding: 6px 10px;
   cursor: pointer;
+}
+
+.fal-suggest-thumb {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.fal-suggest-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
 }
 
 .fal-suggest-item:hover {
@@ -187,4 +204,65 @@
 .fal-suggest-price {
   font-size: 10px;
   color: #c4b5fd;
+}
+
+/* Registry freshness section in the sidebar panel. */
+
+.fal-registry {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fal-registry-news {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid rgba(167, 139, 250, 0.25);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.fal-registry-count {
+  font-weight: 600;
+  color: #c4b5fd;
+}
+
+.fal-registry-model {
+  font-size: 11px;
+  opacity: 0.8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fal-registry-refresh {
+  margin-top: 4px;
+  padding: 4px 10px;
+  border: 1px solid rgba(167, 139, 250, 0.5);
+  border-radius: 6px;
+  background: transparent;
+  color: #ece9fd;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.fal-registry-refresh:hover:not(:disabled) {
+  background: rgba(167, 139, 250, 0.15);
+}
+
+.fal-registry-refresh:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.fal-registry-done {
+  font-size: 11px;
+  color: #86efac;
+}
+
+.fal-registry-error {
+  font-size: 11px;
+  color: #fca5a5;
 }
