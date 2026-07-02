@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
+import time
 from typing import Any
 from urllib.parse import urlparse
 
@@ -13,6 +15,7 @@ from .fal_utils import (
     FalApiError,
     MediaUtils,
     PricingUtils,
+    ResultCache,
     SessionLedger,
     logger,
 )
@@ -367,17 +370,118 @@ def _claim_unique_destination(directory: str, basename: str, suffix: str) -> str
     )
 
 
+_PROVENANCE_VERSION = 1
+_PNG_PROVENANCE_KEY = "fal_provenance"
+_SIDECAR_SUFFIX = ".fal.json"
+
+
+def _build_provenance(target_url: str) -> dict[str, Any]:
+    """Assemble the provenance receipt for a saved URL; lookup misses are None."""
+    endpoint_id: str | None = None
+    request_id: str | None = None
+    try:
+        found = ResultCache().find_request_by_url(target_url)
+    except Exception as err:
+        logger.warning("FalSaveMediaURL: provenance lookup failed for %s: %s", target_url, err)
+        found = None
+    if found:
+        endpoint_id = found.get("endpoint_id")
+        request_id = found.get("request_id")
+    return {
+        "version": _PROVENANCE_VERSION,
+        "endpoint_id": endpoint_id,
+        "request_id": request_id,
+        "source_url": target_url,
+        "saved_at": time.time(),
+    }
+
+
+def _write_provenance_sidecar(saved_path: str, provenance: dict[str, Any]) -> None:
+    """Write '<saved_path>.fal.json' next to the file. Best-effort, never raises."""
+    sidecar_path = saved_path + _SIDECAR_SUFFIX
+    try:
+        with open(sidecar_path, "w", encoding="utf-8") as handle:
+            json.dump(provenance, handle, indent=2)
+    except Exception as err:
+        logger.warning("FalSaveMediaURL: could not write sidecar %s: %s", sidecar_path, err)
+
+
+def _embed_png_provenance(saved_path: str, provenance: dict[str, Any]) -> None:
+    """Embed provenance as a PNG text chunk (PNG files only). Never raises."""
+    if not saved_path.lower().endswith(".png"):
+        return
+    try:
+        from PIL import Image
+        from PIL.PngImagePlugin import PngInfo
+
+        info = PngInfo()
+        info.add_text(_PNG_PROVENANCE_KEY, json.dumps(provenance))
+        with Image.open(saved_path) as image:
+            image.load()  # read fully before overwriting the same path
+            # carry over the source PNG's existing text chunks and color
+            # profile — a fresh PngInfo would otherwise strip them on re-save
+            for key, value in (getattr(image, "text", {}) or {}).items():
+                if key != _PNG_PROVENANCE_KEY and isinstance(value, str):
+                    info.add_text(key, value)
+            save_kwargs: dict[str, Any] = {"pnginfo": info}
+            icc_profile = image.info.get("icc_profile")
+            if icc_profile:
+                save_kwargs["icc_profile"] = icc_profile
+            image.save(saved_path, **save_kwargs)
+    except Exception as err:
+        logger.warning(
+            "FalSaveMediaURL: could not embed PNG provenance in %s: %s", saved_path, err
+        )
+
+
+def _read_provenance_sidecar(path: str) -> dict[str, Any] | None:
+    """Load '<path>.fal.json' if present and valid; None otherwise."""
+    sidecar_path = path + _SIDECAR_SUFFIX
+    if not os.path.isfile(sidecar_path):
+        return None
+    try:
+        with open(sidecar_path, encoding="utf-8") as handle:
+            data = json.load(handle)
+        return data if isinstance(data, dict) else None
+    except Exception as err:
+        logger.warning("FalProvenanceFromFile: unreadable sidecar %s: %s", sidecar_path, err)
+        return None
+
+
+def _read_png_provenance(path: str) -> dict[str, Any] | None:
+    """Read the 'fal_provenance' PNG text chunk (PNG files only); None otherwise."""
+    if not path.lower().endswith(".png"):
+        return None
+    try:
+        from PIL import Image
+
+        with Image.open(path) as image:
+            raw = getattr(image, "text", {}).get(_PNG_PROVENANCE_KEY)
+        if not raw:
+            return None
+        data = json.loads(raw)
+        return data if isinstance(data, dict) else None
+    except Exception as err:
+        logger.warning(
+            "FalProvenanceFromFile: could not read PNG provenance from %s: %s", path, err
+        )
+        return None
+
+
 class FalSaveMediaURL:
     """Download a media URL and save it into the ComfyUI output directory."""
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("path",)
+    RETURN_TYPES = ("STRING", "STRING")
+    RETURN_NAMES = ("path", "request_id")
     FUNCTION = "save"
     CATEGORY = _CATEGORY
     OUTPUT_NODE = True
     DESCRIPTION = (
         "Download a result URL (video, audio, file, ...) and store it under "
-        "the ComfyUI output directory with a unique, never-overwriting name."
+        "the ComfyUI output directory with a unique, never-overwriting name. "
+        "Every save also writes a provenance receipt (a .fal.json sidecar, "
+        "plus an embedded text chunk for PNGs) so the generation can be "
+        "recovered later for free via 'Fal Provenance from File'."
     )
 
     @classmethod
@@ -401,7 +505,7 @@ class FalSaveMediaURL:
             },
         }
 
-    def save(self, url: str, filename_prefix: str = "fal/media") -> tuple[str]:
+    def save(self, url: str, filename_prefix: str = "fal/media") -> tuple[str, str]:
         target_url = (url or "").strip()
         if not target_url.startswith(("http://", "https://")):
             raise FalApiError(
@@ -433,7 +537,68 @@ class FalSaveMediaURL:
 
         saved = os.path.abspath(destination)
         logger.info("FalSaveMediaURL: saved %s -> %s", target_url, saved)
-        return (saved,)
+
+        # Provenance receipt: best-effort, never fails the save itself.
+        provenance = _build_provenance(target_url)
+        _write_provenance_sidecar(saved, provenance)
+        _embed_png_provenance(saved, provenance)
+        request_id = str(provenance.get("request_id") or "")
+        return (saved, request_id)
+
+
+class FalProvenanceFromFile:
+    """Read the fal provenance receipt of a previously saved output file."""
+
+    RETURN_TYPES = ("STRING", "STRING", "STRING")
+    RETURN_NAMES = ("endpoint_id", "request_id", "provenance_json")
+    FUNCTION = "read"
+    CATEGORY = _CATEGORY
+    DESCRIPTION = (
+        "Recover where a saved file came from: reads the .fal.json sidecar "
+        "written by 'Fal Save Media from URL' (or the provenance chunk "
+        "embedded in PNGs). Wire endpoint_id and request_id into 'Fal Result "
+        "by Request ID' to re-materialize the generation for free."
+    )
+
+    @classmethod
+    def INPUT_TYPES(cls) -> dict[str, Any]:
+        return {
+            "required": {
+                "file_path": (
+                    "STRING",
+                    {
+                        "default": "",
+                        "tooltip": (
+                            "Absolute path of a previously saved output — reads the "
+                            ".fal.json sidecar or embedded PNG chunk."
+                        ),
+                    },
+                ),
+            },
+        }
+
+    def read(self, file_path: str) -> tuple[str, str, str]:
+        path = os.path.expanduser((file_path or "").strip())
+        if not path:
+            raise FalApiError("FalProvenanceFromFile", "file_path is required")
+        if not os.path.isfile(path):
+            raise FalApiError("FalProvenanceFromFile", f"File not found: {path}")
+
+        provenance = _read_provenance_sidecar(path)
+        if provenance is None:
+            provenance = _read_png_provenance(path)
+        if provenance is None:
+            raise FalApiError(
+                "FalProvenanceFromFile",
+                f"No fal provenance found for {path}: expected a "
+                f"'{os.path.basename(path)}{_SIDECAR_SUFFIX}' sidecar next to it, or a "
+                f"'{_PNG_PROVENANCE_KEY}' text chunk inside a PNG. Only files saved by "
+                "'Fal Save Media from URL' carry a provenance receipt.",
+            )
+
+        endpoint_id = str(provenance.get("endpoint_id") or "")
+        request_id = str(provenance.get("request_id") or "")
+        return (endpoint_id, request_id, json.dumps(provenance))
 
 
 NODE_CLASS_MAPPINGS = {
@@ -443,6 +608,7 @@ NODE_CLASS_MAPPINGS = {
     "FalCostEstimator_fal": FalCostEstimator,
     "FalSessionCosts_fal": FalSessionCosts,
     "FalSaveMediaURL_fal": FalSaveMediaURL,
+    "FalProvenanceFromFile_fal": FalProvenanceFromFile,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -452,4 +618,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "FalCostEstimator_fal": "Fal Cost Estimator (fal)",
     "FalSessionCosts_fal": "Fal Session Costs (fal)",
     "FalSaveMediaURL_fal": "Fal Save Media from URL (fal)",
+    "FalProvenanceFromFile_fal": "Fal Provenance from File (fal)",
 }

@@ -5,6 +5,7 @@ from .billing import BillingUtils, SpendGuard
 from .config import FalConfig
 from .errors import FalApiError, extract_error_message, raise_fal_error
 from .images import ImageUtils, ResultProcessor
+from .job_store import JobStore
 from .ledger import SessionLedger
 from .logger import logger
 from .media import MediaUtils
@@ -17,6 +18,7 @@ __all__ = [
     "FalApiError",
     "FalConfig",
     "ImageUtils",
+    "JobStore",
     "MediaUtils",
     "PricingUtils",
     "ResultCache",

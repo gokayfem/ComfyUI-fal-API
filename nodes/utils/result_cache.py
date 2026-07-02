@@ -301,6 +301,41 @@ class ResultCache:
             "misses": self._misses,
         }
 
+    def find_request_by_url(self, url: str) -> dict[str, Any] | None:
+        """Find the origin of a result URL: {"endpoint_id", "request_id"} or None.
+
+        Scans cached results (most recently used first) for one whose JSON
+        contains ``url`` as an exact substring. Only rows that recorded a
+        request_id qualify. Best-effort: any failure is a miss.
+        """
+        try:
+            target = (url or "").strip()
+            if not target:
+                return None
+            # LIKE treats %, _ (and our escape char) specially — escape them
+            # so URLs containing percent-encoding still match literally.
+            escaped = (
+                target.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            )
+            with self._lock:
+                conn = self._connection()
+                if conn is None:
+                    return None
+                row = conn.execute(
+                    "SELECT endpoint, request_id FROM results "
+                    "WHERE request_id IS NOT NULL "
+                    "AND result_json LIKE '%' || ? || '%' ESCAPE '\\' "
+                    "ORDER BY last_used DESC LIMIT 1",
+                    (escaped,),
+                ).fetchone()
+            if row is None:
+                return None
+            endpoint, request_id = row
+            return {"endpoint_id": endpoint, "request_id": request_id}
+        except Exception as exc:
+            logger.debug("result cache url lookup failed: %s", exc)
+            return None
+
     # -- layer 2: upload cache ----------------------------------------------
 
     def get_upload(self, content_hash: str) -> str | None:

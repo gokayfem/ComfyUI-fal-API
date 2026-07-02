@@ -226,7 +226,7 @@ If ~893 extra nodes is more than you want, use the `[dynamic_nodes]` config sect
 
 ## Platform Utilities
 
-New in 2.1/2.2: utilities built on fal's platform primitives (queue, request ids, per-model pricing) — found under `FAL/Platform`.
+New in 2.1–2.3: utilities built on fal's platform primitives (queue, request ids, per-model pricing) — found under `FAL/Platform`.
 
 ### Async fan-out: Fal Submit + Fal Collect
 
@@ -255,6 +255,24 @@ Set `[spend_guard] session_budget_usd` and/or `min_balance_usd` in config.ini an
 ### URL passthrough: zero-I/O fal→fal chains (2.2)
 
 Every auto-generated node's media input has an optional `*_direct_url` twin, and image nodes output `image_urls` alongside the IMAGE tensor (video/audio/file nodes already output URLs). Wire a fal node's URL output into the next fal node's `*_direct_url` input and the intermediate media **never touches your machine** — no download, no re-upload. Chain image → video → upscale at fal speed.
+
+### Durable Job Inbox (2.3)
+
+Every `Fal Submit` is journaled to disk, so queued jobs **survive ComfyUI restarts**. The **Fal Job Inbox** node lists pending/collected jobs and outputs the newest pending `request_id` + `endpoint_id` — wire them into *Fal Result by Request ID* to collect yesterday's generations after a restart. Submit tonight, collect tomorrow.
+
+### Provenance: every output is a receipt (2.3)
+
+*Fal Save Media from URL* now writes a `<file>.fal.json` sidecar (and embeds a `fal_provenance` text chunk into PNGs) recording the endpoint, request id, and source URL, and returns the `request_id` as a second output. The **Fal Provenance from File** node reads any previously saved file back into `endpoint_id` + `request_id` — re-materialize the generation for free, months later.
+
+### In-canvas cost badges, job monitor, and endpoint search (2.3)
+
+The pack now ships a small web extension:
+
+- **Cost badges** — every fal node with published pricing shows a pill just above it ("≈$0.08/run"); nodes with free-typed endpoint fields (Any Endpoint, Submit, Cost Estimator) estimate live as you type.
+- **fal sidebar** — session spend, account balance, and a live job list (with copy-able request ids and per-job Cancel) in a sidebar tab.
+- **Endpoint search** — editing an `endpoint_id` field pops up catalog search with prices; click to fill.
+
+All frontend features degrade silently on older ComfyUI versions.
 
 ### Fal Save Media from URL
 

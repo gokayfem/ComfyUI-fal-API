@@ -10,6 +10,7 @@ node_list = [
     "upscaler_node",
     "platform_node",
     "billing_node",
+    "inbox_node",
 ]
 
 NODE_CLASS_MAPPINGS = {}
@@ -41,4 +42,15 @@ except Exception as _dynamic_error:  # never break static nodes
     )
 
 
-__all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]
+WEB_DIRECTORY = "./web"
+
+try:
+    from .nodes import server_routes as _server_routes  # noqa: F401  registers /fal_api routes
+except Exception as _routes_error:  # never break node loading over HTTP extras
+    import logging
+
+    logging.getLogger(__name__).warning(
+        "fal API server routes not registered: %s", _routes_error
+    )
+
+__all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS", "WEB_DIRECTORY"]
