@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "generated_at": "2026-07-02T00:00:00Z",
+  "model_count": 5,
+  "models": [
+    {
+      "endpoint_id": "fal-ai/flux/dev",
+      "title": "FLUX.1 [dev]",
+      "category": "text-to-image",
+      "lab": "Black Forest Labs",
+      "family": "flux",
+      "description": "FLUX.1 [dev] is a 12 billion parameter flow transformer for text-to-image generation.",
+      "pricing": "$0.025 per megapixel",
+      "published_at": "2024-08-01",
+      "thumbnail": null,
+      "inputs": [
+        {"name": "prompt", "type": "string", "required": true, "default": null, "enum": null, "min": null, "max": null, "description": "The prompt to generate an image from", "media_kind": null, "is_list": false, "multiline": true, "has_custom_size": false},
+        {"name": "image_size", "type": "enum", "required": false, "default": "landscape_4_3", "enum": ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9", "custom_size"], "min": null, "max": null, "description": "The size of the generated image", "media_kind": null, "is_list": false, "multiline": false, "has_custom_size": true},
+        {"name": "num_inference_steps", "type": "integer", "required": false, "default": 28, "enum": null, "min": 1, "max": 50, "description": "Number of inference steps", "media_kind": null, "is_list": false, "multiline": false, "has_custom_size": false},
+        {"name": "guidance_scale", "type": "number", "required": false, "default": 3.5, "enum": null, "min": 1, "max": 20, "description": "CFG scale", "media_kind": null, "is_list": false, "multiline": false, "has_custom_size": false},
+        {"name": "seed", "type": "integer", "required": false, "default": null, "enum": null, "min": null, "max": null, "description": "Random seed", "media_kind": null, "is_list": false, "multiline": false, "has_custom_size": false},
+        {"name": "num_images", "type": "integer", "required": false, "default": 1, "enum": null, "min": 1, "max": 4, "description": "Number of images to generate", "media_kind": null, "is_list": false, "multiline": false, "has_custom_size": false},
+        {"name": "enable_safety_checker", "type": "boolean", "required": false, "default": true, "enum": null, "min": null, "max": null, "description": "Enable the safety checker", "media_kind": null, "is_list": false, "multiline": false, "has_custom_size": false},
+        {"name": "loras", "type": "json", "required": false, "default": null, "enum": null, "min": null, "max": null, "description": "LoRA weights to apply", "media_kind": null, "is_list": true, "multiline": false, "has_custom_size": false}
+      ],
+      "output_kind": "images",
+      "output_props": ["images"]
+    },
+    {
+      "endpoint_id": "fal-ai/kling-video/v2/master/image-to-video",
+      "title": "Kling 2.0 Master",
+      "category": "image-to-video",
+      "lab": "Kuaishou",
+      "family": "kling-video",
+      "description": "Generate video clips from an image using Kling 2.0 Master.",
+      "pricing": "$1.40 per 5s video",
+      "published_at": "2025-04-15",
+      "thumbnail": null,
+      "inputs": [
+        {"name": "prompt", "type": "string", "required": true, "default": null, "enum": null, "min": null, "max": null, "description": "Motion prompt", "media_kind": null, "is_list": false, "multiline": true, "has_custom_size": false},
+        {"name": "image_url", "type": "string", "required": true, "default": null, "enum": null, "min": null, "max": null, "description": "Start frame image", "media_kind": "image", "is_list": false, "multiline": false, "has_custom_size": false},
+        {"name": "duration", "type": "enum", "required": false, "default": "5", "enum": ["5", "10"], "min": null, "max": null, "description": "Duration of the video in seconds", "media_kind": null, "is_list": false, "multiline": false, "has_custom_size": false},
+        {"name": "negative_prompt", "type": "string", "required": false, "default": "blur, distort, and low quality", "enum": null, "min": null, "max": null, "description": "Negative prompt", "media_kind": null, "is_list": false, "multiline": false, "has_custom_size": false},
+        {"name": "cfg_scale", "type": "number", "required": false, "default": 0.5, "enum": null, "min": 0, "max": 1, "description": "CFG scale", "media_kind": null, "is_list": false, "multiline": false, "has_custom_size": false}
+      ],
+      "output_kind": "video",
+      "output_props": ["video"]
+    },
+    {
+      "endpoint_id": "fal-ai/video-upscaler",
+      "title": "Video Upscaler",
+      "category": "video-to-video",
+      "lab": "fal",
+      "family": "video-upscaler",
+      "description": "Upscale videos by a given factor.",
+      "pricing": "$0.02 per video second",
+      "published_at": "2024-11-01",
+      "thumbnail": null,
+      "inputs": [
+        {"name": "video_url", "type": "string", "required": true, "default": null, "enum": null, "min": null, "max": null, "description": "Video to upscale", "media_kind": "video", "is_list": false, "multiline": false, "has_custom_size": false},
+        {"name": "scale", "type": "number", "required": false, "default": 2, "enum": null, "min": 1, "max": 4, "description": "Upscale factor", "media_kind": null, "is_list": false, "multiline": false, "has_custom_size": false}
+      ],
+      "output_kind": "video",
+      "output_props": ["video"]
+    },
+    {
+      "endpoint_id": "fal-ai/kokoro/american-english",
+      "title": "Kokoro TTS",
+      "category": "text-to-speech",
+      "lab": "Kokoro",
+      "family": "kokoro",
+      "description": "Fast and expressive American English text-to-speech.",
+      "pricing": "$0.02 per 1000 characters",
+      "published_at": "2025-01-20",
+      "thumbnail": null,
+      "inputs": [
+        {"name": "prompt", "type": "string", "required": true, "default": null, "enum": null, "min": null, "max": null, "description": "Text to convert to speech", "media_kind": null, "is_list": false, "multiline": true, "has_custom_size": false},
+        {"name": "voice", "type": "enum", "required": false, "default": "af_heart", "enum": ["af_heart", "af_bella", "am_adam", "am_echo"], "min": null, "max": null, "description": "Voice to use", "media_kind": null, "is_list": false, "multiline": false, "has_custom_size": false},
+        {"name": "speed", "type": "number", "required": false, "default": 1.0, "enum": null, "min": 0.5, "max": 2.0, "description": "Speech speed", "media_kind": null, "is_list": false, "multiline": false, "has_custom_size": false}
+      ],
+      "output_kind": "audio",
+      "output_props": ["audio"]
+    },
+    {
+      "endpoint_id": "tripo3d/tripo/v2.5/image-to-3d",
+      "title": "Tripo3D v2.5",
+      "category": "image-to-3d",
+      "lab": "Tripo",
+      "family": "tripo",
+      "description": "Generate a textured 3D mesh from a single image.",
+      "pricing": "$0.20 per generation",
+      "published_at": "2025-02-10",
+      "thumbnail": null,
+      "inputs": [
+        {"name": "image_url", "type": "string", "required": true, "default": null, "enum": null, "min": null, "max": null, "description": "Input image", "media_kind": "image", "is_list": false, "multiline": false, "has_custom_size": false},
+        {"name": "image_urls", "type": "array", "required": false, "default": null, "enum": null, "min": null, "max": null, "description": "Optional multi-view images", "media_kind": "image", "is_list": true, "multiline": false, "has_custom_size": false},
+        {"name": "texture", "type": "enum", "required": false, "default": "standard", "enum": ["no", "standard", "HD"], "min": null, "max": null, "description": "Texture quality", "media_kind": null, "is_list": false, "multiline": false, "has_custom_size": false},
+        {"name": "seed", "type": "integer", "required": false, "default": null, "enum": null, "min": null, "max": null, "description": "Random seed", "media_kind": null, "is_list": false, "multiline": false, "has_custom_size": false}
+      ],
+      "output_kind": "file",
+      "output_props": ["model_mesh"]
+    }
+  ]
+}

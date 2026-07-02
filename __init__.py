@@ -22,5 +22,21 @@ for module_name in node_list:
         **imported_module.NODE_DISPLAY_NAME_MAPPINGS,
     }
 
+try:
+    from .nodes.dynamic import get_dynamic_mappings
+
+    dyn_classes, dyn_display = get_dynamic_mappings()
+    # static nodes win on any key collision
+    for k, v in dyn_classes.items():
+        NODE_CLASS_MAPPINGS.setdefault(k, v)
+    for k, v in dyn_display.items():
+        NODE_DISPLAY_NAME_MAPPINGS.setdefault(k, v)
+except Exception as _dynamic_error:  # never break static nodes
+    import logging
+
+    logging.getLogger(__name__).error(
+        "Failed to load dynamic fal nodes: %s", _dynamic_error
+    )
+
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]

@@ -1,0 +1,47 @@
+name: Refresh fal model registry
+
+on:
+  schedule:
+    # Every Monday at 06:00 UTC
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    name: Rebuild registry and open PR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Rebuild registry
+        run: python scripts/build_registry.py --out data/fal_registry.json 
+      - name: Summarize changes
+        id: diff
+        run: |
+          {
+            echo "stat<<EOF"
+            git diff --stat
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+      # create-pull-request skips PR creation when there are no changes.
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: chore/registry-refresh
+          commit-message: "chore: refresh fal model registry"
+          title: "Refresh fal model registry"
+          body: |
+            Automated weekly refresh of `data/fal_registry.json` via `scripts/build_registry.py`.
+
+            ```
+            ${{ steps.diff.outputs.stat }}
+            ```
+          delete-branch: true

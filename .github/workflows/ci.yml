@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install ruff
+        run: pip install ruff
+      - name: Run ruff
+        run: ruff check .
+
+  test:
+    name: Test (python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+      - name: Run tests
+        run: |
+          if [ -d tests ]; then pytest tests -x -q; else echo "no tests yet"; fi
+      - name: Registry builder smoke check
+        run: |
+          if [ -f scripts/build_registry.py ]; then python scripts/build_registry.py --help; else echo "no registry builder yet"; fi
+      - name: Validate model registry
+        run: |
+          python -c "
+          import json, pathlib
+          path = pathlib.Path('data/fal_registry.json')
+          if not path.exists():
+              print('no registry file yet')
+          else:
+              registry = json.loads(path.read_text())
+              assert {'version', 'models', 'model_count'} <= set(registry), 'missing required keys'
+              assert registry['model_count'] == len(registry['models']), 'model_count mismatch'
+              assert registry['model_count'] > 500, 'suspiciously few models'
+              print(f\"registry OK: {registry['model_count']} models\")
+          "

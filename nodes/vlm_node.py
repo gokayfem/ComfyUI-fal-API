@@ -9,7 +9,14 @@ class VLMNode:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "prompt": ("STRING", {"default": "", "multiline": True}),
+                "prompt": (
+                    "STRING",
+                    {
+                        "default": "",
+                        "multiline": True,
+                        "tooltip": "User prompt sent to the model.",
+                    },
+                ),
                 "model": (
                     [
                         "google/gemini-2.5-flash",
@@ -19,16 +26,61 @@ class VLMNode:
                         "x-ai/grok-4-fast",
                         "Custom",
                     ],
-                    {"default": "google/gemini-2.5-flash"},
+                    {
+                        "default": "google/gemini-2.5-flash",
+                        "tooltip": "Vision model to use. Select 'Custom' to type any OpenRouter model id in custom_model_name.",
+                    },
                 ),
-                "system_prompt": ("STRING", {"default": "", "multiline": True}),
-                "image": ("IMAGE",),
-                "temperature": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.1}),
-                "reasoning": ("BOOLEAN", {"default": False}),
+                "system_prompt": (
+                    "STRING",
+                    {
+                        "default": "",
+                        "multiline": True,
+                        "tooltip": "Optional system prompt to steer the model's behavior.",
+                    },
+                ),
+                "image": (
+                    "IMAGE",
+                    {
+                        "tooltip": "Image(s) for the model to analyze. Batches are sent as multiple images.",
+                    },
+                ),
+                "temperature": (
+                    "FLOAT",
+                    {
+                        "default": 1.0,
+                        "min": 0.0,
+                        "max": 2.0,
+                        "step": 0.1,
+                        "tooltip": "Sampling temperature. Lower is more deterministic.",
+                    },
+                ),
+                "reasoning": (
+                    "BOOLEAN",
+                    {
+                        "default": False,
+                        "tooltip": "Request reasoning from the model.",
+                    },
+                ),
             },
             "optional": {
-                "max_tokens": ("INT", {"default": 0, "min": 0, "max": 100000}),
-                "custom_model_name": ("STRING", {"default": "", "multiline": False}),
+                "max_tokens": (
+                    "INT",
+                    {
+                        "default": 0,
+                        "min": 0,
+                        "max": 100000,
+                        "tooltip": "Maximum output tokens. 0 uses the model default.",
+                    },
+                ),
+                "custom_model_name": (
+                    "STRING",
+                    {
+                        "default": "",
+                        "multiline": False,
+                        "tooltip": "OpenRouter model id used when model is set to 'Custom'.",
+                    },
+                ),
             },
         }
 
@@ -46,28 +98,12 @@ class VLMNode:
                     )
                 model = custom_model_name.strip()
 
-            # Handle multiple images - image can be a batch
-            image_urls = []
-
-            # Check if image is a batch (4D tensor) or single image (3D tensor)
-            if len(image.shape) == 4:
-                # Batch of images
-                for i in range(image.shape[0]):
-                    single_image = image[i:i+1]
-                    image_url = ImageUtils.upload_image(single_image)
-                    if not image_url:
-                        return ApiHandler.handle_text_generation_error(
-                            model, f"Failed to upload image {i+1}"
-                        )
-                    image_urls.append(image_url)
-            else:
-                # Single image
-                image_url = ImageUtils.upload_image(image)
-                if not image_url:
-                    return ApiHandler.handle_text_generation_error(
-                        model, "Failed to upload image"
-                    )
-                image_urls.append(image_url)
+            # Upload single image or batch and collect URLs
+            image_urls = ImageUtils.prepare_images(image)
+            if not image_urls:
+                return ApiHandler.handle_text_generation_error(
+                    model, "Failed to upload image(s)"
+                )
 
             arguments = {
                 "model": model,
@@ -88,7 +124,7 @@ class VLMNode:
             )
             return (result["output"],)
         except Exception as e:
-            return ApiHandler.handle_text_generation_error(model, str(e))
+            return ApiHandler.handle_text_generation_error(model, e)
 
 
 # Node class mappings

@@ -1,3 +1,6 @@
+# Local configuration (contains API keys) — use config.ini.example as a template
+config.ini
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

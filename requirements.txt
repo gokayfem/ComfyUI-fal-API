@@ -1,3 +1,6 @@
-fal-client
+fal-client>=1.0,<2
 torch
 opencv-python
+numpy
+pillow
+requests
