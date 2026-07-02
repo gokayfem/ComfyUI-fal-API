@@ -50,6 +50,14 @@ _SCHEMA = (
         created REAL
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS request_urls (
+        url TEXT PRIMARY KEY,
+        endpoint TEXT,
+        request_id TEXT,
+        created REAL
+    )
+    """,
 )
 
 
@@ -301,17 +309,65 @@ class ResultCache:
             "misses": self._misses,
         }
 
+    def remember_urls(self, endpoint: str, request_id: str, result: Any) -> None:
+        """Record every media URL in a result → (endpoint, request_id).
+
+        Called on every successful fetch (live, async collect, recovery) so
+        provenance lookups work regardless of which path produced the result.
+        Best-effort: never raises.
+        """
+        try:
+            if not request_id or not isinstance(result, dict):
+                return
+            urls: list[str] = []
+
+            def dig(value: Any) -> None:
+                if isinstance(value, dict):
+                    candidate = value.get("url")
+                    if isinstance(candidate, str) and candidate.startswith("http"):
+                        urls.append(candidate)
+                    for child in value.values():
+                        dig(child)
+                elif isinstance(value, list):
+                    for child in value:
+                        dig(child)
+
+            dig(result)
+            if not urls:
+                return
+            now = time.time()
+            with self._lock:
+                conn = self._connection()
+                if conn is None:
+                    return
+                conn.executemany(
+                    "INSERT OR REPLACE INTO request_urls VALUES (?, ?, ?, ?)",
+                    [(u, endpoint, request_id, now) for u in urls[:64]],
+                )
+                conn.commit()
+        except Exception as exc:
+            logger.debug("result cache remember_urls failed: %s", exc)
+
     def find_request_by_url(self, url: str) -> dict[str, Any] | None:
         """Find the origin of a result URL: {"endpoint_id", "request_id"} or None.
 
-        Scans cached results (most recently used first) for one whose JSON
-        contains ``url`` as an exact substring. Only rows that recorded a
-        request_id qualify. Best-effort: any failure is a miss.
+        Checks the explicit request_urls table first (covers async collect and
+        recovery paths), then falls back to scanning cached results for the
+        URL as a substring. Best-effort: any failure is a miss.
         """
         try:
             target = (url or "").strip()
             if not target:
                 return None
+            with self._lock:
+                conn = self._connection()
+                if conn is not None:
+                    row = conn.execute(
+                        "SELECT endpoint, request_id FROM request_urls WHERE url = ?",
+                        (target,),
+                    ).fetchone()
+                    if row is not None:
+                        return {"endpoint_id": row[0], "request_id": row[1]}
             # LIKE treats %, _ (and our escape char) specially — escape them
             # so URLs containing percent-encoding still match literally.
             escaped = (

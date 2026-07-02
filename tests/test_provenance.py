@@ -70,3 +70,16 @@ def test_png_chunk_roundtrip(platform, tmp_path):
     endpoint, request_id, _ = node.read(file_path=str(png))
     assert endpoint == "fal-ai/flux-2"
     assert request_id == "req-png"
+
+
+def test_remember_urls_covers_async_results(platform):
+    """Provenance must work for Submit→Collect results, not just cached calls."""
+    cache_mod = importlib.import_module(f"{PKG}.nodes.utils.result_cache")
+    cache = cache_mod.ResultCache()
+    cache.clear()
+    url = "https://v3.fal.media/files/x/collected_output.jpg"
+    # no cache.put() — this simulates the async-collect path
+    cache.remember_urls("fal-ai/veo3", "req-async", {"images": [{"url": url}]})
+    hit = cache.find_request_by_url(url)
+    assert hit == {"endpoint_id": "fal-ai/veo3", "request_id": "req-async"}
+    cache.clear()
