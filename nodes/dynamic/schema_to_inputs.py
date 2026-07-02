@@ -28,6 +28,11 @@ WIDTH_HEIGHT_OPTS = {"default": 1024, "min": 64, "max": 14142, "step": 8}
 
 _MEDIA_TYPES = {"image": "IMAGE", "video": "VIDEO", "audio": "AUDIO"}
 
+# media kinds that get a "<name>_direct_url" passthrough companion input
+# ("file" is excluded: it is already a plain STRING URL widget)
+DIRECT_URL_SUFFIX = "_direct_url"
+DIRECT_URL_KINDS = ("image", "video", "audio")
+
 
 def _clamp(value: float, lo: float, hi: float) -> float:
     return max(lo, min(hi, value))
@@ -135,6 +140,31 @@ def _media_spec(inp: dict[str, Any]) -> tuple[Any, ...]:
     return ("STRING", {"default": "", "tooltip": tooltip})
 
 
+def _direct_url_spec(name: str, media_kind: str, is_list: bool) -> tuple[Any, ...]:
+    tooltip = (
+        f"fal/CDN URL passthrough for '{name}': when set, this URL is sent directly "
+        f"and the {media_kind} input is ignored — no download/re-upload. "
+        "Chain fal nodes' *_url outputs here."
+    )
+    if is_list:
+        tooltip += " Comma-separate multiple URLs."
+    return ("STRING", {"default": "", "tooltip": tooltip})
+
+
+def _direct_url_twin(
+    inp: dict[str, Any], existing_names: set[str]
+) -> tuple[str, tuple[Any, ...]] | None:
+    """The optional passthrough companion for a media input, or None."""
+    media_kind = inp.get("media_kind")
+    if media_kind not in DIRECT_URL_KINDS:
+        return None
+    twin_name = inp["name"] + DIRECT_URL_SUFFIX
+    if twin_name in existing_names:
+        return None
+    spec = _direct_url_spec(inp["name"], media_kind, bool(inp.get("is_list")))
+    return (twin_name, spec)
+
+
 def _input_spec(inp: dict[str, Any]) -> tuple[Any, ...]:
     if inp.get("media_kind"):
         return _media_spec(inp)
@@ -156,9 +186,14 @@ def build_input_types(model: dict[str, Any]) -> dict[str, Any]:
     """Build a ComfyUI INPUT_TYPES dict from a registry model entry."""
     required: dict[str, Any] = {}
     optional: dict[str, Any] = {}
+    # twins of *required* media inputs go at the start of the optional bucket
+    leading_optional: dict[str, Any] = {}
     custom_size_input: dict[str, Any] | None = None
 
-    for inp in model.get("inputs", []):
+    inputs = model.get("inputs", [])
+    existing_names = {inp["name"] for inp in inputs}
+
+    for inp in inputs:
         name = inp["name"]
         if name == "seed":
             optional[name] = SEED_SPEC
@@ -166,10 +201,17 @@ def build_input_types(model: dict[str, Any]) -> dict[str, Any]:
         if inp.get("has_custom_size") and custom_size_input is None:
             custom_size_input = inp
         spec = _input_spec(inp)
+        twin = _direct_url_twin(inp, existing_names)
         if inp.get("required"):
             required[name] = spec
+            if twin is not None:
+                leading_optional[twin[0]] = twin[1]
         else:
             optional[name] = spec
+            if twin is not None:
+                optional[twin[0]] = twin[1]
+
+    optional = {**leading_optional, **optional}
 
     if custom_size_input is not None:
         for dimension in ("width", "height"):

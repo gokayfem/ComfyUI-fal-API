@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import hashlib
+import inspect
 import re
+from functools import cache
 from typing import Any
 
 from ..fal_utils import ApiHandler
@@ -54,6 +56,27 @@ def stable_hash(kwargs: dict[str, Any]) -> str:
 
 
 
+@cache
+def _accepts_skip_cache(func: Any) -> bool:
+    """Whether ``submit_and_get_result`` supports the skip_cache keyword.
+
+    Cached per callable so the check runs once, and re-evaluated automatically
+    when tests stub out ApiHandler. On uninspectable callables fall back to
+    False: calling without skip_cache works with both old and new signatures.
+    """
+    try:
+        return "skip_cache" in inspect.signature(func).parameters
+    except (TypeError, ValueError):
+        return False
+
+
+def _call_api(endpoint_id: str, arguments: dict[str, Any], skip_cache: bool) -> Any:
+    submit = ApiHandler.submit_and_get_result
+    if _accepts_skip_cache(submit):
+        return submit(endpoint_id, arguments, skip_cache=skip_cache)
+    return submit(endpoint_id, arguments)
+
+
 def _class_name(model: dict[str, Any]) -> str:
     return re.sub(r"[^0-9A-Za-z_]", "_", node_key(model))
 
@@ -83,7 +106,7 @@ def build_node_class(model: dict[str, Any]) -> type:
 
     def run(self: Any, **kwargs: Any) -> tuple:
         arguments = build_arguments(model, kwargs)
-        result = ApiHandler.submit_and_get_result(endpoint_id, arguments)
+        result = _call_api(endpoint_id, arguments, bool(kwargs.get("force_rerun")))
         return process_result(model, result)
 
     attrs = {

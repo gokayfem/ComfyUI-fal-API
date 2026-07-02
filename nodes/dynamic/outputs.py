@@ -9,8 +9,8 @@ from typing import Any
 from ..fal_utils import FalApiError, MediaUtils, ResultProcessor
 
 RETURN_SPECS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
-    "images": (("IMAGE",), ("images",)),
-    "image": (("IMAGE",), ("images",)),
+    "images": (("IMAGE", "STRING"), ("images", "image_urls")),
+    "image": (("IMAGE", "STRING"), ("image", "image_url")),
     "video": (("VIDEO", "STRING"), ("video", "video_url")),
     "audio": (("AUDIO", "STRING"), ("audio", "audio_url")),
     "text": (("STRING",), ("text",)),
@@ -75,6 +75,26 @@ def _media_url(model: dict[str, Any], result: dict[str, Any], primary: str) -> s
     return url
 
 
+def _image_urls_csv(result: dict[str, Any]) -> str:
+    """CDN URLs of an {"images": [...]} result, comma-joined (twin-input format)."""
+    images = result.get("images")
+    if not isinstance(images, (list, tuple)):
+        return ""
+    urls = [url for url in (find_url(item) for item in images) if url]
+    return ",".join(urls)
+
+
+def _process_images(result: dict[str, Any]) -> tuple[Any, ...]:
+    tensor = ResultProcessor.process_image_result(result)[0]
+    return (tensor, _image_urls_csv(result))
+
+
+def _process_image(result: dict[str, Any]) -> tuple[Any, ...]:
+    tensor = ResultProcessor.process_single_image_result(result)[0]
+    url = find_url(result.get("image"))
+    return (tensor, url or "")
+
+
 def _process_video(model: dict[str, Any], result: dict[str, Any]) -> tuple[Any, ...]:
     url = _media_url(model, result, "video")
     return (MediaUtils.video_from_url(url), url)
@@ -110,9 +130,9 @@ def process_result(model: dict[str, Any], result: dict[str, Any]) -> tuple[Any, 
     """Convert a raw fal API result dict into the node's return tuple."""
     kind = model.get("output_kind", "json")
     if kind == "images":
-        return ResultProcessor.process_image_result(result)
+        return _process_images(result)
     if kind == "image":
-        return ResultProcessor.process_single_image_result(result)
+        return _process_image(result)
     if kind == "video":
         return _process_video(model, result)
     if kind == "audio":

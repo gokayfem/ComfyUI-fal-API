@@ -4,11 +4,17 @@ from __future__ import annotations
 
 import asyncio
 import concurrent.futures
+import time
 from typing import Any, Callable, NoReturn
 
 from .config import FalConfig
 from .errors import FalApiError, extract_error_message, raise_fal_error
+from .ledger import SessionLedger
 from .logger import logger
+from .pricing import PricingUtils
+from .result_cache import ResultCache
+
+_RECOVERY_POLL_INTERVAL_S = 0.5
 
 _MAX_QUEUE_LOG_LINES = 10_000
 
@@ -114,6 +120,65 @@ def _partition_results(
     return successes, failures
 
 
+def _record_ledger_entry(
+    endpoint: str,
+    request_id: str | None,
+    duration_s: float,
+    est_cost_override: float | None = None,
+    free: bool = False,
+) -> None:
+    """Record one fal call in the session ledger.
+
+    ``free=True`` marks a recovery/replay that spent no new money (est_cost
+    None). Best-effort bookkeeping: any pricing or ledger error is swallowed
+    so it can never break generation.
+    """
+    if free:
+        est_cost = est_cost_override
+    else:
+        try:
+            est_cost = PricingUtils.estimate(endpoint, 1)["total"]
+        except Exception as exc:
+            logger.debug("[%s] cost estimation failed: %s", endpoint, exc)
+            est_cost = None
+    try:
+        SessionLedger().record(endpoint, request_id, duration_s, est_cost)
+    except Exception as exc:
+        logger.debug("[%s] ledger record failed: %s", endpoint, exc)
+
+
+def _spend_guard_preflight(endpoint: str) -> None:
+    """Enforce the spend budget before submitting a paid call.
+
+    A no-op when the billing module is absent. A FalApiError raised by
+    SpendGuard (over budget) propagates to the caller.
+    """
+    try:
+        from .billing import SpendGuard
+    except ImportError:
+        return
+    SpendGuard.preflight(endpoint)
+
+
+def _store_result_in_cache(
+    endpoint: str,
+    arguments: dict[str, Any],
+    result: Any,
+    request_id: str | None,
+) -> None:
+    """Persist a successful live result in the persistent cache.
+
+    Best-effort bookkeeping: only dict results are cached and any cache
+    error is swallowed so it can never break generation.
+    """
+    if not isinstance(result, dict):
+        return
+    try:
+        ResultCache().put(endpoint, arguments, result, request_id)
+    except Exception as exc:
+        logger.debug("[%s] result cache store failed: %s", endpoint, exc)
+
+
 def _raise_generation_error(model_name: str, error: Exception | str) -> NoReturn:
     """Normalize an exception or error string into a raised FalApiError."""
     if isinstance(error, BaseException):
@@ -131,21 +196,43 @@ class ApiHandler:
         endpoint: str,
         arguments: dict[str, Any],
         timeout: float | None = None,
+        skip_cache: bool = False,
     ) -> Any:
         """Submit a job via client.subscribe and return the final result.
 
-        Logs queue position and in-progress log lines, and checks for ComfyUI
-        interruption on every queue update. ``timeout`` is reserved for future
-        use (fal_client 1.0 subscribe does not accept one).
+        Checks the spend budget first, then the persistent result cache: an
+        identical previous call returns its stored result immediately (no
+        charge, no ledger entry). Pass ``skip_cache=True`` to force a live
+        call (e.g. force_rerun). Logs queue position and in-progress log
+        lines, and checks for ComfyUI interruption on every queue update.
+        ``timeout`` is reserved for future use (fal_client 1.0 subscribe does
+        not accept one).
         """
         del timeout  # Reserved; not supported by fal_client 1.0 subscribe.
+
+        # Cache first: a hit costs nothing, so it must not be blocked by the
+        # spend guard (which only gates live, billable calls).
+        if not skip_cache:
+            cached = ResultCache().get(endpoint, arguments)
+            if cached is not None:
+                return cached
+
+        _spend_guard_preflight(endpoint)
+
         client = FalConfig().get_client()
         callback = _make_queue_callback(endpoint)
+        request_id_ref: list[str | None] = [None]
+
+        def on_enqueue(request_id: str) -> None:
+            request_id_ref[0] = request_id
+
+        started = time.monotonic()
         try:
-            return client.subscribe(
+            result = client.subscribe(
                 endpoint,
                 arguments=arguments,
                 with_logs=True,
+                on_enqueue=on_enqueue,
                 on_queue_update=callback,
             )
         except FalApiError:
@@ -154,6 +241,82 @@ class ApiHandler:
             if _is_interruption(exc):
                 raise
             raise_fal_error(endpoint, exc)
+        finally:
+            duration_s = time.monotonic() - started
+            logger.info(
+                "[%s] call finished in %.1fs (request_id=%s)",
+                endpoint,
+                duration_s,
+                request_id_ref[0],
+            )
+            _record_ledger_entry(endpoint, request_id_ref[0], duration_s)
+
+        _store_result_in_cache(endpoint, arguments, result, request_id_ref[0])
+        return result
+
+    @staticmethod
+    def submit_only(endpoint: str, arguments: dict[str, Any]) -> str:
+        """Submit a job without waiting and return its request id.
+
+        Checks the spend budget first (async fan-out must respect it too).
+        Does not record to the session ledger — the collect side
+        (``result_from_request_id``) records the call.
+        """
+        _spend_guard_preflight(endpoint)
+        client = FalConfig().get_client()
+        try:
+            handle = client.submit(endpoint, arguments=arguments)
+        except FalApiError:
+            raise
+        except Exception as exc:
+            if _is_interruption(exc):
+                raise
+            raise_fal_error(endpoint, exc)
+        logger.info("[%s] submitted async (request_id=%s)", endpoint, handle.request_id)
+        return handle.request_id
+
+    @staticmethod
+    def result_from_request_id(
+        endpoint: str, request_id: str, record_cost: bool = True
+    ) -> dict[str, Any]:
+        """Wait for and fetch the result of a previously submitted request.
+
+        Reconstructs a queue handle from the request id, polls until the
+        request completes (honoring ComfyUI interruption), and returns the
+        result payload. A request that already completed returns immediately
+        without incurring new charges — the result-recovery path.
+        """
+        label = f"{endpoint}#{request_id}"
+        client = FalConfig().get_client()
+        started = time.monotonic()
+        try:
+            handle = client.get_handle(endpoint, request_id)
+            for _status in handle.iter_events(
+                with_logs=False, interval=_RECOVERY_POLL_INTERVAL_S
+            ):
+                _check_interruption()
+            result = handle.get()
+        except FalApiError:
+            raise
+        except Exception as exc:
+            if _is_interruption(exc):
+                raise
+            raise_fal_error(label, exc)
+        finally:
+            duration_s = time.monotonic() - started
+            logger.info(
+                "[%s] result recovery finished in %.1fs (request_id=%s)",
+                endpoint,
+                duration_s,
+                request_id,
+            )
+            # record_cost=False marks a pure recovery of an old request:
+            # log the fetch for traceability but count no new spend.
+            if record_cost:
+                _record_ledger_entry(endpoint, request_id, duration_s)
+            else:
+                _record_ledger_entry(endpoint, request_id, duration_s, est_cost_override=None, free=True)
+        return result
 
     @staticmethod
     def submit_multiple_and_get_results(

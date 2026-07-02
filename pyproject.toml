@@ -1,7 +1,7 @@
 [project]
 name = "fal-api"
 description = "Custom nodes for using fal API with auto-generated full-catalog coverage of fal.ai models. Video generation with Kling, Runway, Luma. Image generation with Flux. LLMs and VLMs OpenAI, Claude, Llama and Gemini."
-version = "2.0.0"
+version = "2.2.0"
 license = {file = "LICENSE"}
 requires-python = ">=3.9"
 dependencies = [
