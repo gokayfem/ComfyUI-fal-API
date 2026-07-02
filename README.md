@@ -16,6 +16,7 @@ Custom nodes that bring the entire [fal.ai](https://fal.ai) catalog into ComfyUI
   - [Language Models (LLMs)](#language-models-llms)
   - [Vision Language Models (VLMs)](#vision-language-models-vlms)
 - [Auto-Generated Nodes](#auto-generated-nodes)
+- [Platform Utilities](#platform-utilities)
 - [Generated Model List](#generated-model-list)
 - [Registry Maintenance](#registry-maintenance)
 - [Troubleshooting](#troubleshooting)
@@ -222,6 +223,30 @@ The escape hatch: a single generic node (under `FAL/Models`) that calls **any** 
 ### Disabling or filtering
 
 If ~893 extra nodes is more than you want, use the `[dynamic_nodes]` config section (see [Configuration](#configuration)) to disable them entirely (`enabled = false`) or load only certain categories (`categories = text-to-image,image-to-video`). The curated nodes always load regardless.
+
+## Platform Utilities
+
+New in 2.1: utilities built on fal's platform primitives (queue, request ids, per-model pricing) — found under `FAL/Platform`.
+
+### Async fan-out: Fal Submit + Fal Collect
+
+ComfyUI executes nodes one at a time — normally five video generations run back-to-back. **Fal Submit** queues a job on any endpoint and returns instantly with a handle; **Fal Collect** blocks until that job finishes and extracts the outputs (`IMAGE`/`VIDEO`/`AUDIO` + raw JSON). Wire five Submits into five Collects and all five models run **in parallel** on fal — the graph takes as long as the slowest one, not the sum.
+
+### Fal Result by Request ID
+
+Every fal generation has a durable request id (shown in the console log and the session cost report, and on your [fal dashboard](https://fal.ai/dashboard/requests)). Paste an id into this node to **re-fetch any past result without re-generating or re-paying** — recover yesterday's video and wire it into a new graph.
+
+### Fal Cost Estimator
+
+Enter an endpoint id and a run count → a cost report and a `total_usd` float, parsed from fal's published pricing — *before* you queue anything. For per-unit priced models (e.g. $/second of video) it reports the unit price.
+
+### Fal Session Costs
+
+An in-memory ledger records every fal call this session (endpoint, duration, request id, estimated cost). This node reports the running total — "47 calls, ~$6.20" — with the last calls itemized so you can copy request ids. Optional `reset` clears it after reporting.
+
+### Fal Save Media from URL
+
+fal result URLs eventually expire from the CDN. This node downloads any result URL into your ComfyUI `output/` directory (subfolders + collision-safe numbering) so generations are persisted with your other outputs.
 
 ## Generated Model List
 

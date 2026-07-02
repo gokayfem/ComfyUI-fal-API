@@ -52,6 +52,25 @@ def _media_overlay(
     return overlay
 
 
+def build_overlay_arguments(
+    endpoint_id: str,
+    arguments_json: str,
+    image: Any = None,
+    image_2: Any = None,
+    video: Any = None,
+    audio: Any = None,
+    seed: int = -1,
+) -> dict[str, Any]:
+    """Merge free-form JSON arguments with uploaded media inputs and seed.
+
+    Connected media inputs win over matching keys in the JSON
+    (image_url, image_urls, video_url, audio_url, seed).
+    """
+    parsed = _parse_arguments_json(endpoint_id, arguments_json)
+    overlay = _media_overlay(image, image_2, video, audio, seed)
+    return {**parsed, **overlay}
+
+
 def _extract_images(result: dict[str, Any]) -> Any | None:
     try:
         images = result.get("images")
@@ -82,6 +101,20 @@ def _extract_audio(result: dict[str, Any]) -> Any | None:
     except Exception as err:
         logger.debug("FalAnyEndpoint: could not extract audio: %s", err)
     return None
+
+
+def extract_flexible_outputs(result: dict[str, Any]) -> tuple[Any, Any, Any, str]:
+    """Opportunistically extract (images, video, audio, raw json) from a result.
+
+    Each media slot is None when the result has no matching content; the raw
+    result is always available as a JSON string in the last slot.
+    """
+    return (
+        _extract_images(result),
+        _extract_video(result),
+        _extract_audio(result),
+        json.dumps(result, default=str),
+    )
 
 
 class FalAnyEndpoint:
@@ -176,15 +209,10 @@ class FalAnyEndpoint:
         if not endpoint:
             raise FalApiError("(any endpoint)", "endpoint_id is required")
 
-        parsed = _parse_arguments_json(endpoint, arguments_json)
-        overlay = _media_overlay(image, image_2, video, audio, seed)
-        arguments = {**parsed, **overlay}
+        arguments = build_overlay_arguments(
+            endpoint, arguments_json, image, image_2, video, audio, seed
+        )
 
         result = ApiHandler.submit_and_get_result(endpoint, arguments)
 
-        return (
-            _extract_images(result),
-            _extract_video(result),
-            _extract_audio(result),
-            json.dumps(result, default=str),
-        )
+        return extract_flexible_outputs(result)
