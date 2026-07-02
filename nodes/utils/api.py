@@ -189,6 +189,34 @@ def _remember_result_urls(endpoint: str, request_id: str | None, result: Any) ->
     except Exception as exc:
         logger.debug("[%s] remember_urls failed: %s", endpoint, exc)
 
+
+def _finalize_live_call(endpoint: str, request_id: str | None, started: float) -> None:
+    """Log the finished call and record it in the session ledger."""
+    duration_s = time.monotonic() - started
+    logger.info(
+        "[%s] call finished in %.1fs (request_id=%s)",
+        endpoint,
+        duration_s,
+        request_id,
+    )
+    _record_ledger_entry(endpoint, request_id, duration_s)
+
+
+async def _close_async_client(client: Any) -> None:
+    """Best-effort close of a per-call AsyncClient's underlying httpx client.
+
+    fal_client.AsyncClient lazily caches an httpx.AsyncClient per instance
+    (bound to the current event loop); we create one AsyncClient per call, so
+    close it here to avoid leaking connections. Resolving ``_client`` does no
+    network I/O; any failure is swallowed — cleanup must never mask a result
+    or an error from the call itself.
+    """
+    try:
+        httpx_client = await client._client
+        await httpx_client.aclose()
+    except Exception as exc:
+        logger.debug("async fal client close failed: %s", exc)
+
 def _raise_generation_error(model_name: str, error: Exception | str) -> NoReturn:
     """Normalize an exception or error string into a raised FalApiError."""
     if isinstance(error, BaseException):
@@ -252,14 +280,74 @@ class ApiHandler:
                 raise
             raise_fal_error(endpoint, exc)
         finally:
-            duration_s = time.monotonic() - started
-            logger.info(
-                "[%s] call finished in %.1fs (request_id=%s)",
+            _finalize_live_call(endpoint, request_id_ref[0], started)
+
+        _store_result_in_cache(endpoint, arguments, result, request_id_ref[0])
+        _remember_result_urls(endpoint, request_id_ref[0], result)
+        return result
+
+    @staticmethod
+    async def submit_and_get_result_async(
+        endpoint: str,
+        arguments: dict[str, Any],
+        skip_cache: bool = False,
+    ) -> Any:
+        """Async twin of ``submit_and_get_result`` for async-capable ComfyUI.
+
+        Same semantics — spend-guard preflight, persistent result cache,
+        queue-progress logging, interruption via the queue callback, ledger
+        recording and cache/provenance bookkeeping — but awaits the fal call
+        on the event loop so the executor can run other graph branches
+        concurrently. The AsyncClient is created per call because its cached
+        httpx client is bound to the current event loop (ComfyUI runs each
+        prompt in a fresh loop via ``asyncio.run``).
+        """
+        # Cache first: a hit costs nothing, so it must not be blocked by the
+        # spend guard (which only gates live, billable calls).
+        if not skip_cache:
+            cached = ResultCache().get(endpoint, arguments)
+            if cached is not None:
+                return cached
+
+        # off-loop: preflight may make a blocking balance HTTP call
+        await asyncio.to_thread(_spend_guard_preflight, endpoint)
+
+        from fal_client import AsyncClient
+
+        # Validate the key via get_client() first so a missing/placeholder key
+        # raises the actionable config error instead of a raw auth failure.
+        FalConfig().get_client()
+        client = AsyncClient(key=FalConfig().get_key())
+        callback = _make_queue_callback(endpoint)
+        request_id_ref: list[str | None] = [None]
+
+        def on_enqueue(request_id: str) -> None:
+            request_id_ref[0] = request_id
+
+        # The queue callback checks interruption on every update while the job
+        # runs; this covers a cancel that landed before submission (and stays
+        # outside the try so it cannot record a ledger entry for a job that
+        # was never submitted).
+        _check_interruption()
+
+        started = time.monotonic()
+        try:
+            result = await client.subscribe(
                 endpoint,
-                duration_s,
-                request_id_ref[0],
+                arguments=arguments,
+                with_logs=True,
+                on_enqueue=on_enqueue,
+                on_queue_update=callback,
             )
-            _record_ledger_entry(endpoint, request_id_ref[0], duration_s)
+        except FalApiError:
+            raise
+        except Exception as exc:
+            if _is_interruption(exc):
+                raise
+            raise_fal_error(endpoint, exc)
+        finally:
+            _finalize_live_call(endpoint, request_id_ref[0], started)
+            await _close_async_client(client)
 
         _store_result_in_cache(endpoint, arguments, result, request_id_ref[0])
         _remember_result_urls(endpoint, request_id_ref[0], result)

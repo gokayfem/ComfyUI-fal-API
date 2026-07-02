@@ -14,6 +14,9 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 PKG = "ComfyUI_fal_API"
 
+# never let the freshness daemon make live network calls during tests
+os.environ.setdefault("FAL_DISABLE_STARTUP_CHECK", "1")
+
 # keep the persistent result cache out of the user's real cache dir during tests
 os.environ.setdefault(
     "COMFYUI_FAL_API_CACHE_DB",

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
+import importlib.util
 import inspect
 import re
 from functools import cache
@@ -14,6 +16,25 @@ from .outputs import RETURN_SPECS, process_result
 from .schema_to_inputs import build_input_types
 
 NODE_KEY_PREFIX = "FalAPI_"
+
+
+def _detect_async_capable() -> bool:
+    """True when the host ComfyUI awaits coroutine node FUNCTIONs.
+
+    ``comfy_execution/utils.py`` was introduced by the exact commit that added
+    async node support (Comfy-Org/ComfyUI commit 2b653e8c18, PR #8830,
+    2025-07-10) and has not been touched since, so its presence is a precise
+    import-time proxy for ``_async_map_node_over_list`` existing in the
+    executor. Must never raise outside ComfyUI: a missing ``comfy_execution``
+    package (tests, older ComfyUI) simply selects the sync path.
+    """
+    try:
+        return importlib.util.find_spec("comfy_execution.utils") is not None
+    except Exception:
+        return False
+
+
+_ASYNC_CAPABLE = _detect_async_capable()
 
 
 def node_key(model: dict[str, Any]) -> str:
@@ -77,6 +98,15 @@ def _call_api(endpoint_id: str, arguments: dict[str, Any], skip_cache: bool) -> 
     return submit(endpoint_id, arguments)
 
 
+async def _call_api_async(
+    endpoint_id: str, arguments: dict[str, Any], skip_cache: bool
+) -> Any:
+    submit = ApiHandler.submit_and_get_result_async
+    if _accepts_skip_cache(submit):
+        return await submit(endpoint_id, arguments, skip_cache=skip_cache)
+    return await submit(endpoint_id, arguments)
+
+
 def _class_name(model: dict[str, Any]) -> str:
     return re.sub(r"[^0-9A-Za-z_]", "_", node_key(model))
 
@@ -109,6 +139,16 @@ def build_node_class(model: dict[str, Any]) -> type:
         result = _call_api(endpoint_id, arguments, bool(kwargs.get("force_rerun")))
         return process_result(model, result)
 
+    async def run_async(self: Any, **kwargs: Any) -> tuple:
+        # build_arguments uploads media and process_result downloads results —
+        # blocking HTTP — so both run in worker threads; only the fal call
+        # itself awaits on the loop, letting other graph branches proceed.
+        arguments = await asyncio.to_thread(build_arguments, model, kwargs)
+        result = await _call_api_async(
+            endpoint_id, arguments, bool(kwargs.get("force_rerun"))
+        )
+        return await asyncio.to_thread(process_result, model, result)
+
     attrs = {
         "INPUT_TYPES": classmethod(input_types),
         "IS_CHANGED": classmethod(is_changed),
@@ -117,7 +157,7 @@ def build_node_class(model: dict[str, Any]) -> type:
         "FUNCTION": "run",
         "CATEGORY": f"FAL/Models/{category}",
         "DESCRIPTION": _description(model),
-        "run": run,
+        "run": run_async if _ASYNC_CAPABLE else run,
         "_FAL_ENDPOINT_ID": endpoint_id,
     }
     return type(_class_name(model), (object,), attrs)

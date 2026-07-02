@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Any
 
@@ -13,11 +14,18 @@ from ..fal_utils import (
     ResultProcessor,
     logger,
 )
-from .factory import stable_hash
+from .factory import _ASYNC_CAPABLE, stable_hash
 from .outputs import find_url
 
 ANY_ENDPOINT_KEY = "FalAnyEndpoint_fal"
 ANY_ENDPOINT_DISPLAY_NAME = "Fal Any Endpoint (fal)"
+
+
+def _validated_endpoint(endpoint_id: str) -> str:
+    endpoint = (endpoint_id or "").strip()
+    if not endpoint:
+        raise FalApiError("(any endpoint)", "endpoint_id is required")
+    return endpoint
 
 
 def _parse_arguments_json(endpoint_id: str, arguments_json: str) -> dict[str, Any]:
@@ -194,7 +202,7 @@ class FalAnyEndpoint:
             return float("nan")
         return stable_hash(kwargs)
 
-    def run(
+    def _run_sync(
         self,
         endpoint_id: str,
         arguments_json: str = "{}",
@@ -205,9 +213,7 @@ class FalAnyEndpoint:
         seed: int = -1,
         force_rerun: bool = False,
     ) -> tuple[Any, Any, Any, str]:
-        endpoint = (endpoint_id or "").strip()
-        if not endpoint:
-            raise FalApiError("(any endpoint)", "endpoint_id is required")
+        endpoint = _validated_endpoint(endpoint_id)
 
         arguments = build_overlay_arguments(
             endpoint, arguments_json, image, image_2, video, audio, seed
@@ -218,3 +224,40 @@ class FalAnyEndpoint:
         )
 
         return extract_flexible_outputs(result)
+
+    async def _run_async(
+        self,
+        endpoint_id: str,
+        arguments_json: str = "{}",
+        image: Any = None,
+        image_2: Any = None,
+        video: Any = None,
+        audio: Any = None,
+        seed: int = -1,
+        force_rerun: bool = False,
+    ) -> tuple[Any, Any, Any, str]:
+        endpoint = _validated_endpoint(endpoint_id)
+
+        # Media uploads (build_overlay_arguments) and result downloads
+        # (extract_flexible_outputs) are blocking HTTP, so both run in worker
+        # threads; the fal call awaits on the loop so other branches proceed.
+        arguments = await asyncio.to_thread(
+            build_overlay_arguments,
+            endpoint,
+            arguments_json,
+            image,
+            image_2,
+            video,
+            audio,
+            seed,
+        )
+
+        result = await ApiHandler.submit_and_get_result_async(
+            endpoint, arguments, skip_cache=bool(force_rerun)
+        )
+
+        return await asyncio.to_thread(extract_flexible_outputs, result)
+
+    # On async-capable ComfyUI the executor awaits the coroutine, running
+    # other graph branches concurrently; older ComfyUI gets the sync path.
+    run = _run_async if _ASYNC_CAPABLE else _run_sync
