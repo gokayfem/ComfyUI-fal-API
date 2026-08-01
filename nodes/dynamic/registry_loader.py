@@ -107,6 +107,8 @@ def _superseded_map(models: list[dict[str, Any]]) -> dict[str, tuple[str, str]]:
     """
     groups: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for model in models:
+        if _truthy(model.get("deprecated")):
+            continue
         family = str(model.get("family") or "").strip()
         if not family or not model.get("endpoint_id"):
             continue
@@ -137,6 +139,15 @@ def _apply_superseded_note(node_class: type, newest_id: str, newest_date: str) -
     node_class.DESCRIPTION = f"{note}\n\n{existing}".rstrip()
 
 
+def _apply_deprecated_note(node_class: type, reason: str) -> None:
+    """Mark a compatibility-only endpoint without breaking its node key."""
+    note = "Compatibility node: this endpoint is absent from the latest live fal catalog."
+    if reason:
+        note = f"{note} {reason}"
+    existing = str(getattr(node_class, "DESCRIPTION", "") or "")
+    node_class.DESCRIPTION = f"{note}\n\n{existing}".rstrip()
+
+
 def _unique_display_name(name: str, used: set[str]) -> str:
     if name not in used:
         return name
@@ -151,7 +162,7 @@ def _build_model_mappings(
     categories: set[str],
     featured: dict[str, str | None] | None = None,
     superseded: dict[str, tuple[str, str]] | None = None,
-) -> tuple[dict[str, type], dict[str, str], int, int]:
+) -> tuple[dict[str, type], dict[str, str], int, int, int]:
     classes: dict[str, type] = {}
     display: dict[str, str] = {}
     used_names: set[str] = {ANY_ENDPOINT_DISPLAY_NAME}
@@ -159,6 +170,7 @@ def _build_model_mappings(
     superseded = superseded or {}
     skipped = 0
     flagged = 0
+    deprecated_count = 0
 
     for model in models:
         try:
@@ -173,11 +185,20 @@ def _build_model_mappings(
             endpoint_id = str(model.get("endpoint_id") or "")
 
             preferred = build_display_name(model)
-            if endpoint_id in featured:
+            deprecated = _truthy(model.get("deprecated"))
+            if deprecated:
+                category = str(model.get("category") or "other")
+                node_class.CATEGORY = f"FAL/Compatibility/{category}"
+                preferred = f"[Unavailable] {preferred}"
+                _apply_deprecated_note(
+                    node_class, str(model.get("deprecated_reason") or "").strip()
+                )
+                deprecated_count += 1
+            elif endpoint_id in featured:
                 category = str(model.get("category") or "other")
                 node_class.CATEGORY = f"FAL/Featured/{category}"
                 preferred = featured[endpoint_id] or preferred
-            if endpoint_id in superseded:
+            if not deprecated and endpoint_id in superseded:
                 newest_id, newest_date = superseded[endpoint_id]
                 _apply_superseded_note(node_class, newest_id, newest_date)
                 flagged += 1
@@ -194,7 +215,7 @@ def _build_model_mappings(
                 err,
             )
 
-    return classes, display, skipped, flagged
+    return classes, display, skipped, flagged, deprecated_count
 
 
 def _log_missing_featured(featured: dict[str, str | None], models: list[dict[str, Any]]) -> int:
@@ -228,7 +249,7 @@ def load_dynamic_mappings() -> Mappings:
         featured = _read_featured()
         featured_count = _log_missing_featured(featured, models)
         superseded = _superseded_map(models)
-        classes, display, skipped, flagged = _build_model_mappings(
+        classes, display, skipped, flagged, deprecated_count = _build_model_mappings(
             models, categories, featured=featured, superseded=superseded
         )
 
@@ -237,11 +258,12 @@ def load_dynamic_mappings() -> Mappings:
 
         logger.info(
             "Registered %d dynamic fal nodes (skipped %d, featured %d, "
-            "%d flagged as superseded within their family)",
+            "%d superseded, %d compatibility-preserved)",
             len(all_classes),
             skipped,
             featured_count,
             flagged,
+            deprecated_count,
         )
         _schedule_freshness_check()
         return all_classes, all_display

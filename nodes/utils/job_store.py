@@ -196,7 +196,9 @@ class JobStore:
             if status:
                 query += " WHERE status = ?"
                 params = (status,)
-            query += " ORDER BY submitted_at DESC LIMIT ?"
+            # SQLite's timestamp resolution can tie for back-to-back submits.
+            # rowid preserves insertion order, so the newest job stays first.
+            query += " ORDER BY submitted_at DESC, rowid DESC LIMIT ?"
             params = (*params, int(limit))
             with self._lock:
                 conn = self._connection()

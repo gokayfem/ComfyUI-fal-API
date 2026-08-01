@@ -20,6 +20,9 @@ def test_top_level_shape():
     reg = _registry()
     assert reg["version"] == 1
     assert reg["model_count"] == len(reg["models"])
+    deprecated = sum(bool(model.get("deprecated")) for model in reg["models"])
+    assert reg["live_model_count"] == reg["model_count"] - deprecated
+    assert reg["deprecated_model_count"] == deprecated
     assert reg["model_count"] > 500
 
 

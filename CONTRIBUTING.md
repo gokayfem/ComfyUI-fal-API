@@ -6,10 +6,15 @@ Thanks for helping! Before you write anything, read this — it will probably sa
 
 Historically, adding a model to this pack meant hand-writing a node class. **That is no longer how it works.** Every live public model on fal gets a node automatically, generated at ComfyUI startup from the committed snapshot at `data/fal_registry.json`. No node class, no mapping entry, no code.
 
-The snapshot stays fresh two ways:
+The snapshot stays fresh three ways:
 
-- A **weekly GitHub Action** (`.github/workflows/registry-refresh.yml`) rebuilds the registry and opens a PR.
+- A **daily GitHub Action** (`.github/workflows/registry-refresh.yml`) builds a candidate, validates it against the committed baseline, and commits safe changes automatically.
 - Anyone can run it locally: `python scripts/build_registry.py --out data/fal_registry.json` (then `python scripts/build_readme.py` to regenerate [MODELS.md](MODELS.md)).
+- The fal sidebar can rebuild the local registry; restart ComfyUI afterward so new node classes register.
+
+The automated validator rejects malformed records, duplicate or unsorted endpoint IDs, suspiciously small catalogs, and unexpectedly large additions or removals. A maintainer can explicitly override only the change-size thresholds when manually dispatching the workflow; all structural checks still apply.
+
+Missing endpoints are preserved by default with `deprecated: true`, which keeps their node keys available under `FAL/Compatibility` for old workflows. Use `--prune-missing` only for an intentional breaking cleanup. A fresh endpoint record automatically replaces its deprecated copy if it returns to the live catalog.
 
 To check whether a model is already covered:
 
@@ -55,7 +60,8 @@ CI runs both on every PR (Python 3.10 and 3.12). The most important test to unde
 
 ```
 scripts/build_registry.py     queries fal's platform APIs → writes the snapshot
-data/fal_registry.json        committed model catalog (~1,391 models)
+scripts/validate_registry.py  safety gate for generated registry candidates
+data/fal_registry.json        committed model catalog (~1,400 models)
 data/featured_models.json     curation: featured tier + display-name overrides
 scripts/build_readme.py       renders MODELS.md from the snapshot
 

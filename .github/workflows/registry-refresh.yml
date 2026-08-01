@@ -1,49 +1,93 @@
 name: Refresh fal model registry
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/registry-refresh.yml"
+      - "data/fal_registry.json"
+      - "scripts/build_readme.py"
+      - "scripts/build_registry.py"
+      - "scripts/validate_registry.py"
+      - "tests/test_registry_format.py"
+      - "tests/test_validate_registry.py"
   schedule:
-    # Every Monday at 06:00 UTC
-    - cron: "0 6 * * 1"
+    # Daily, off the hour to avoid peak GitHub Actions scheduling delays.
+    - cron: "17 4 * * *"
   workflow_dispatch:
+    inputs:
+      allow_large_change:
+        description: Allow endpoint additions/removals above the automatic safety limits
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: fal-registry-refresh
+  cancel-in-progress: false
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   refresh:
-    name: Rebuild registry and open PR
+    name: Validate and publish registry refresh
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - name: Check out code
+      - name: Check out the default branch
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Rebuild registry
-        run: python scripts/build_registry.py --out data/fal_registry.json 
-      - name: Regenerate MODELS.md
-        run: python scripts/build_readme.py
-      - name: Summarize changes
-        id: diff
-        run: |
-          {
-            echo "stat<<EOF"
-            git diff --stat
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-      # create-pull-request skips PR creation when there are no changes.
-      - name: Create pull request
-        uses: peter-evans/create-pull-request@v6
-        with:
-          branch: chore/registry-refresh
-          commit-message: "chore: refresh fal model registry"
-          title: "Refresh fal model registry"
-          body: |
-            Automated weekly refresh of `data/fal_registry.json` via `scripts/build_registry.py`.
 
-            ```
-            ${{ steps.diff.outputs.stat }}
-            ```
-          delete-branch: true
+      - name: Build candidate registry
+        run: >-
+          python scripts/build_registry.py
+          --out data/fal_registry.next.json
+          --preserve-from data/fal_registry.json
+
+      - name: Validate candidate against the committed registry
+        env:
+          ALLOW_LARGE_CHANGE: ${{ inputs.allow_large_change || 'false' }}
+        run: |
+          args=(
+            data/fal_registry.next.json
+            --baseline data/fal_registry.json
+            --max-removal-fraction 0.05
+            --max-addition-fraction 0.25
+          )
+          if [[ "$ALLOW_LARGE_CHANGE" == "true" ]]; then
+            args+=(--allow-large-change)
+          fi
+          python scripts/validate_registry.py "${args[@]}"
+
+      - name: Promote candidate and regenerate model catalog
+        run: |
+          mv data/fal_registry.next.json data/fal_registry.json
+          python scripts/build_readme.py
+
+      - name: Run refresh safety checks
+        run: |
+          python -m pip install pytest
+          python -m pytest tests/test_registry_format.py tests/test_validate_registry.py -q
+          git diff --check
+
+      - name: Commit and push changes
+        run: |
+          if git diff --quiet -- data/fal_registry.json MODELS.md; then
+            echo "Registry is already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/fal_registry.json MODELS.md
+          git commit -m "chore: refresh fal model registry"
+          git pull --rebase origin main
+          git push origin HEAD:main

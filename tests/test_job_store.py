@@ -33,7 +33,9 @@ def test_submit_and_collect_lifecycle(store):
     assert pending[0]["request_id"] == "req-b"
 
 
-def test_entries_newest_first(store):
+def test_entries_newest_first(store, monkeypatch):
+    mod = importlib.import_module(f"{PKG}.nodes.utils.job_store")
+    monkeypatch.setattr(mod.time, "time", lambda: 1_700_000_000.0)
     store.record_submit("fal-ai/a", "req-1")
     store.record_submit("fal-ai/b", "req-2")
     entries = store.entries()

@@ -2,7 +2,7 @@
 
 **Every fal model in ComfyUI, one API key.**
 
-Custom nodes that bring the entire [fal.ai](https://fal.ai) catalog into ComfyUI: ~90 curated hand-written nodes for the most popular models, plus ~1,391 auto-generated nodes covering every live public model on fal — image, video, audio, 3D, LLMs and more. One `FAL_KEY` unlocks all of them. With a persistent result cache (never pay for the same call twice), spend guards, async fan-out, and zero-I/O fal→fal chaining. The full model catalog lives in [MODELS.md](MODELS.md).
+Custom nodes that bring the entire [fal.ai](https://fal.ai) catalog into ComfyUI: ~90 curated hand-written nodes for the most popular models, plus ~1,400 auto-generated nodes covering every live public model on fal — image, video, audio, 3D, LLMs and more. One `FAL_KEY` unlocks all of them. With a persistent result cache (never pay for the same call twice), spend guards, async fan-out, and zero-I/O fal→fal chaining. The exact current catalog lives in [MODELS.md](MODELS.md).
 
 ## Table of Contents
 
@@ -26,7 +26,8 @@ Custom nodes that bring the entire [fal.ai](https://fal.ai) catalog into ComfyUI
 - **Typed builder nodes** — build LoRA lists and reference-element configs with dedicated, connectable nodes instead of hand-typed JSON.
 - **Featured tier** — hand-picked models surface under **FAL/Featured** in the node menu, and models superseded by newer versions are flagged.
 - **Registry freshness** — the pack warns when the committed model registry snapshot is stale, and you can refresh it from the fal sidebar without leaving ComfyUI.
-- **MODELS.md** — the full ~1,391-model catalog moved out of this README into [MODELS.md](MODELS.md).
+- **Automatic daily catalog updates** — a guarded GitHub workflow validates and commits new fal endpoints without waiting for a manual PR merge. Missing historical endpoints remain registered under **FAL/Compatibility** so saved workflows still load.
+- **MODELS.md** — the full ~1,400-model catalog moved out of this README into [MODELS.md](MODELS.md).
 
 ### 2.4
 
@@ -46,7 +47,7 @@ Platform utilities under `FAL/Platform`: **Fal Submit + Fal Collect** for parall
 
 ### 2.0
 
-Every live public model on fal became a node: ~1,391 auto-generated nodes built at startup from the committed `data/fal_registry.json`, with native `IMAGE`/`VIDEO`/`AUDIO` sockets, schema-derived tooltips, and pricing in the help panel. Plus the generic **Fal Any Endpoint** node, visible errors (failed calls raise fal's actual error message instead of silently returning blanks), progress + cancellation, and full backward compatibility for all ~90 curated nodes.
+Every live public model on fal became a node: ~1,400 auto-generated nodes built at startup from the committed `data/fal_registry.json`, with native `IMAGE`/`VIDEO`/`AUDIO` sockets, schema-derived tooltips, and pricing in the help panel. Plus the generic **Fal Any Endpoint** node, visible errors (failed calls raise fal's actual error message instead of silently returning blanks), progress + cancellation, and full backward compatibility for all ~90 curated nodes.
 
 ## Installation
 
@@ -122,7 +123,7 @@ Find them in the node browser under `FAL/Models/<category>`, or search by model 
 
 **Fal Any Endpoint (fal)** is the escape hatch: one generic node that calls *any* fal endpoint by id with free-form JSON arguments plus optional image/video/audio inputs (uploaded and merged into the matching keys). Outputs are extracted as `IMAGE`/`VIDEO`/`AUDIO`, with the raw result always available as `result_json`. Even brand-new models work the day they launch.
 
-**Keeping the catalog fresh:** a weekly GitHub Action refreshes `data/fal_registry.json` and opens a PR; you can also run `python scripts/build_registry.py` yourself (then `python scripts/build_readme.py` to regenerate MODELS.md), or use the refresh button in the fal sidebar. If ~1,391 extra nodes is more than you want, the `[dynamic_nodes]` config section disables or filters them — see [Configuration](#configuration).
+**Keeping the catalog fresh:** a daily GitHub Action builds a candidate registry, validates its structure and endpoint changes, regenerates [MODELS.md](MODELS.md), and commits the result when it is safe. Large unexpected catalog changes are blocked rather than published. Endpoints missing from a refresh are retained under **FAL/Compatibility** instead of deleting their node keys and breaking saved workflows. You can also run `python scripts/build_registry.py` yourself (then `python scripts/build_readme.py`), or use the refresh button in the fal sidebar. Install updates through ComfyUI Manager to receive the latest committed snapshot; locally refreshed nodes appear after restarting ComfyUI. If ~1,400 extra nodes is more than you want, the `[dynamic_nodes]` config section disables or filters them — see [Configuration](#configuration).
 
 ## Platform Utilities
 

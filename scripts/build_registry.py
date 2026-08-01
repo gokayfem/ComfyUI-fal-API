@@ -548,6 +548,30 @@ def load_json_file(path):
         raise RuntimeError(f"Failed to load cache file {path}: {error}") from error
 
 
+def preserve_missing_records(records, baseline):
+    """Retain historical endpoints so saved ComfyUI workflows keep loading.
+
+    A missing endpoint may be retired or its OpenAPI schema may be temporarily
+    unavailable. The old schema remains usable for node registration and is
+    moved to a compatibility tier at runtime. If the endpoint returns in a
+    later catalog build, its fresh record automatically replaces this copy.
+    """
+    current_ids = {record["endpoint_id"] for record in records}
+    preserved = []
+    for model in baseline.get("models") or []:
+        if not isinstance(model, dict) or not model.get("endpoint_id"):
+            continue
+        if model["endpoint_id"] in current_ids:
+            continue
+        compatibility_record = {
+            **model,
+            "deprecated": True,
+            "deprecated_reason": "Endpoint absent from the latest live fal catalog or schema fetch.",
+        }
+        preserved.append(compatibility_record)
+    return records + preserved
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Build the fal.ai model registry JSON.")
     parser.add_argument("--out", default="data/fal_registry.json", help="Output registry path")
@@ -560,6 +584,16 @@ def parse_args():
     parser.add_argument("--catalog-cache", default=None, help="Path to cached catalog JSON")
     parser.add_argument("--schemas-cache", default=None, help="Path to cached endpoint_id->OpenAPI JSON")
     parser.add_argument("--max-workers", type=int, default=16, help="Concurrent schema fetches")
+    parser.add_argument(
+        "--preserve-from",
+        default=None,
+        help="Registry whose missing endpoints should be retained for workflow compatibility",
+    )
+    parser.add_argument(
+        "--prune-missing",
+        action="store_true",
+        help="Drop endpoints missing from the live build instead of preserving compatibility nodes",
+    )
     return parser.parse_args()
 
 
@@ -579,6 +613,11 @@ def log_summary(records, skipped):
 def main():
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     args = parse_args()
+
+    baseline = None
+    baseline_path = args.preserve_from or args.out
+    if not args.prune_missing and os.path.isfile(baseline_path):
+        baseline = load_json_file(baseline_path)
 
     now = datetime.now(timezone.utc)
     since = now - timedelta(days=args.since_days) if args.since_days > 0 else None
@@ -610,7 +649,11 @@ def main():
             continue
         records = records + [record]
 
+    live_model_count = len(records)
+    if baseline is not None:
+        records = preserve_missing_records(records, baseline)
     records = sorted(records, key=lambda record: record["endpoint_id"])
+    deprecated_model_count = sum(bool(record.get("deprecated")) for record in records)
 
     # NOTE: no wall-clock fields (generated_at etc.) — the committed registry
     # must be content-deterministic so the weekly refresh workflow only opens a
@@ -619,6 +662,8 @@ def main():
         "version": 1,
         "window_days": args.since_days,
         "model_count": len(records),
+        "live_model_count": live_model_count,
+        "deprecated_model_count": deprecated_model_count,
         "models": records,
     }
 
@@ -639,7 +684,13 @@ def main():
     os.replace(tmp_out, args.out)
 
     log_summary(records, skipped)
-    logger.info("Wrote %d models to %s", len(records), args.out)
+    logger.info(
+        "Wrote %d models to %s (%d live, %d compatibility-preserved)",
+        len(records),
+        args.out,
+        live_model_count,
+        deprecated_model_count,
+    )
 
 
 if __name__ == "__main__":
