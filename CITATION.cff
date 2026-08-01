@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "If you use ComfyUI-fal-API in your work, please cite it using the metadata below."
+type: software
+title: "ComfyUI-fal-API"
+version: "2.5.0"
+date-released: 2026-07-02
+authors:
+  - family-names: "Aydoğan"
+    given-names: "Gökay"
+    orcid: "https://orcid.org/0000-0002-2343-9433"
+abstract: "A ComfyUI integration for the fal model catalog, including curated and generated nodes, workflow utilities, caching, and spend controls."
+keywords:
+  - ComfyUI
+  - fal
+  - generative AI
+  - image generation
+  - video generation
+  - API integration
+license: Apache-2.0
+repository-code: "https://github.com/gokayfem/ComfyUI-fal-API"
+url: "https://github.com/gokayfem/ComfyUI-fal-API"

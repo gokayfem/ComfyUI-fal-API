@@ -182,6 +182,26 @@ The full LoRA-training pipeline needs nothing else: Load Image Folder → Batch 
 
 Contributions are welcome — but note that **a new fal model usually needs no code at all**: it appears automatically via the registry. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a PR; it covers when a hand-written node is (and isn't) justified, the compatibility rules, and dev setup.
 
+<details>
+<summary><strong>Cite this project</strong></summary>
+
+If ComfyUI-fal-API supports your work, please cite the software. GitHub also
+provides ready-to-copy APA and BibTeX entries via **Cite this repository**.
+
+```bibtex
+@software{Aydogan_ComfyUI_fal_API_2026,
+  author  = {Aydoğan, Gökay},
+  title   = {ComfyUI-fal-API},
+  version = {2.5.0},
+  year    = {2026},
+  url     = {https://github.com/gokayfem/ComfyUI-fal-API}
+}
+```
+
+[ORCID](https://orcid.org/0000-0002-2343-9433) · [Citation metadata](CITATION.cff)
+
+</details>
+
 ## License
 
 This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.
