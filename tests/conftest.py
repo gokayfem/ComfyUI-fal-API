@@ -14,6 +14,12 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 PKG = "ComfyUI_fal_API"
 
+# Keep local helper modules (notably scripts/) ahead of unrelated installed
+# packages when pytest is invoked via its console entry point instead of
+# ``python -m pytest``.
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 # never let the freshness daemon make live network calls during tests
 os.environ.setdefault("FAL_DISABLE_STARTUP_CHECK", "1")
 
