@@ -76,3 +76,8 @@ def factory_mod():
 @pytest.fixture(scope="session")
 def errors_mod():
     return _submodule("nodes.utils.errors")
+
+
+@pytest.fixture(scope="session")
+def media_mod():
+    return _submodule("nodes.utils.media")

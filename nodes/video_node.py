@@ -2770,8 +2770,16 @@ class SeedanceProImageToVideoNode:
                 "fal-ai/bytedance/seedance/v1/pro/image-to-video", arguments, variations
             )
 
-            # Return list of video URLs
-            return ([r["video"]["url"] for r in results],)
+            # Validate before exposing URLs to downstream loaders. Older error
+            # paths could leak an error string through this list output; a
+            # downstream loader would then receive its first character ("E")
+            # and raise requests.exceptions.MissingSchema.
+            endpoint = "fal-ai/bytedance/seedance/v1/pro/image-to-video"
+            video_urls = [
+                MediaUtils.require_http_url(r["video"]["url"], endpoint)
+                for r in results
+            ]
+            return (video_urls,)
 
         except Exception as e:
             return ApiHandler.handle_video_generation_error(

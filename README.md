@@ -51,19 +51,28 @@ Every live public model on fal became a node: ~1,400 auto-generated nodes built 
 
 ## Installation
 
-1. Navigate to your ComfyUI custom nodes directory:
+The recommended installation method is **ComfyUI Manager**: search for
+`ComfyUI-fal-API`, install it, and restart ComfyUI. Manager installs the
+dependencies into the same Python environment ComfyUI uses.
+
+For a manual installation:
+
+1. Navigate to your ComfyUI custom-nodes directory and clone this repository:
    ```
    cd custom_nodes
-   ```
-2. Clone this repository:
-   ```
    git clone https://github.com/gokayfem/ComfyUI-fal-API.git
+   cd ComfyUI-fal-API
    ```
-3. Install the required dependencies:
+2. Install the dependencies with **ComfyUI's Python**, not an unrelated system
+   `pip`:
    ```
-   pip install -r requirements.txt
+   python -m pip install -r requirements.txt
    ```
-4. Configure your API key (below) and restart ComfyUI. Curated nodes appear under the **FAL** category, auto-generated nodes under **FAL/Models/&lt;category&gt;** (e.g. `FAL/Models/text-to-image`), and hand-picked models under **FAL/Featured** — or just search for any model by name.
+   From the root of **ComfyUI Windows Portable**, use its embedded interpreter:
+   ```powershell
+   .\python_embeded\python.exe -m pip install -r .\ComfyUI\custom_nodes\ComfyUI-fal-API\requirements.txt
+   ```
+3. Configure your API key (below) and restart ComfyUI. Curated nodes appear under the **FAL** category, auto-generated nodes under **FAL/Models/&lt;category&gt;** (e.g. `FAL/Models/text-to-image`), and hand-picked models under **FAL/Featured** — or just search for any model by name.
 
 ## Configuration
 
@@ -169,12 +178,23 @@ The full LoRA-training pipeline needs nothing else: Load Image Folder → Batch 
    ```
    cd custom_nodes/ComfyUI-fal-API
    git pull
-   pip install -r requirements.txt
+   python -m pip install -r requirements.txt
    ```
-3. If you're using ComfyUI Windows Portable, you may need to install fal-client manually:
+3. **Windows Portable Python is blocked or no longer starts after installing a node?**
+   Do not keep rerunning `pip`. From the portable root, first check the exact
+   interpreter and dependency state:
+   ```powershell
+   .\python_embeded\python.exe -c "import sys; print(sys.executable); print(sys.version)"
+   .\python_embeded\python.exe -m pip check
    ```
-   ComfyUI_windows_portable>.\python_embeded\python.exe -m pip install fal-client
-   ```
+   This project installs Python packages only; it does not replace or modify
+   `python.exe`. If the first command itself is blocked or the executable was
+   quarantined, review Windows Security **Protection history**. Restore a file
+   only when the portable archive came from the official ComfyUI release, or
+   re-extract a clean official portable build and move your `models`, `input`,
+   `output`, and `user` data across. Avoid disabling antivirus globally. Then
+   reinstall this node through ComfyUI Manager, or use the exact embedded-
+   interpreter requirements command from the Installation section.
 4. **Dynamic nodes not appearing?** Check the ComfyUI console for a line like `Registered N dynamic fal nodes` at startup. If it says the nodes are disabled, remove `enabled = false` from the `[dynamic_nodes]` section of your `config.ini` (and check the `categories` filter isn't excluding what you're looking for). Any registry loading error is also printed there.
 5. **`VIDEO` output is `None` or video sockets are missing?** Update ComfyUI — native `VIDEO`/`AUDIO` types require a recent ComfyUI version.
 6. **API calls failing?** Failed fal requests raise visible errors that include fal's actual error message (validation issues, content policy, quota). Read the error text in ComfyUI — it usually tells you exactly which parameter to fix.

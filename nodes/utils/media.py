@@ -33,6 +33,27 @@ def _is_http_url(value: str) -> bool:
     return value.startswith(("http://", "https://"))
 
 
+def _require_http_url(value: Any, operation: str) -> str:
+    """Return a normalized HTTP(S) URL or raise an actionable fal error.
+
+    ``requests`` otherwise turns values such as ``"E"`` (historically the
+    first character of an error string routed through a list output) into a
+    cryptic ``MissingSchema`` exception. Validate at the media boundary so
+    the bad upstream value and the responsible operation remain visible.
+    """
+    url = str(value or "").strip()
+    parsed = urlparse(url)
+    if parsed.scheme.lower() not in {"http", "https"} or not parsed.netloc:
+        preview = repr(url if len(url) <= 120 else f"{url[:117]}...")
+        raise FalApiError(
+            operation,
+            f"Expected an HTTP(S) media URL, got {preview}. "
+            "The upstream generation may have failed, or a non-URL output "
+            "may be connected to a media input.",
+        )
+    return url
+
+
 def _suffix_from_url(url: str, default: str) -> str:
     """Derive a file suffix from a URL path, falling back to a default."""
     suffix = os.path.splitext(urlparse(url).path)[1]
@@ -165,8 +186,14 @@ class MediaUtils:
     """
 
     @staticmethod
+    def require_http_url(value: Any, operation: str = "media-download") -> str:
+        """Public validation hook for legacy nodes that return media URLs."""
+        return _require_http_url(value, operation)
+
+    @staticmethod
     def download_url_to_temp(url: str, suffix: str) -> str:
         """Stream a URL to a temp file and return its local path."""
+        url = _require_http_url(url, "media-download")
         temp_path: str | None = None
         try:
             with requests.get(url, stream=True, timeout=_DOWNLOAD_TIMEOUT) as resp:
