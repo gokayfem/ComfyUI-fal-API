@@ -96,6 +96,14 @@ def test_multi_select_enum_is_comma_string(schema_to_inputs):
     assert "vocals, drums, bass" in opts["tooltip"]
 
 
+def test_numeric_multi_select_enum_keeps_api_value_types(schema_to_inputs, arguments_mod):
+    model = _model([_input("layers", "enum", enum=[1, 2, 4], default=[1, 4], is_list=True)])
+    typ, opts = schema_to_inputs.build_input_types(model)["optional"]["layers"]
+    assert typ == "STRING"
+    assert opts["default"] == "1, 4"
+    assert arguments_mod.build_arguments(model, {"layers": "1, 4"}) == {"layers": [1, 4]}
+
+
 def test_json_field_is_multiline_string(schema_to_inputs):
     model = _model([_input("loras", "json")])
     it = schema_to_inputs.build_input_types(model)
@@ -115,3 +123,34 @@ def test_every_input_has_tooltip_when_description_given(schema_to_inputs):
     model = _model([_input("prompt", "string", required=True, description="What to draw")])
     it = schema_to_inputs.build_input_types(model)
     assert it["required"]["prompt"][1]["tooltip"] == "What to draw"
+
+
+def test_suggestions_keep_string_socket_and_default(schema_to_inputs, arguments_mod):
+    model = _model([_input("voice", "string", default="my-voice-id", suggestions=["Aria", "Rachel"], multiline=True)])
+    spec = schema_to_inputs.build_input_types(model)["optional"]["voice"]
+    assert spec[0] == "STRING"
+    assert spec[1]["default"] == "my-voice-id"
+    assert spec[1]["fal_suggestions"] == ["Aria", "Rachel"]
+    assert spec[1]["multiline"] is False
+    assert arguments_mod.build_arguments(model, {"voice": "new-custom-voice"}) == {"voice": "new-custom-voice"}
+
+
+def test_all_catalog_suggestions_preserve_input_names_and_arbitrary_values(schema_to_inputs, arguments_mod):
+    import json
+    from pathlib import Path
+
+    registry = json.loads((Path(__file__).resolve().parents[1] / "data" / "fal_registry.json").read_text())
+    count = 0
+    for model in registry["models"]:
+        inputs = schema_to_inputs.build_input_types(model)
+        widgets = {**inputs["required"], **inputs["optional"]}
+        for inp in model["inputs"]:
+            if not inp.get("suggestions"):
+                continue
+            count += 1
+            assert widgets[inp["name"]][0] == "STRING", model["endpoint_id"]
+            assert widgets[inp["name"]][1]["fal_suggestions"] == inp["suggestions"]
+            assert arguments_mod.build_arguments(model, {inp["name"]: "arbitrary-future-value"}) == {
+                inp["name"]: "arbitrary-future-value",
+            }
+    assert count > 20

@@ -20,6 +20,12 @@ Custom nodes that bring the entire [fal.ai](https://fal.ai) catalog into ComfyUI
 
 ## What's New
 
+### 2.5.1
+
+- **Schema controls across the catalog** — nested schema definitions and literal choices are resolved, and inputs are no longer truncated by a 40-field limit.
+- **Editable suggestions** — modes, voices, languages and model IDs with short example values get dropdowns with an **Enter custom value…** option. Saved text values and `STRING` connections keep working.
+- **Safer updates** — refresh remains available when only existing models changed. Scheduled and sidebar refreshes reject disappearing controls or choices before replacing the registry.
+
 ### 2.5
 
 - **Async execution** — fal calls run asynchronously on modern ComfyUI, so the UI stays responsive while jobs are in flight.
@@ -198,6 +204,7 @@ The full LoRA-training pipeline needs nothing else: Load Image Folder → Batch 
 4. **Dynamic nodes not appearing?** Check the ComfyUI console for a line like `Registered N dynamic fal nodes` at startup. If it says the nodes are disabled, remove `enabled = false` from the `[dynamic_nodes]` section of your `config.ini` (and check the `categories` filter isn't excluding what you're looking for). Any registry loading error is also printed there.
 5. **`VIDEO` output is `None` or video sockets are missing?** Update ComfyUI — native `VIDEO`/`AUDIO` types require a recent ComfyUI version.
 6. **API calls failing?** Failed fal requests raise visible errors that include fal's actual error message (validation issues, content policy, quota). Read the error text in ComfyUI — it usually tells you exactly which parameter to fix.
+7. **Missing duration, resolution, or other model controls?** Update the pack in ComfyUI Manager, then use **fal sidebar → Registry → Refresh registry**. The button is available even when no new model IDs are found: existing APIs can add or change controls without adding a model. Restart ComfyUI and reload the browser afterward. If an existing canvas node still shows old widgets, add a fresh instance of the same node. H3 generation nodes expose **duration (5–15 seconds)**; H3 Max and Max Turbo expose **480P / 768P / 1080P** and a **disabled / balanced / quality** prompt expansion dropdown, following the current [H3 Max API](https://fal.ai/models/minimax/h3-max/image-to-video/api). Original H3 uses its own schema options, including the `fast` prompt expansion mode.
 
 ## Contributing
 

@@ -12,7 +12,11 @@ The snapshot stays fresh three ways:
 - Anyone can run it locally: `python scripts/build_registry.py --out data/fal_registry.json` (then `python scripts/build_readme.py` to regenerate [MODELS.md](MODELS.md)).
 - The fal sidebar can rebuild the local registry; restart ComfyUI afterward so new node classes register.
 
-The automated validator rejects malformed records, duplicate or unsorted endpoint IDs, suspiciously small catalogs, and unexpectedly large additions or removals. A maintainer can explicitly override only the change-size thresholds when manually dispatching the workflow; all structural checks still apply.
+The automated validator rejects malformed records, duplicate or unsorted endpoint IDs, suspiciously small catalogs, and unexpectedly large additions or removals. A maintainer can override the change-size thresholds when manually dispatching the workflow; all structural checks still apply.
+
+Refresh validation also rejects removed input controls, lost dropdowns, and removed enum choices on existing endpoints. Inspect these changes against the live API before using the separate `allow_input_removal` workflow option (or `validate_registry.py --allow-input-removal`). The sidebar builds and validates a candidate before replacing the local snapshot, so a failed refresh keeps the previous registry intact.
+
+The generator handles nested references, composed schemas, nullable types and literal choices for every endpoint, and never caps the number of exposed fields. Short string examples become suggested dropdown choices with a **custom value** input; they are not treated as exhaustive enums. Prompts, prose and URLs remain text/media controls. Fix schema patterns in the shared generator and widget/argument translators rather than adding model-specific patches. Add upstream schema fixtures and regressions in `tests/test_build_registry.py`; H3 and the catalog's suggested controls are checked against the shipped registry too.
 
 Missing endpoints are preserved by default with `deprecated: true`, which keeps their node keys available under `FAL/Compatibility` for old workflows. Use `--prune-missing` only for an intentional breaking cleanup. A fresh endpoint record automatically replaces its deprecated copy if it returns to the live catalog.
 
@@ -52,6 +56,7 @@ If you're writing one, the rules are non-negotiable:
 pip install -r requirements.txt
 python -m pytest tests     # the suite MUST pass
 ruff check .               # lint, same as CI
+node --experimental-vm-modules --test tests/test_*.mjs
 ```
 
 CI runs both on every PR (Python 3.10 and 3.12). The most important test to understand is the **compatibility snapshot**: `tests/test_mappings.py` asserts that every node key recorded in `tests/legacy_node_keys.json` still registers. If your change makes it fail, the fix is to restore the key — not to edit the snapshot.

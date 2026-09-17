@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import importlib
+from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from conftest import PKG, _load_package
@@ -48,3 +50,36 @@ def test_session_shape(routes):
 def test_jobs_degrades_gracefully(routes):
     payload = routes._jobs(limit=5)
     assert "jobs" in payload and "counts" in payload
+
+
+@pytest.mark.parametrize("failure_step", [None, "build_registry.py", "validate_registry.py"])
+def test_refresh_promotes_only_validated_candidates(routes, monkeypatch, tmp_path, failure_step):
+    import subprocess
+
+    data = tmp_path / "data"
+    data.mkdir()
+    baseline = data / "fal_registry.json"
+    baseline.write_text("original registry")
+    monkeypatch.setattr(routes, "_repo_root", lambda: str(tmp_path))
+    steps = []
+
+    def run(command, **kwargs):
+        step = Path(command[1]).name
+        steps.append(step)
+        assert baseline.read_text() == "original registry"
+        assert command[-2:] == ["--preserve-from" if step == "build_registry.py" else "--baseline", str(baseline)]
+        if step == "build_registry.py":
+            Path(command[3]).write_text("validated candidate")
+        else:
+            assert Path(command[2]).read_text() == "validated candidate"
+        return SimpleNamespace(returncode=int(step == failure_step), stdout="", stderr="schema rejected")
+
+    monkeypatch.setattr(subprocess, "run", run)
+    ok, message = routes._run_refresh_subprocess()
+    assert ok == (failure_step is None)
+    assert baseline.read_text() == ("validated candidate" if ok else "original registry")
+    assert len(list(data.iterdir())) == 1
+    assert steps[0] == "build_registry.py"
+    if failure_step != "build_registry.py":
+        assert steps[1] == "validate_registry.py"
+    assert "Restart ComfyUI" in message if ok else "schema rejected" in message
