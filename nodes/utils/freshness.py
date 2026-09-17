@@ -188,7 +188,7 @@ def _startup_worker() -> None:
                 new_count,
             )
         else:
-            logger.debug("fal catalog: local registry is up to date")
+            logger.debug("fal catalog: no new model IDs found; existing schemas may still have updates")
     except Exception as err:
         logger.debug("fal registry freshness check failed: %s", err)
 

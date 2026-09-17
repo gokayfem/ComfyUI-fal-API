@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 from pathlib import Path
 
@@ -79,3 +80,20 @@ def test_enum_defaults_are_members_or_custom_size():
                     f"{model['endpoint_id']}.{inp['name']}: default "
                     f"{inp['default']!r} not in enum"
                 )
+
+
+def test_every_shipped_input_can_build_a_widget_without_comfyui():
+    """The nightly refresh must render every control, without torch/ComfyUI.
+
+    The translator has only stdlib dependencies. Load it directly so the
+    scheduled registry checks don't need to import the whole node pack.
+    """
+    path = REGISTRY.parents[1] / "nodes" / "dynamic" / "schema_to_inputs.py"
+    spec = importlib.util.spec_from_file_location("registry_widget_check", path)
+    translator = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(translator)
+    for model in _registry()["models"]:
+        input_types = translator.build_input_types(model)
+        widgets = {**input_types["required"], **input_types["optional"]}
+        for inp in model["inputs"]:
+            assert inp["name"] in widgets, f"{model['endpoint_id']}: missing {inp['name']} widget"

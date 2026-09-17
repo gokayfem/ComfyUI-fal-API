@@ -71,7 +71,7 @@ def _multi_enum_spec(inp: dict[str, Any]) -> tuple[Any, ...]:
     default = inp.get("default")
     text = ", ".join(str(v) for v in default) if isinstance(default, list) else ""
     description = (inp.get("description") or "").strip()
-    tooltip = f"{description} Comma-separated. Options: {', '.join(values)}".strip()
+    tooltip = f"{description} Comma-separated. Options: {', '.join(str(value) for value in values)}".strip()
     return ("STRING", {"default": text, "tooltip": tooltip})
 
 
@@ -113,6 +113,10 @@ def _string_spec(inp: dict[str, Any]) -> tuple[Any, ...]:
         "default": default if isinstance(default, str) else "",
         "multiline": bool(inp.get("multiline")),
     }
+    if inp.get("suggestions"):
+        # Keep STRING at the API/socket boundary. The frontend presents an
+        # editable dropdown, preserving saved text values and STRING links.
+        opts.update(fal_suggestions=list(inp["suggestions"]), multiline=False)
     return ("STRING", _with_tooltip(opts, inp.get("description")))
 
 

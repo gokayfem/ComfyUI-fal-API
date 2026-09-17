@@ -197,7 +197,7 @@ def _search_models(
 
 # -- registry freshness + refresh -----------------------------------------------
 
-_RESTART_NOTE = "Restart ComfyUI after the refresh finishes: new nodes register at import time."
+_RESTART_NOTE = "Restart ComfyUI and reload the browser after the refresh to load updated controls and new nodes."
 _REFRESH_TIMEOUT_S = 1800
 
 _refresh_lock = threading.Lock()
@@ -229,23 +229,29 @@ def _refresh_status() -> dict[str, Any]:
 
 
 def _run_refresh_subprocess() -> tuple[bool, str]:
-    """Run scripts/build_registry.py; returns (ok, message)."""
+    """Build and validate a candidate before atomically replacing the registry."""
     import subprocess
     import sys
+    import tempfile
 
     root = _repo_root()
-    command = [
-        sys.executable,
-        os.path.join(root, "scripts", "build_registry.py"),
-        "--out",
-        os.path.join("data", "fal_registry.json"),
-    ]
-    completed = subprocess.run(
-        command, cwd=root, capture_output=True, text=True, timeout=_REFRESH_TIMEOUT_S
-    )
-    if completed.returncode != 0:
-        tail = (completed.stderr or completed.stdout or "").strip()[-500:]
-        return False, f"build_registry.py exited with {completed.returncode}: {tail}"
+    baseline = os.path.join(root, "data", "fal_registry.json")
+    with tempfile.TemporaryDirectory(prefix="fal-registry-", dir=os.path.dirname(baseline)) as workdir:
+        candidate = os.path.join(workdir, "candidate.json")
+        commands = [
+            [sys.executable, os.path.join(root, "scripts", "build_registry.py"),
+             "--out", candidate, "--preserve-from", baseline],
+            [sys.executable, os.path.join(root, "scripts", "validate_registry.py"),
+             candidate, "--baseline", baseline],
+        ]
+        for command in commands:
+            completed = subprocess.run(
+                command, cwd=root, capture_output=True, text=True, timeout=_REFRESH_TIMEOUT_S
+            )
+            if completed.returncode != 0:
+                tail = (completed.stderr or completed.stdout or "").strip()[-500:]
+                return False, f"{os.path.basename(command[1])} exited with {completed.returncode}: {tail}"
+        os.replace(candidate, baseline)
     return True, f"Registry refreshed. {_RESTART_NOTE}"
 
 

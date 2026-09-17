@@ -113,7 +113,7 @@ function registryDone(view, ok, message) {
   const note = element(
     "div",
     ok ? "fal-registry-done" : "fal-registry-error",
-    ok ? "done — restart ComfyUI to load new nodes" : message || "refresh failed"
+    ok ? "done — restart ComfyUI and reload this page to load updated controls and new nodes" : message || "refresh failed"
   );
   view.registry.append(note);
 }
@@ -131,6 +131,10 @@ async function pollRefresh(view, button) {
     }
     if (status && status.running === false && status.finished_at) {
       registryDone(view, status.ok === true, status.message);
+      if (button) {
+        button.disabled = false;
+        button.textContent = "Refresh registry";
+      }
       return;
     }
   }
@@ -144,25 +148,30 @@ async function startRegistryRefresh(view, button) {
     const result = await postJson("/registry_refresh", {});
     if (!result?.started && result?.running !== true) {
       registryDone(view, false, result?.message || "could not start refresh");
+      button.disabled = false;
+      button.textContent = "Refresh registry";
       return;
     }
     await pollRefresh(view, button);
   } catch (error) {
     console.debug("[fal] registry refresh failed", error);
     registryDone(view, false, "refresh request failed");
+    button.disabled = false;
+    button.textContent = "Refresh registry";
   }
 }
 
 function renderRegistry(view, status) {
   try {
     const count = Number(status?.new_count) || 0;
-    if (count <= 0) {
-      view.registry.replaceChildren(element("div", "fal-muted", "Registry is up to date."));
-      return;
-    }
     const box = element("div", "fal-registry-news");
     box.append(
-      element("div", "fal-registry-count", `${count} new model${count === 1 ? "" : "s"} on fal`)
+      element("div", "fal-registry-count", status == null
+        ? "Registry status unavailable."
+        : count > 0 ? `${count} new model${count === 1 ? "" : "s"} on fal` : "No new model IDs found.")
+    );
+    box.append(
+      element("div", "fal-muted", "Refresh to fetch updated controls for existing models too. Restart ComfyUI and reload this page afterward.")
     );
     const models = Array.isArray(status?.new_models) ? status.new_models : [];
     for (const model of models.slice(0, REGISTRY_TITLE_LIMIT)) {
@@ -195,7 +204,7 @@ async function loadRegistrySection(view) {
   } catch (error) {
     console.debug("[fal] registry status failed", error);
     try {
-      view.registry.replaceChildren(element("div", "fal-muted", "Registry status unavailable."));
+      renderRegistry(view, null);
     } catch (renderError) {
       console.debug("[fal] registry fallback render failed", renderError);
     }

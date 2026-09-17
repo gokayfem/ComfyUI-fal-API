@@ -1,0 +1,370 @@
+{
+  "minimax/h3/image-to-video": {
+    "source": "https://fal.ai/api/openapi/queue/openapi.json?endpoint_id=minimax/h3/image-to-video",
+    "input": {
+      "title": "ImageToVideoHailuo03Input",
+      "properties": {
+        "seed": {
+          "title": "Seed",
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Random seed. A random seed is selected when omitted."
+        },
+        "sync_mode": {
+          "default": false,
+          "title": "Sync Mode",
+          "type": "boolean",
+          "description": "Return the generated video as base64 instead of a CDN URL."
+        },
+        "prompt_expansion_mode": {
+          "default": "balanced",
+          "examples": [
+            "disabled",
+            "fast",
+            "balanced",
+            "quality"
+          ],
+          "title": "Prompt Expansion Mode",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "How much effort to spend rewriting the prompt before generation. 'disabled' skips prompt expansion. 'fast' returns in about a second. 'balanced' picks per request. 'quality' spends up to ~30s on a richer prompt."
+        },
+        "prompt": {
+          "maxLength": 50000,
+          "examples": [
+            "The camera slowly pulls back from the scene, revealing the full landscape as clouds drift overhead and light shifts across the terrain."
+          ],
+          "minLength": 1,
+          "title": "Prompt",
+          "type": "string",
+          "description": "Text prompt for video generation"
+        },
+        "target_audio_url": {
+          "title": "Target Audio Url",
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional URL of a 2-15 second audio clip (maximum 15 MB) to pin to the generated soundtrack. The original audio replaces the output soundtrack, trimmed or padded with silence to the video duration without changing playback speed. Accepts an HTTP(S) URL or a base64 data URI."
+        },
+        "duration": {
+          "minimum": 5,
+          "description": "The duration of the video in seconds.",
+          "title": "Duration",
+          "default": 5,
+          "type": "integer",
+          "maximum": 15
+        },
+        "end_image_url": {
+          "title": "End Image URL",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional URL of the image to use as the last frame. It may be provided alone for end-only keyframe generation; in that case the output canvas follows this image."
+        },
+        "enable_safety_checker": {
+          "default": true,
+          "title": "Enable Safety Checker",
+          "type": "boolean",
+          "description": "If set to true, the safety checker will be enabled."
+        },
+        "image_url": {
+          "examples": [
+            "https://storage.googleapis.com/falserverless/example_inputs/hailuo23/pro_i2v_in.jpg"
+          ],
+          "title": "Image URL",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional URL of the image to use as the first frame. When provided, the output canvas follows this image. If only end_image_url is provided, the canvas follows that last frame instead. If both images are omitted, the request is handled as text-to-video (16:9 by default)."
+        },
+        "resolution": {
+          "default": "2K",
+          "type": "string",
+          "title": "Resolution",
+          "enum": [
+            "480P",
+            "768P",
+            "2K",
+            "4K"
+          ],
+          "description": "The resolution of the generated video. 480P and 768P are native generation modes; 2K and 4K upscale a 768P base result."
+        }
+      },
+      "required": [
+        "prompt"
+      ],
+      "type": "object",
+      "x-fal-order-properties": [
+        "prompt",
+        "duration",
+        "resolution",
+        "seed",
+        "enable_safety_checker",
+        "sync_mode",
+        "prompt_expansion_mode",
+        "target_audio_url",
+        "image_url",
+        "end_image_url"
+      ]
+    }
+  },
+  "minimax/h3-max/image-to-video": {
+    "source": "https://fal.ai/api/openapi/queue/openapi.json?endpoint_id=minimax/h3-max/image-to-video",
+    "input": {
+      "properties": {
+        "sync_mode": {
+          "type": "boolean",
+          "title": "Sync Mode",
+          "default": false,
+          "description": "Return the generated video as base64 instead of a CDN URL."
+        },
+        "prompt_expansion_mode": {
+          "type": "string",
+          "title": "Prompt Expansion Mode",
+          "examples": [
+            "disabled",
+            "balanced",
+            "quality"
+          ],
+          "description": "How much effort to spend rewriting the prompt before generation. 'disabled' skips prompt expansion. 'balanced' returns in about a second. 'quality' spends up to ~30s on a richer prompt.",
+          "default": "balanced"
+        },
+        "end_image_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "End Image URL",
+          "description": "Optional URL of the image to use as the last frame. It may be provided alone for end-only keyframe generation; in that case the output canvas follows this image."
+        },
+        "duration": {
+          "type": "integer",
+          "maximum": 15,
+          "title": "Duration",
+          "default": 5,
+          "description": "The duration of the video in seconds.",
+          "minimum": 5
+        },
+        "seed": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Seed",
+          "description": "Random seed. A random seed is selected when omitted."
+        },
+        "prompt": {
+          "type": "string",
+          "title": "Prompt",
+          "examples": [
+            "The camera slowly pulls back from the scene, revealing the full landscape as clouds drift overhead and light shifts across the terrain."
+          ],
+          "minLength": 1,
+          "maxLength": 50000,
+          "description": "Text prompt for video generation"
+        },
+        "resolution": {
+          "type": "string",
+          "title": "Resolution",
+          "enum": [
+            "480P",
+            "768P",
+            "1080P"
+          ],
+          "description": "The native generation resolution, or 1080P latent refinement from a native 768P source.",
+          "default": "768P"
+        },
+        "image_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "examples": [
+            "https://storage.googleapis.com/falserverless/example_inputs/hailuo23/pro_i2v_in.jpg"
+          ],
+          "description": "Optional URL of the image to use as the first frame. When provided, the output canvas follows this image. If only end_image_url is provided, the canvas follows that last frame instead. If both images are omitted, the request is handled as text-to-video (16:9 by default).",
+          "title": "Image URL"
+        },
+        "enable_safety_checker": {
+          "type": "boolean",
+          "title": "Enable Safety Checker",
+          "default": true,
+          "description": "If set to true, the safety checker will be enabled."
+        }
+      },
+      "type": "object",
+      "x-fal-order-properties": [
+        "prompt",
+        "duration",
+        "resolution",
+        "seed",
+        "enable_safety_checker",
+        "sync_mode",
+        "prompt_expansion_mode",
+        "image_url",
+        "end_image_url"
+      ],
+      "title": "TurboImageToVideoHailuo03Input",
+      "required": [
+        "prompt",
+        "prompt_expansion_mode"
+      ]
+    }
+  },
+  "minimax/h3-max-turbo/image-to-video": {
+    "source": "https://fal.ai/api/openapi/queue/openapi.json?endpoint_id=minimax/h3-max-turbo/image-to-video",
+    "input": {
+      "properties": {
+        "sync_mode": {
+          "type": "boolean",
+          "title": "Sync Mode",
+          "default": false,
+          "description": "Return the generated video as base64 instead of a CDN URL."
+        },
+        "prompt_expansion_mode": {
+          "type": "string",
+          "title": "Prompt Expansion Mode",
+          "examples": [
+            "disabled",
+            "balanced",
+            "quality"
+          ],
+          "description": "How much effort to spend rewriting the prompt before generation. 'disabled' skips prompt expansion. 'balanced' returns in about a second. 'quality' spends up to ~30s on a richer prompt.",
+          "default": "balanced"
+        },
+        "end_image_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "End Image URL",
+          "description": "Optional URL of the image to use as the last frame. It may be provided alone for end-only keyframe generation; in that case the output canvas follows this image."
+        },
+        "duration": {
+          "type": "integer",
+          "maximum": 15,
+          "title": "Duration",
+          "default": 5,
+          "description": "The duration of the video in seconds.",
+          "minimum": 5
+        },
+        "seed": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Seed",
+          "description": "Random seed. A random seed is selected when omitted."
+        },
+        "prompt": {
+          "type": "string",
+          "title": "Prompt",
+          "examples": [
+            "The camera slowly pulls back from the scene, revealing the full landscape as clouds drift overhead and light shifts across the terrain."
+          ],
+          "minLength": 1,
+          "maxLength": 50000,
+          "description": "Text prompt for video generation"
+        },
+        "resolution": {
+          "type": "string",
+          "title": "Resolution",
+          "enum": [
+            "480P",
+            "768P",
+            "1080P"
+          ],
+          "description": "The native generation resolution, or 1080P latent refinement from a native 768P source.",
+          "default": "768P"
+        },
+        "image_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "examples": [
+            "https://storage.googleapis.com/falserverless/example_inputs/hailuo23/pro_i2v_in.jpg"
+          ],
+          "description": "Optional URL of the image to use as the first frame. When provided, the output canvas follows this image. If only end_image_url is provided, the canvas follows that last frame instead. If both images are omitted, the request is handled as text-to-video (16:9 by default).",
+          "title": "Image URL"
+        },
+        "enable_safety_checker": {
+          "type": "boolean",
+          "title": "Enable Safety Checker",
+          "default": true,
+          "description": "If set to true, the safety checker will be enabled."
+        }
+      },
+      "type": "object",
+      "x-fal-order-properties": [
+        "prompt",
+        "duration",
+        "resolution",
+        "seed",
+        "enable_safety_checker",
+        "sync_mode",
+        "prompt_expansion_mode",
+        "image_url",
+        "end_image_url"
+      ],
+      "title": "TurboImageToVideoHailuo03Input",
+      "required": [
+        "prompt",
+        "prompt_expansion_mode"
+      ]
+    }
+  }
+}

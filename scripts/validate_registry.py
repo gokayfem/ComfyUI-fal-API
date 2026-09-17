@@ -36,6 +36,7 @@ REQUIRED_MODEL_FIELDS = {
     "thumbnail",
 }
 OUTPUT_KINDS = {"audio", "file", "image", "images", "json", "text", "video"}
+INPUT_TYPES = {"string", "integer", "number", "boolean", "enum", "object", "array", "json"}
 ENDPOINT_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]*$")
 
 
@@ -98,6 +99,25 @@ def validate_registry(registry: dict[str, Any], *, min_models: int = 500) -> set
             raise RegistryValidationError(f"{endpoint_id} has an invalid title")
         if not isinstance(model["inputs"], list):
             raise RegistryValidationError(f"{endpoint_id} inputs must be a list")
+        input_names = set()
+        for inp in model["inputs"]:
+            if not isinstance(inp, dict) or not isinstance(inp.get("name"), str) or not inp["name"]:
+                raise RegistryValidationError(f"{endpoint_id} has an invalid input record")
+            name = inp["name"]
+            if name in input_names:
+                raise RegistryValidationError(f"{endpoint_id} has duplicate input {name}")
+            input_names.add(name)
+            if inp.get("type") not in INPUT_TYPES:
+                raise RegistryValidationError(f"{endpoint_id}.{name} has an invalid input type")
+            if not isinstance(inp.get("required"), bool):
+                raise RegistryValidationError(f"{endpoint_id}.{name} required must be a boolean")
+            if inp["type"] == "enum" and (not isinstance(inp.get("enum"), list) or not inp["enum"]):
+                raise RegistryValidationError(f"{endpoint_id}.{name} has no enum choices")
+            if "suggestions" in inp and (
+                inp["type"] != "string" or not isinstance(inp["suggestions"], list)
+                or not inp["suggestions"] or not all(isinstance(v, str) for v in inp["suggestions"])
+            ):
+                raise RegistryValidationError(f"{endpoint_id}.{name} has invalid suggestions")
         if not isinstance(model["output_props"], list):
             raise RegistryValidationError(f"{endpoint_id} output_props must be a list")
         if model["output_kind"] not in OUTPUT_KINDS:
@@ -143,6 +163,39 @@ def compare_registries(
     return added, removed
 
 
+def compare_model_inputs(baseline: dict[str, Any], candidate: dict[str, Any]) -> list[str]:
+    """Find controls or choices that a refresh would remove from existing nodes.
+
+    Intentional upstream removals require review; silently accepting a partial
+    schema can otherwise publish missing duration/resolution controls as valid.
+    """
+    previous = {model["endpoint_id"]: model for model in baseline["models"]}
+    regressions = []
+    for model in candidate["models"]:
+        endpoint_id = model["endpoint_id"]
+        if endpoint_id not in previous:
+            continue
+        current = {inp["name"]: inp for inp in model["inputs"]}
+        for old in previous[endpoint_id]["inputs"]:
+            name = old["name"]
+            new = current.get(name)
+            if new is None:
+                regressions.append(f"{endpoint_id}: removed input {name}")
+            elif old["type"] in ("integer", "number", "boolean") and new["type"] == "json":
+                regressions.append(f"{endpoint_id}.{name}: lost {old['type']} control")
+            elif old["type"] == "enum" or old.get("suggestions"):
+                choices = new.get("enum") if new["type"] == "enum" else new.get("suggestions")
+                if not choices:
+                    control = "enum control" if old["type"] == "enum" else "suggested choices"
+                    regressions.append(f"{endpoint_id}.{name}: lost {control}")
+                else:
+                    old_choices = old["enum"] if old["type"] == "enum" else old["suggestions"]
+                    lost = [value for value in old_choices if value not in choices]
+                    if lost:
+                        regressions.append(f"{endpoint_id}.{name}: removed choices {lost}")
+    return regressions
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("candidate", type=Path, help="Generated registry to validate")
@@ -151,16 +204,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-removal-fraction", type=float, default=0.05)
     parser.add_argument("--max-addition-fraction", type=float, default=0.25)
     parser.add_argument("--allow-large-change", action="store_true")
+    parser.add_argument("--allow-input-removal", action="store_true",
+                        help="Allow reviewed removals of existing input controls or enum choices")
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    candidate_ids = validate_registry(load_registry(args.candidate), min_models=args.min_models)
+    candidate = load_registry(args.candidate)
+    candidate_ids = validate_registry(candidate, min_models=args.min_models)
     added: set[str] = set()
     removed: set[str] = set()
     if args.baseline:
-        baseline_ids = validate_registry(load_registry(args.baseline), min_models=args.min_models)
+        baseline = load_registry(args.baseline)
+        baseline_ids = validate_registry(baseline, min_models=args.min_models)
         added, removed = compare_registries(
             baseline_ids,
             candidate_ids,
@@ -168,6 +225,12 @@ def main() -> None:
             max_addition_fraction=args.max_addition_fraction,
             allow_large_change=args.allow_large_change,
         )
+        regressions = compare_model_inputs(baseline, candidate)
+        if regressions and not args.allow_input_removal:
+            raise RegistryValidationError(
+                "Candidate removes existing controls; review before using --allow-input-removal:\n"
+                + "\n".join(regressions[:20])
+            )
     print(f"Registry valid: {len(candidate_ids)} models " f"(+{len(added)} / -{len(removed)} vs baseline)")
 
 

@@ -9,6 +9,16 @@ on:
       - main
 
 jobs:
+  sidebar-test:
+    name: Frontend regression tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node --experimental-vm-modules --test tests/test_*.mjs
+
   lint:
     name: Lint (ruff)
     runs-on: ubuntu-latest

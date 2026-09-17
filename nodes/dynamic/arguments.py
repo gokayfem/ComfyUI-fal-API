@@ -67,7 +67,7 @@ def _multi_enum_argument(endpoint: str, inp: dict[str, Any], value: Any) -> Any 
     selected = [part.strip() for part in str(value).split(",") if part.strip()]
     if not selected:
         return None
-    allowed = set(inp.get("enum") or [])
+    allowed = {str(member): member for member in inp.get("enum") or []}
     invalid = [part for part in selected if part not in allowed]
     if invalid:
         raise FalApiError(
@@ -75,7 +75,7 @@ def _multi_enum_argument(endpoint: str, inp: dict[str, Any], value: Any) -> Any 
             f"Invalid value(s) {invalid} for '{inp['name']}'. "
             f"Allowed: {', '.join(sorted(allowed))}",
         )
-    return selected
+    return [allowed[part] for part in selected]
 
 
 def _enum_argument(inp: dict[str, Any], value: Any, kwargs: dict[str, Any]) -> Any:

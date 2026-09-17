@@ -18,6 +18,7 @@ import argparse
 import json
 import logging
 import os
+import re
 import time
 import urllib.error
 import urllib.request
@@ -31,7 +32,6 @@ USER_AGENT = "ComfyUI-fal-API-registry-builder/1.0"
 
 FETCH_ATTEMPTS = 3
 BACKOFF_BASE_SECONDS = 1.5
-MAX_INPUT_PROPERTIES = 40
 MAX_DESCRIPTION_CHARS = 500
 MULTILINE_NAMES = frozenset({"prompt", "negative_prompt", "text", "script", "dialogue"})
 MULTILINE_DESCRIPTION_THRESHOLD = 120
@@ -171,28 +171,12 @@ def resolve_ref(schema, components):
     ref = schema.get("$ref", "")
     if not ref.startswith("#/components/schemas/"):
         return schema
-    name = ref.rsplit("/", 1)[-1]
+    name = ref.rsplit("/", 1)[-1].replace("~1", "/").replace("~0", "~")
     resolved = components.get(name)
     if not isinstance(resolved, dict):
         return schema
     siblings = {key: value for key, value in schema.items() if key != "$ref"}
     return {**resolved, **siblings}
-
-
-def non_null_branches(branches, components):
-    """Resolve and drop null branches from an anyOf/oneOf list."""
-    resolved = [resolve_ref(branch, components) for branch in branches if isinstance(branch, dict)]
-    return [branch for branch in resolved if branch.get("type") != "null"]
-
-
-def merge_all_of(schema, components):
-    """Merge an allOf list (one level), with sibling keys taking precedence."""
-    merged = {}
-    for branch in schema.get("allOf", []):
-        if isinstance(branch, dict):
-            merged = {**merged, **resolve_ref(branch, components)}
-    siblings = {key: value for key, value in schema.items() if key != "allOf"}
-    return {**merged, **siblings}
 
 
 def is_custom_size_pair(branches):
@@ -214,29 +198,85 @@ def is_custom_size_pair(branches):
     return None
 
 
-def normalize_schema(schema, components):
-    """Resolve $ref / allOf / anyOf / oneOf one level.
+def normalize_schema(schema, components, _seen_refs=frozenset()):
+    """Resolve nested references and composition without dropping enum choices.
 
     Returns (resolved_schema, has_custom_size, custom_size_enum_values).
     """
     if not isinstance(schema, dict):
         return {}, False, None
+    ref = schema.get("$ref")
+    if ref and ref in _seen_refs:
+        return {}, False, None
+    seen = _seen_refs | {ref} if ref else _seen_refs
     resolved = resolve_ref(schema, components)
+    if "$ref" in resolved and resolved != schema:
+        return normalize_schema(resolved, components, seen)
+    has_custom_size, custom_values = False, None
     if "allOf" in resolved:
-        resolved = merge_all_of(resolved, components)
+        merged = {}
+        for branch in resolved["allOf"]:
+            normalized, branch_custom, branch_values = normalize_schema(branch, components, seen)
+            if branch_custom:
+                has_custom_size, custom_values = True, branch_values
+            properties = {**merged.get("properties", {}), **normalized.get("properties", {})}
+            required = list(dict.fromkeys(merged.get("required", []) + normalized.get("required", [])))
+            merged = {**merged, **normalized}
+            if properties:
+                merged["properties"] = properties
+            if required:
+                merged["required"] = required
+        siblings = {key: value for key, value in resolved.items() if key != "allOf"}
+        if "properties" in siblings:
+            siblings["properties"] = {**merged.get("properties", {}), **siblings["properties"]}
+        if "required" in siblings:
+            siblings["required"] = list(dict.fromkeys(merged.get("required", []) + siblings["required"]))
+        resolved = {**merged, **siblings}
+    if "const" in resolved:
+        if resolved["const"] is None:
+            resolved = {**resolved, "type": "null"}
+        else:
+            resolved = {**resolved, "enum": [resolved["const"]]}
+    if isinstance(resolved.get("type"), list):
+        types = [value for value in resolved["type"] if value != "null"]
+        if len(types) == 1:
+            resolved = {**resolved, "type": types[0]}
     branches_key = "anyOf" if "anyOf" in resolved else ("oneOf" if "oneOf" in resolved else None)
     if branches_key is None:
-        return resolved, False, None
+        return resolved, has_custom_size, custom_values
 
-    branches = non_null_branches(resolved[branches_key], components)
+    normalized_branches = [normalize_schema(branch, components, seen) for branch in resolved[branches_key]]
+    normalized_branches = [entry for entry in normalized_branches if entry[0] and entry[0].get("type") != "null"]
+    branches = [entry[0] for entry in normalized_branches]
     siblings = {key: value for key, value in resolved.items() if key != branches_key}
     if not branches:
         return siblings, False, None
+    if len(branches) == 1:
+        branch, branch_custom, branch_values = normalized_branches[0]
+        return {**branch, **siblings}, branch_custom, branch_values
 
     custom_enum_branch = is_custom_size_pair(branches)
     if custom_enum_branch is not None:
         values = list(custom_enum_branch.get("enum", [])) + ["custom_size"]
         return {**custom_enum_branch, **siblings}, True, values
+
+    if all(branch.get("enum") for branch in branches):
+        values = []
+        for branch in branches:
+            for value in branch["enum"]:
+                if value is not None and value not in values:
+                    values.append(value)
+        return {**branches[0], **siblings, "enum": values}, False, None
+
+    # An enum plus an open string branch is still an open string. Keep the
+    # literals as suggestions instead of incorrectly restricting API values.
+    open_string = next((b for b in branches if b.get("type") == "string" and not b.get("enum")), None)
+    if open_string is not None and all(
+        b.get("type") == "string" or (b.get("enum") and all(isinstance(value, str) for value in b["enum"]))
+        for b in branches
+    ):
+        examples = [value for b in branches for value in b.get("enum", b.get("examples", []))]
+        return {**open_string, "examples": examples, **siblings}, False, None
 
     enum_branch = next((branch for branch in branches if branch.get("enum")), None)
     chosen = enum_branch if enum_branch is not None else branches[0]
@@ -283,6 +323,27 @@ def scalar_type_of(schema):
     if type_name == "object" or "properties" in schema:
         return "json"
     return "json"
+
+
+def string_suggestions(name, schema):
+    """Short example identifiers are suggestions, never strict enum constraints.
+
+    Keep prose, prompts and formatted strings as text. The frontend offers
+    custom values so undocumented languages, voices, model IDs and
+    future modes remain usable even when examples are incomplete.
+    """
+    if name in MULTILINE_NAMES or name.endswith(("_prompt", "_text")) or schema.get("format"):
+        return None
+    examples = schema.get("examples")
+    if not isinstance(examples, list) or not all(
+        isinstance(value, str) and re.fullmatch(r"[\w./:+-]{1,80}", value) and "://" not in value
+        for value in examples
+    ):
+        return None
+    values = list(dict.fromkeys(examples))
+    if len(values) < 2:
+        return None
+    return values
 
 
 def distill_property(name, raw_schema, required_names, components):
@@ -359,6 +420,10 @@ def distill_property(name, raw_schema, required_names, components):
     }
     if has_custom_size:
         record = {**record, "has_custom_size": True}
+    if type_name == "string" and not is_list and not media_kind:
+        suggestions = string_suggestions(name, schema)
+        if suggestions:
+            record = {**record, "suggestions": suggestions}
     return record
 
 
@@ -375,21 +440,10 @@ def ordered_property_names(schema):
 
 def distill_inputs(schema, components, endpoint_id):
     """Distill an Input schema's properties into registry input records."""
+    schema, _, _ = normalize_schema(schema, components)
     properties = schema.get("properties", {})
     required_names = set(schema.get("required", []))
     names = ordered_property_names(schema)
-
-    if len(names) > MAX_INPUT_PROPERTIES:
-        required_first = [n for n in names if n in required_names]
-        optional = [n for n in names if n not in required_names]
-        budget = max(MAX_INPUT_PROPERTIES - len(required_first), 0)
-        names = required_first + optional[:budget]
-        logger.info(
-            "%s: input schema has %d properties, capped to %d",
-            endpoint_id,
-            len(properties),
-            len(names),
-        )
 
     inputs = []
     for name in names:
@@ -406,7 +460,7 @@ def distill_inputs(schema, components, endpoint_id):
 def ref_name(schema):
     """Extract the local component name from a {'$ref': ...} node."""
     ref = schema.get("$ref", "") if isinstance(schema, dict) else ""
-    return ref.rsplit("/", 1)[-1] if ref.startswith("#/components/schemas/") else None
+    return ref.rsplit("/", 1)[-1].replace("~1", "/").replace("~0", "~") if ref.startswith("#/components/schemas/") else None
 
 
 def input_ref_from_paths(doc):
@@ -441,9 +495,21 @@ def output_ref_from_paths(doc):
 def select_schema(doc, endpoint_id, suffix, path_lookup):
     """Select the app Input/Output schema from components.schemas."""
     components = doc.get("components", {}).get("schemas", {})
+    # A document can describe several sibling endpoints. Prefer this endpoint's
+    # operation, including inline schemas, over whichever path happens to be first.
+    path = "/" + endpoint_id.strip("/")
+    if suffix == "Input":
+        operation = doc.get("paths", {}).get(path, {}).get("post", {})
+        content = operation.get("requestBody", {}).get("content", {})
+    else:
+        operation = doc.get("paths", {}).get(path + "/requests/{request_id}", {}).get("get", {})
+        content = operation.get("responses", {}).get("200", {}).get("content", {})
+    schema = content.get("application/json", {}).get("schema")
+    if isinstance(schema, dict):
+        return normalize_schema(schema, components)[0]
     referenced = path_lookup(doc)
     if referenced and referenced in components:
-        return components[referenced]
+        return normalize_schema(components[referenced], components)[0]
 
     candidates = [name for name in components if name.endswith(suffix)]
     if not candidates:
@@ -456,7 +522,7 @@ def select_schema(doc, endpoint_id, suffix, path_lookup):
         in normalized_endpoint
     ]
     pool = matching or candidates
-    return components[max(pool, key=len)]
+    return normalize_schema(components[max(pool, key=len)], components)[0]
 
 
 # ---------------------------------------------------------------------------

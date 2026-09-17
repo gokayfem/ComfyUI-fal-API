@@ -5,6 +5,7 @@ import { app } from "../../scripts/app.js";
 import { loadPricingMap, setupNodeBadges } from "./fal_badges.js";
 import { registerSidebar } from "./fal_sidebar.js";
 import { installAutocomplete } from "./fal_autocomplete.js";
+import { setupSuggestedWidgets } from "./fal_suggestions.js";
 
 // Start loading the pricing map immediately: node definitions register before
 // setup() runs, and the badge drawer looks the map up lazily at draw time.
@@ -29,6 +30,11 @@ app.registerExtension({
       setupNodeBadges(nodeType, nodeData);
     } catch (error) {
       console.debug("[fal] badge setup failed", error);
+    }
+    try {
+      setupSuggestedWidgets(nodeType, nodeData, app);
+    } catch (error) {
+      console.debug("[fal] suggested control setup failed", error);
     }
   },
 
