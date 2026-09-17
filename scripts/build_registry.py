@@ -221,6 +221,8 @@ def normalize_schema(schema, components, _seen_refs=frozenset()):
                 has_custom_size, custom_values = True, branch_values
             properties = {**merged.get("properties", {}), **normalized.get("properties", {})}
             required = list(dict.fromkeys(merged.get("required", []) + normalized.get("required", [])))
+            if "enum" in merged and "enum" in normalized:
+                normalized = {**normalized, "enum": [v for v in merged["enum"] if v in normalized["enum"]]}
             merged = {**merged, **normalized}
             if properties:
                 merged["properties"] = properties
@@ -233,10 +235,12 @@ def normalize_schema(schema, components, _seen_refs=frozenset()):
             siblings["required"] = list(dict.fromkeys(merged.get("required", []) + siblings["required"]))
         resolved = {**merged, **siblings}
     if "const" in resolved:
-        if resolved["const"] is None:
+        literal = resolved["const"]
+        resolved = {key: value for key, value in resolved.items() if key != "const"}
+        if literal is None:
             resolved = {**resolved, "type": "null"}
         else:
-            resolved = {**resolved, "enum": [resolved["const"]]}
+            resolved = {**resolved, "enum": [literal]}
     if isinstance(resolved.get("type"), list):
         types = [value for value in resolved["type"] if value != "null"]
         if len(types) == 1:
@@ -266,6 +270,8 @@ def normalize_schema(schema, components, _seen_refs=frozenset()):
             for value in branch["enum"]:
                 if value is not None and value not in values:
                     values.append(value)
+        if "enum" in siblings:
+            values = [value for value in values if value in siblings["enum"]]
         return {**branches[0], **siblings, "enum": values}, False, None
 
     # An enum plus an open string branch is still an open string. Keep the

@@ -103,6 +103,21 @@ def test_union_of_literals_preserves_all_choices(keyword):
     assert inp["enum"] == ["480P", "768P", "1080P"]
 
 
+def test_literal_union_survives_nested_composition_and_repeated_normalization():
+    raw = {"allOf": [{"anyOf": [{"const": "480P"}, {"const": "1080P"}]}]}
+    normalized = normalize_schema(raw, {})[0]
+    assert normalized["enum"] == ["480P", "1080P"]
+    assert normalize_schema(normalized, {})[0] == normalized
+
+
+@pytest.mark.parametrize("schema", [
+    {"allOf": [{"enum": ["480P", "768P"]}, {"enum": ["768P", "1080P"]}]},
+    {"anyOf": [{"const": "480P"}, {"const": "768P"}], "enum": ["768P"]},
+])
+def test_composed_enum_respects_intersecting_constraints(schema):
+    assert distill_property("resolution", schema, set(), {})["enum"] == ["768P"]
+
+
 def test_all_of_input_objects_keep_inherited_fields_and_required_names():
     doc = _doc({"allOf": [
         {"$ref": "#/components/schemas/Base"},
