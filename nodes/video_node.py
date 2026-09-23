@@ -2787,6 +2787,119 @@ class SeedanceProImageToVideoNode:
             )
 
 
+class Seedance25VideoToVideoNode:
+    """Curated Seedance 2.5 video editing node."""
+
+    ENDPOINT = "bytedance/seedance-2.5/reference-to-video"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "video": (
+                    "VIDEO",
+                    {
+                        "tooltip": "Source video to edit. URL-backed VIDEO inputs are passed through without re-uploading.",
+                    },
+                ),
+                "prompt": (
+                    "STRING",
+                    {
+                        "default": "",
+                        "multiline": True,
+                        "tooltip": "Describe the edits to apply to the source video.",
+                    },
+                ),
+            },
+            "optional": {
+                "resolution": (
+                    ["480p", "720p", "1080p"],
+                    {"default": "720p", "tooltip": "Output video resolution."},
+                ),
+                "generate_audio": (
+                    "BOOLEAN",
+                    {
+                        "default": True,
+                        "tooltip": "Generate synchronized audio for the edited video.",
+                    },
+                ),
+                "bitrate_mode": (
+                    ["standard", "high"],
+                    {
+                        "default": "standard",
+                        "tooltip": "Use the standard bitrate or request a larger, higher-quality encode.",
+                    },
+                ),
+                "seed": (
+                    "INT",
+                    {
+                        "default": -1,
+                        "min": -1,
+                        "max": 2147483647,
+                        "tooltip": "Random seed for reproducible results; -1 lets the API choose.",
+                    },
+                ),
+                "force_rerun": (
+                    "BOOLEAN",
+                    {
+                        "default": False,
+                        "tooltip": "Bypass the persistent result cache and submit a new fal request.",
+                    },
+                ),
+            },
+        }
+
+    RETURN_TYPES = ("VIDEO", "STRING")
+    RETURN_NAMES = ("video", "video_url")
+    FUNCTION = "edit_video"
+    CATEGORY = "FAL/VideoGeneration"
+    DESCRIPTION = (
+        "Edit one video with Seedance 2.5. The endpoint is always called with "
+        "task='editing' and the source as a single video_urls entry."
+    )
+
+    @classmethod
+    def IS_CHANGED(cls, force_rerun=False, **_kwargs):
+        if force_rerun:
+            return float("nan")
+        return False
+
+    def edit_video(
+        self,
+        video,
+        prompt,
+        resolution="720p",
+        generate_audio=True,
+        bitrate_mode="standard",
+        seed=-1,
+        force_rerun=False,
+    ):
+        try:
+            uploaded_url = MediaUtils.upload_video(video)
+            arguments = {
+                "prompt": prompt,
+                "task": "editing",
+                "video_urls": [uploaded_url],
+                "resolution": resolution,
+                "generate_audio": generate_audio,
+                "bitrate_mode": bitrate_mode,
+            }
+            if seed != -1:
+                arguments["seed"] = seed
+
+            result = ApiHandler.submit_and_get_result(
+                self.ENDPOINT,
+                arguments,
+                skip_cache=bool(force_rerun),
+            )
+            video_url = MediaUtils.require_http_url(
+                result["video"]["url"], self.ENDPOINT
+            )
+            return (MediaUtils.video_from_url(video_url), video_url)
+        except Exception as e:
+            return ApiHandler.handle_video_generation_error(self.ENDPOINT, e)
+
+
 class Veo3Node:
     @classmethod
     def INPUT_TYPES(cls):
@@ -3733,6 +3846,7 @@ NODE_CLASS_MAPPINGS = {
     "DYWanFun22_fal": DYWanFun22Node,
     "DYWanUpscaler_fal": DYWanUpscalerNode,
     "SeedanceImageToVideo_fal": SeedanceImageToVideoNode,
+    "Seedance25VideoToVideo_fal": Seedance25VideoToVideoNode,
     "SeedanceProImageToVideo_fal": SeedanceProImageToVideoNode,
     "SeedanceTextToVideo_fal": SeedanceTextToVideoNode,
     "Veo3_fal": Veo3Node,
@@ -3779,6 +3893,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "Veo2ImageToVideo_fal": "Google Veo2 Image-to-Video (fal)",
     "WanPro_fal": "Wan Pro Image-to-Video (fal)",
     "SeedanceImageToVideo_fal": "Seedance Image-to-Video (fal)",
+    "Seedance25VideoToVideo_fal": "Seedance 2.5 Video-to-Video (fal)",
     "SeedanceProImageToVideo_fal": "Seedance Pro Image-to-Video (fal)",
     "SeedanceTextToVideo_fal": "Seedance Text-to-Video (fal)",
     "Veo3_fal": "Veo3 Video Generation (fal)",
