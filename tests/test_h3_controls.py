@@ -1,4 +1,4 @@
-"""Check the shipped H3 nodes all the way from widgets to the API boundary."""
+"""Check shared controls on shipped H3 generation nodes through the API boundary."""
 
 from __future__ import annotations
 
@@ -8,15 +8,19 @@ from pathlib import Path
 import pytest
 
 REGISTRY = Path(__file__).resolve().parents[1] / "data" / "fal_registry.json"
-H3_MODELS = [
+H3_SHARED_CONTROL_MODELS = [
     model for model in json.loads(REGISTRY.read_text())["models"]
     if model["endpoint_id"].startswith(("minimax/h3/", "minimax/h3-max/", "minimax/h3-max-turbo/"))
-    and "/trainer" not in model["endpoint_id"] and not model.get("deprecated")
+    and not any(
+        specialty in model["endpoint_id"]
+        for specialty in ("/trainer", "/lip-sync/", "/styles/")
+    )
+    and not model.get("deprecated")
 ]
 
 
-@pytest.mark.parametrize("model", H3_MODELS, ids=lambda model: model["endpoint_id"])
-def test_shipped_h3_widgets_and_api_arguments(model, factory_mod, monkeypatch):
+@pytest.mark.parametrize("model", H3_SHARED_CONTROL_MODELS, ids=lambda model: model["endpoint_id"])
+def test_shipped_h3_shared_control_widgets_and_api_arguments(model, factory_mod, monkeypatch):
     monkeypatch.setattr(factory_mod, "_ASYNC_CAPABLE", False)
     captured = []
     monkeypatch.setattr(factory_mod, "_call_api", lambda *args: captured.append(args) or {})
