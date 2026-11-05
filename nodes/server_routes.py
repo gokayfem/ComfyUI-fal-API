@@ -242,7 +242,7 @@ def _run_refresh_subprocess() -> tuple[bool, str]:
             [sys.executable, os.path.join(root, "scripts", "build_registry.py"),
              "--out", candidate, "--preserve-from", baseline],
             [sys.executable, os.path.join(root, "scripts", "validate_registry.py"),
-             candidate, "--baseline", baseline],
+             candidate, "--preserve-incompatible-models", "--baseline", baseline],
         ]
         for command in commands:
             completed = subprocess.run(
@@ -252,7 +252,8 @@ def _run_refresh_subprocess() -> tuple[bool, str]:
                 tail = (completed.stderr or completed.stdout or "").strip()[-500:]
                 return False, f"{os.path.basename(command[1])} exited with {completed.returncode}: {tail}"
         os.replace(candidate, baseline)
-    return True, f"Registry refreshed. {_RESTART_NOTE}"
+    details = completed.stdout.strip()
+    return True, f"Registry refreshed. {_RESTART_NOTE}" + (f"\n{details}" if details else "")
 
 
 def _finish_refresh(ok: bool, message: str) -> None:

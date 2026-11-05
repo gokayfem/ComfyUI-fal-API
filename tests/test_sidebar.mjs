@@ -26,7 +26,7 @@ class Element {
   }
 }
 
-async function mount(status, { failPost = false, refreshOK = true } = {}) {
+async function mount(status, { failPost = false, refreshOK = true, refreshMessage = "" } = {}) {
   const calls = [];
   const context = vm.createContext({
     document: { createElement: (tag) => new Element(tag), hidden: false },
@@ -44,7 +44,7 @@ async function mount(status, { failPost = false, refreshOK = true } = {}) {
         if (status instanceof Error) throw status;
         return status;
       }
-      if (path === "/registry_refresh") return { running: false, finished_at: 1, ok: refreshOK, message: "Validation failed" };
+      if (path === "/registry_refresh") return { running: false, finished_at: 1, ok: refreshOK, message: refreshMessage };
       return {};
     });
     this.setExport("postJson", async (path) => {
@@ -62,6 +62,15 @@ async function mount(status, { failPost = false, refreshOK = true } = {}) {
   await setImmediate();
   return { root, calls };
 }
+
+test("successful partial refresh shows held-back models and removed choices", async () => {
+  const message = "Registry refreshed. Restart ComfyUI.\nKept previous definitions: example.model: removed choices ['old']";
+  const { root } = await mount({ new_count: 1 }, { refreshMessage: message });
+  root.find("fal-registry-refresh").listeners.click();
+  await setImmediate();
+  assert.equal(root.find("fal-registry-done").textContent, message);
+  assert.equal(root.find("fal-registry-refresh").disabled, false);
+});
 
 for (const status of [{ new_count: 0, new_models: [] }, new Error("catalog unavailable"), { new_count: 1, new_models: [{ title: "New model" }] }]) {
   test(`refresh is available with status ${JSON.stringify(status)}`, async () => {

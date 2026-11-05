@@ -75,6 +75,8 @@ jobs:
           fi
           if [[ "$ALLOW_INPUT_REMOVAL" == "true" ]]; then
             args+=(--allow-input-removal)
+          else
+            args+=(--preserve-incompatible-models)
           fi
           python scripts/validate_registry.py "${args[@]}"
 

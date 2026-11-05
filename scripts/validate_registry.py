@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -196,6 +198,41 @@ def compare_model_inputs(baseline: dict[str, Any], candidate: dict[str, Any]) ->
     return regressions
 
 
+def preserve_incompatible_models(baseline: dict[str, Any], candidate: dict[str, Any]) -> list[str]:
+    """Hold back incompatible model updates without blocking unrelated additions.
+
+    Keep the whole baseline record: mixing old controls with a new schema's
+    defaults or outputs could create a definition that never existed upstream.
+    Call only after validating both registries and their endpoint change limits.
+    """
+    previous = {model["endpoint_id"]: model for model in baseline["models"]}
+    regressions = []
+    models = []
+    for model in candidate["models"]:
+        old = previous.get(model["endpoint_id"])
+        changes = compare_model_inputs({"models": [old]}, {"models": [model]}) if old else []
+        regressions.extend(changes)
+        models.append(old if changes else model)
+    candidate["models"] = models
+    candidate["deprecated_model_count"] = sum(bool(model.get("deprecated")) for model in models)
+    candidate["live_model_count"] = len(models) - candidate["deprecated_model_count"]
+    return regressions
+
+
+def write_registry(path: Path, registry: dict[str, Any]) -> None:
+    """Replace only the candidate, atomically, after every safety check passes."""
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, delete=False) as handle:
+            temporary = Path(handle.name)
+            json.dump(registry, handle, separators=(",", ":"), sort_keys=True, ensure_ascii=False)
+            handle.write("\n")
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("candidate", type=Path, help="Generated registry to validate")
@@ -204,9 +241,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-removal-fraction", type=float, default=0.05)
     parser.add_argument("--max-addition-fraction", type=float, default=0.25)
     parser.add_argument("--allow-large-change", action="store_true")
-    parser.add_argument("--allow-input-removal", action="store_true",
-                        help="Allow reviewed removals of existing input controls or enum choices")
-    return parser.parse_args()
+    input_policy = parser.add_mutually_exclusive_group()
+    input_policy.add_argument("--allow-input-removal", action="store_true",
+                              help="Allow reviewed removals of existing input controls or enum choices")
+    input_policy.add_argument("--preserve-incompatible-models", action="store_true",
+                              help="Rewrite the candidate keeping baseline definitions for models losing controls or choices")
+    args = parser.parse_args()
+    if args.preserve_incompatible_models and not args.baseline:
+        parser.error("--preserve-incompatible-models requires --baseline")
+    if args.preserve_incompatible_models and args.candidate.resolve() == args.baseline.resolve():
+        parser.error("Candidate and baseline must be separate files when preserving models")
+    return args
 
 
 def main() -> None:
@@ -215,6 +260,7 @@ def main() -> None:
     candidate_ids = validate_registry(candidate, min_models=args.min_models)
     added: set[str] = set()
     removed: set[str] = set()
+    preserved: list[str] = []
     if args.baseline:
         baseline = load_registry(args.baseline)
         baseline_ids = validate_registry(baseline, min_models=args.min_models)
@@ -226,12 +272,20 @@ def main() -> None:
             allow_large_change=args.allow_large_change,
         )
         regressions = compare_model_inputs(baseline, candidate)
-        if regressions and not args.allow_input_removal:
+        if regressions and args.preserve_incompatible_models:
+            preserved = preserve_incompatible_models(baseline, candidate)
+            validate_registry(candidate, min_models=args.min_models)
+            write_registry(args.candidate, candidate)
+        elif regressions and not args.allow_input_removal:
             raise RegistryValidationError(
                 "Candidate removes existing controls; review before using --allow-input-removal:\n"
                 + "\n".join(regressions[:20])
             )
     print(f"Registry valid: {len(candidate_ids)} models " f"(+{len(added)} / -{len(removed)} vs baseline)")
+    if preserved:
+        print("Kept previous definitions for models with removed controls or choices; other updates applied.")
+        print("These definitions may contain options no longer supported by the API. Review before accepting removals:")
+        print("\n".join(preserved))
 
 
 if __name__ == "__main__":
