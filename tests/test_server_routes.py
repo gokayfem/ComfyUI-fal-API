@@ -72,7 +72,13 @@ def test_refresh_promotes_only_validated_candidates(routes, monkeypatch, tmp_pat
             Path(command[3]).write_text("validated candidate")
         else:
             assert Path(command[2]).read_text() == "validated candidate"
-        return SimpleNamespace(returncode=int(step == failure_step), stdout="", stderr="schema rejected")
+            assert "--preserve-incompatible-models" in command
+            assert "--allow-input-removal" not in command
+        return SimpleNamespace(
+            returncode=int(step == failure_step),
+            stdout="Kept previous definitions for fal-ai/example: removed choices ['old']",
+            stderr="schema rejected",
+        )
 
     monkeypatch.setattr(subprocess, "run", run)
     ok, message = routes._run_refresh_subprocess()
@@ -83,3 +89,5 @@ def test_refresh_promotes_only_validated_candidates(routes, monkeypatch, tmp_pat
     if failure_step != "build_registry.py":
         assert steps[1] == "validate_registry.py"
     assert "Restart ComfyUI" in message if ok else "schema rejected" in message
+    if ok:
+        assert "fal-ai/example: removed choices ['old']" in message

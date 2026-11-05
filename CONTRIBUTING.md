@@ -14,7 +14,17 @@ The snapshot stays fresh three ways:
 
 The automated validator rejects malformed records, duplicate or unsorted endpoint IDs, suspiciously small catalogs, and unexpectedly large additions or removals. A maintainer can override the change-size thresholds when manually dispatching the workflow; all structural checks still apply.
 
-Refresh validation also rejects removed input controls, lost dropdowns, and removed enum choices on existing endpoints. Inspect these changes against the live API before using the separate `allow_input_removal` workflow option (or `validate_registry.py --allow-input-removal`). The sidebar builds and validates a candidate before replacing the local snapshot, so a failed refresh keeps the previous registry intact.
+The validator rejects removed input controls, lost dropdowns, and removed enum choices by default. Scheduled and sidebar refreshes use `--preserve-incompatible-models`: affected models keep their entire previous definition while new models and compatible updates are applied. The sidebar result and workflow validation logs list the held-back changes. These retained definitions can include options the live API no longer supports; preservation protects saved workflows but does not restore upstream functionality. Inspect the reported changes against the live API before accepting them with the separate `allow_input_removal` workflow option (or `validate_registry.py --allow-input-removal`). All structural and catalog-size checks still apply. The sidebar builds and validates a separate candidate before atomically replacing the local snapshot, so a failed refresh keeps the previous registry intact.
+
+To use the same safe partial refresh locally:
+
+```bash
+python scripts/build_registry.py --out data/fal_registry.next.json --preserve-from data/fal_registry.json
+python scripts/validate_registry.py data/fal_registry.next.json --baseline data/fal_registry.json --preserve-incompatible-models
+# Only after validation succeeds:
+mv data/fal_registry.next.json data/fal_registry.json
+python scripts/build_readme.py
+```
 
 The generator handles nested references, composed schemas, nullable types and literal choices for every endpoint, and never caps the number of exposed fields. Short string examples become suggested dropdown choices with a **custom value** input; they are not treated as exhaustive enums. Prompts, prose and URLs remain text/media controls. Fix schema patterns in the shared generator and widget/argument translators rather than adding model-specific patches. Add upstream schema fixtures and regressions in `tests/test_build_registry.py`; H3 and the catalog's suggested controls are checked against the shipped registry too.
 

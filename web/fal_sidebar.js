@@ -113,7 +113,7 @@ function registryDone(view, ok, message) {
   const note = element(
     "div",
     ok ? "fal-registry-done" : "fal-registry-error",
-    ok ? "done — restart ComfyUI and reload this page to load updated controls and new nodes" : message || "refresh failed"
+    message || (ok ? "done — restart ComfyUI and reload this page to load updated controls and new nodes" : "refresh failed")
   );
   view.registry.append(note);
 }

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import copy
+import json
+import sys
 
 import pytest
 
@@ -10,6 +12,8 @@ from scripts.validate_registry import (
     RegistryValidationError,
     compare_model_inputs,
     compare_registries,
+    main,
+    preserve_incompatible_models,
     validate_registry,
 )
 
@@ -198,11 +202,6 @@ def test_refresh_rejects_lost_suggested_choices():
 
 @pytest.mark.parametrize("allow", [False, True])
 def test_cli_requires_separate_explicit_override_for_input_removal(monkeypatch, tmp_path, allow):
-    import json
-    import sys
-
-    from scripts.validate_registry import main
-
     baseline = _input_registry()
     candidate = copy.deepcopy(baseline)
     candidate["models"][0]["inputs"].pop(0)
@@ -218,3 +217,109 @@ def test_cli_requires_separate_explicit_override_for_input_removal(monkeypatch, 
     else:
         with pytest.raises(RegistryValidationError, match="removes existing controls"):
             main()
+
+
+def _run_preserving_cli(monkeypatch, tmp_path, baseline, candidate):
+    baseline_path = tmp_path / "baseline.json"
+    candidate_path = tmp_path / "candidate.json"
+    baseline_path.write_text(json.dumps(baseline))
+    candidate_path.write_text(json.dumps(candidate))
+    monkeypatch.setattr(sys, "argv", [
+        "validate_registry.py", str(candidate_path), "--baseline", str(baseline_path),
+        "--min-models", "1", "--preserve-incompatible-models",
+    ])
+    main()
+    assert json.loads(baseline_path.read_text()) == baseline
+    return json.loads(candidate_path.read_text())
+
+
+@pytest.mark.parametrize("change", [
+    lambda inputs: inputs.pop(0),
+    lambda inputs: inputs[1].update(type="string"),
+    lambda inputs: inputs[1].update(enum=["768P"]),
+    lambda inputs: inputs[0].update(type="json"),
+])
+def test_partial_refresh_keeps_incompatible_models_and_applies_safe_updates(
+    monkeypatch, tmp_path, capsys, change,
+):
+    baseline = _registry("fal-ai/a", "fal-ai/b", "fal-ai/c", "fal-ai/video")
+    baseline["models"][-1] = _input_registry()["models"][0]
+    candidate = copy.deepcopy(baseline)
+    change(candidate["models"][-1]["inputs"])
+    candidate["models"][-1]["output_kind"] = "video"
+    candidate["models"][0]["title"] = "Updated model"
+    candidate["models"].insert(3, _model("fal-ai/new"))
+    candidate.update(model_count=5, live_model_count=5)
+
+    promoted = _run_preserving_cli(monkeypatch, tmp_path, baseline, candidate)
+    assert promoted["models"][-1] == baseline["models"][-1]
+    assert promoted["models"][:-1] == candidate["models"][:-1]
+    assert compare_model_inputs(baseline, promoted) == []
+    assert len(validate_registry(promoted, min_models=1)) == 5
+    assert "Kept previous definitions" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("failure", ["malformed", "large_addition", "large_removal"])
+def test_partial_refresh_does_not_bypass_safety_checks(monkeypatch, tmp_path, failure):
+    baseline = _input_registry()
+    candidate = copy.deepcopy(baseline)
+    candidate["models"][0]["inputs"].pop(0)
+    if failure == "malformed":
+        candidate["models"][0]["inputs"][0]["enum"] = []
+    elif failure == "large_addition":
+        candidate["models"].insert(0, _model("fal-ai/new"))
+        candidate.update(model_count=2, live_model_count=2)
+    else:
+        baseline["models"].insert(0, _model("fal-ai/removed"))
+        baseline.update(model_count=2, live_model_count=2)
+    with pytest.raises(RegistryValidationError):
+        _run_preserving_cli(monkeypatch, tmp_path, baseline, candidate)
+    assert json.loads((tmp_path / "candidate.json").read_text()) == candidate
+    assert json.loads((tmp_path / "baseline.json").read_text()) == baseline
+
+
+def test_preserving_retired_model_keeps_counts_consistent():
+    baseline = _input_registry()
+    baseline["models"][0]["deprecated"] = True
+    baseline.update(live_model_count=0, deprecated_model_count=1)
+    candidate = _input_registry()
+    candidate["models"][0]["inputs"].pop(0)
+    preserve_incompatible_models(baseline, candidate)
+    assert candidate == baseline
+    validate_registry(candidate, min_models=1)
+
+
+def test_partial_refresh_without_regressions_leaves_candidate_unchanged(monkeypatch, tmp_path, capsys):
+    baseline = _input_registry()
+    candidate = copy.deepcopy(baseline)
+    candidate["models"][0]["inputs"][1]["enum"].append("4K")
+    assert _run_preserving_cli(monkeypatch, tmp_path, baseline, candidate) == candidate
+    assert "Kept previous definitions" not in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("arguments", [
+    ["candidate.json", "--preserve-incompatible-models"],
+    ["candidate.json", "--baseline", "candidate.json", "--preserve-incompatible-models"],
+    ["candidate.json", "--baseline", "baseline.json", "--preserve-incompatible-models", "--allow-input-removal"],
+])
+def test_preservation_requires_separate_baseline_and_exclusive_policy(monkeypatch, arguments):
+    monkeypatch.setattr(sys, "argv", ["validate_registry.py", *arguments])
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 2
+
+
+def test_failed_atomic_write_keeps_candidate_and_cleans_temporary_file(monkeypatch, tmp_path):
+    from scripts import validate_registry as validator
+
+    path = tmp_path / "candidate.json"
+    path.write_text("original candidate")
+
+    def fail_replace(*args):
+        raise OSError("replacement failed")
+
+    monkeypatch.setattr(validator.os, "replace", fail_replace)
+    with pytest.raises(OSError, match="replacement failed"):
+        validator.write_registry(path, _input_registry())
+    assert path.read_text() == "original candidate"
+    assert list(tmp_path.iterdir()) == [path]

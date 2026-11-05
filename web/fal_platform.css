@@ -257,6 +257,14 @@
   cursor: default;
 }
 
+.fal-registry-done,
+.fal-registry-error {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
 .fal-registry-done {
   font-size: 11px;
   color: #86efac;
