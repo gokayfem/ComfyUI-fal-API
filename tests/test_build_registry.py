@@ -103,6 +103,27 @@ def test_union_of_literals_preserves_all_choices(keyword):
     assert inp["enum"] == ["480P", "768P", "1080P"]
 
 
+@pytest.mark.parametrize("keyword", ["anyOf", "oneOf"])
+def test_integer_range_or_string_literal_keeps_both_choices(keyword):
+    # series_amount in both Kling v4 image schemas
+    raw = {keyword: [
+        {"type": "integer", "minimum": 2, "maximum": 10},
+        {"type": "string", "const": "auto"},
+    ], "default": 4}
+    inp = distill_property("series_amount", raw, set(), {})
+    assert inp["type"] == "enum"
+    assert inp["enum"] == [*range(2, 11), "auto"]
+    assert inp["default"] == 4
+
+
+@pytest.mark.parametrize("bounds", [{}, {"minimum": 0, "maximum": 2**31}])
+def test_wide_integer_range_or_literal_round_trips_json_default(bounds):
+    raw = {"anyOf": [{"const": "auto"}, {"type": "integer", **bounds}], "default": "auto"}
+    inp = distill_property("count", raw, set(), {})
+    assert inp["type"] == "json"
+    assert json.loads(inp["default"]) == "auto"
+
+
 def test_literal_union_survives_nested_composition_and_repeated_normalization():
     raw = {"allOf": [{"anyOf": [{"const": "480P"}, {"const": "1080P"}]}]}
     normalized = normalize_schema(raw, {})[0]

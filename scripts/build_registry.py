@@ -33,6 +33,7 @@ USER_AGENT = "ComfyUI-fal-API-registry-builder/1.0"
 FETCH_ATTEMPTS = 3
 BACKOFF_BASE_SECONDS = 1.5
 MAX_DESCRIPTION_CHARS = 500
+MAX_INTEGER_DROPDOWN_CHOICES = 64
 MULTILINE_NAMES = frozenset({"prompt", "negative_prompt", "text", "script", "dialogue"})
 MULTILINE_DESCRIPTION_THRESHOLD = 120
 SKIPPED_PROPERTY_NAMES = frozenset({"sync_mode"})
@@ -198,6 +199,30 @@ def is_custom_size_pair(branches):
     return None
 
 
+def normalize_integer_or_string_union(branches, siblings):
+    """Use a typed dropdown for small ranges and a JSON field for larger unions."""
+    if len(branches) != 2:
+        return None
+    integer = next((b for b in branches if b.get("type") == "integer" and not b.get("enum")), None)
+    literals = next((b["enum"] for b in branches if b.get("enum")), None)
+    if integer is None or not literals or not all(isinstance(v, str) for v in literals):
+        return None
+
+    lo, hi = integer.get("minimum"), integer.get("maximum")
+    annotations = {"default", "title", "description", "examples"}
+    if (
+        type(lo) is int and type(hi) is int
+        and 1 <= hi - lo + 1 <= MAX_INTEGER_DROPDOWN_CHOICES
+        and integer.keys() <= annotations | {"type", "minimum", "maximum"}
+        and siblings.keys() <= annotations
+    ):
+        return {**siblings, "enum": [*range(lo, hi + 1), *literals]}
+
+    # Keep both disjoint branches for the JSON widget when a dropdown cannot
+    # express the constraints.
+    return {"anyOf": branches, **siblings}
+
+
 def normalize_schema(schema, components, _seen_refs=frozenset()):
     """Resolve nested references and composition without dropping enum choices.
 
@@ -283,6 +308,10 @@ def normalize_schema(schema, components, _seen_refs=frozenset()):
     ):
         examples = [value for b in branches for value in b.get("enum", b.get("examples", []))]
         return {**open_string, "examples": examples, **siblings}, False, None
+
+    mixed = normalize_integer_or_string_union(branches, siblings)
+    if mixed is not None:
+        return mixed, False, None
 
     enum_branch = next((branch for branch in branches if branch.get("enum")), None)
     chosen = enum_branch if enum_branch is not None else branches[0]
@@ -388,7 +417,10 @@ def distill_property(name, raw_schema, required_names, components):
         maximum = None
 
     default = schema.get("default", raw_schema.get("default") if isinstance(raw_schema, dict) else None)
-    if type_name == "json" and default is not None and not isinstance(default, str):
+    # A string in a mixed-type JSON field is a literal and needs its quotes.
+    if type_name == "json" and default is not None and (
+        not isinstance(default, str) or "anyOf" in schema
+    ):
         default = json.dumps(default, ensure_ascii=False, sort_keys=True)
 
     # Some upstream schemas declare enum members and the default with mismatched
